@@ -1,0 +1,19 @@
+sequenceDiagram
+    participant Client
+    participant FastAPI
+    participant EventStore
+    participant EventBus
+    participant Celery
+    participant ReadModel
+    
+    Client->>FastAPI: POST /users
+    FastAPI->>EventStore: Append UserCreated event
+    FastAPI->>EventBus: Publish UserCreated event
+    FastAPI->>Client: Return user_id (immediate)
+    
+    EventBus->>Celery: Trigger process_user_created task
+    Celery->>ReadModel: Update user table
+    Celery->>Celery: Send welcome email
+    Celery->>Celery: Notify other services
+    
+    Note over Client,ReadModel: Eventual consistency - read model updated asynchronously 
