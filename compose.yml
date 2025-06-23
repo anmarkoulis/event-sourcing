@@ -1,0 +1,117 @@
+volumes:
+  event_sourcing_local_postgres_data: {}
+  event_sourcing_local_postgres_data_backups: {}
+  event_sourcing_localstack_data: {}
+
+x-fastapi-common: &fastapi-common
+  image: event-sourcing
+  restart: unless-stopped
+  build:
+    context: .
+    target: local
+  environment:
+    - DD_SERVICE=event-sourcing
+    - DD_ENV=local
+    - DD_TAGS=env:dev
+    - DD_AGENT_HOST=datadog
+  depends_on:
+    postgres:
+      condition: service_healthy
+    localstack:
+      condition: service_healthy
+  volumes:
+    - .:/app:z
+  env_file:
+    - ./.envs/.fastapi
+    - ./.envs/.postgres
+
+services:
+  fastapi:
+    <<: *fastapi-common
+    container_name: event_sourcing_fastapi
+    command: /start
+    depends_on:
+      - postgres
+      
+
+  migrator:
+    <<: *fastapi-common
+    container_name: event_sourcing_migrator
+    restart: on-failure
+    command: /migrate
+    depends_on:
+      - postgres
+
+  initializer:
+    <<: *fastapi-common
+    container_name: event_sourcing_initializer
+    restart: on-failure
+    command: /initialize
+    depends_on:
+      - postgres
+      - migrator
+      
+
+  postgres:
+    image: postgres:16.6
+    restart: unless-stopped
+    container_name: event_sourcing_postgres
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -d event_sourcing -U admin" ]
+      interval: 1s
+      timeout: 2s
+      retries: 5
+      start_period: 3s
+    volumes:
+      - event_sourcing_local_postgres_data:/var/lib/postgresql/data:Z
+      - event_sourcing_local_postgres_data_backups:/backups:z
+    env_file:
+      - ./.envs/.postgres
+  
+
+  
+  localstack:
+    container_name: event_sourcing_localstack
+    image: localstack/localstack:3.5.0
+    env_file:
+      - ./.envs/.localstack
+    healthcheck:
+      test: >
+        bash -c '
+        awslocal sqs list-queues &&
+        awslocal cloudformation list-stacks
+        '
+      interval: 30s
+      timeout: 10s
+      retries: 5
+
+    volumes:
+      - "./localstack/scripts:/etc/localstack/init/ready.d/"
+      - "/var/run/docker.sock:/var/run/docker.sock"
+  
+
+  celeryworker:
+    <<: *fastapi-common
+    container_name: event_sourcing_celeryworker
+    command: /start-celeryworker
+
+  celerybeat:
+    <<: *fastapi-common
+    container_name: event_sourcing_celerybeat
+    command: /start-celerybeat
+
+  datadog:
+    image: datadog/agent:latest
+    profiles:
+      - datadog
+    container_name: datadog-agent
+    env_file:
+      - ./.envs/.datadog
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - /var/lib/docker/containers:/var/lib/docker/containers:ro
+      - /proc/:/host/proc/:ro
+      - /opt/datadog-agent/run:/opt/datadog-agent/run:rw
+      - /sys/fs/cgroup:/host/sys/fs/cgroup:ro
+    ports:
+      - '8126:8126/tcp'

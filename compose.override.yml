@@ -1,0 +1,16 @@
+services:
+  fastapi:
+    ports:
+      - "5001:5000"
+
+  postgres:
+    ports:
+      - 5423:5432
+  
+
+  
+  localstack:
+    ports:
+      - "4561-4599:4561-4599"
+      - "8888:8080"
+  

@@ -1,0 +1,30 @@
+# General
+# ------------------------------------------------------------------------------
+ENV=local
+USE_AUTH=false
+
+# SQS
+# ------------------------------------------------------------------------------
+AWS_ACCESS_KEY_ID=FAKE  # pragma: allowlist secret
+AWS_SECRET_ACCESS_KEY=FAKE  # pragma: allowlist secret
+CELERY_BROKER_URL=sqs://fake:fake@localstack:4566/0 # pragma: allowlist secret
+CELERY_QUEUE_URL=http://localstack:4566/000000000000/SqsQueue # pragma: allowlist secret
+
+
+# Security
+# ------------------------------------------------------------------------------
+BACKEND_CORS_ORIGINS='["*"]'
+ALLOWED_HOSTS='["*"]'
+
+# Logging
+# ------------------------------------------------------------------------------
+LOGGING_LEVEL=DEBUG
+LOGGING_FORMAT=plain
+
+# Datadog
+# ------------------------------------------------------------------------------
+DD_ENABLED=false
+
+# SWAGGER
+# ------------------------------------------------------------------------------
+ENABLE_SWAGGER=true

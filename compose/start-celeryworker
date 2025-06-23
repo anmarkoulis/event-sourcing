@@ -1,0 +1,11 @@
+#!/bin/bash
+
+set -o errexit
+set -o pipefail
+set -o nounset
+
+if [ "${DD_ENABLED:-}" == "true" ]; then
+  ddtrace-run celery -A event_sourcing.config.celery_app worker -l INFO
+else
+  celery -A event_sourcing.config.celery_app worker -l INFO
+fi

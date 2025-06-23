@@ -1,0 +1,7 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: CloudFormation for Localstack
+Resources:
+  SqsQueue:
+    Type: AWS::SQS::Queue
+    Properties:
+      QueueName: SqsQueue

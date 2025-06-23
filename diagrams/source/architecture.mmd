@@ -1,19 +1,7 @@
 graph TD
     A[Client Request] --> B[FastAPI]
-    B --> C[Command Handler]
-    C --> D[Event Store]
-    C --> E[Event Bus]
-    E --> F[Celery Workers]
-    F --> G[Business Logic]
-    G --> H[Read Model]
-    H --> I[Client Response]
-    
-    style A fill:#FFD43B
-    style B fill:#306998
-    style C fill:#306998
-    style D fill:#4B8BBE
-    style E fill:#4B8BBE
-    style F fill:#FFD43B
-    style G fill:#FFD43B
-    style H fill:#4B8BBE
-    style I fill:#FFD43B 
+    B --> C[Event Store]
+    B --> D[Event Bus]
+    D --> E[Celery Workers]
+    E --> F[Read Model]
+    F --> G[Client Response]

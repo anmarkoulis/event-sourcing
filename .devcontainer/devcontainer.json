@@ -1,0 +1,45 @@
+{
+  "name": "event_sourcing_dev_container",
+  "dockerComposeFile": [
+    "../compose.yml",
+    "../compose.override.yml"
+  ],
+  "init": true,
+  "service": "fastapi",
+  "runServices": ["fastapi"],
+  "workspaceFolder": "/app",
+  "shutdownAction": "stopCompose",
+  "customizations": {
+    "vscode": {
+        "extensions": [
+          "ms-python.python",
+          "ms-python.vscode-pylance",
+          "ms-azuretools.vscode-docker",
+          "bierner.markdown-mermaid",
+          "marp-team.marp-vscode"
+        ],
+        "settings": {
+            "python.defaultInterpreterPath": "/opt/pysetup/.venv/bin/python",
+            "python.testing.pytestEnabled": true,
+            "python.analysis.extraPaths": ["/app/src"]
+        }
+    }
+  },
+  "overrideCommand": true,
+  "mounts": [
+    {
+      "source": "./.devcontainer/bash_history",
+      "target": "/root/.bash_history",
+      "type": "bind"
+    },
+    {
+      "source": "~/.ssh",
+      "target": "/root/.ssh",
+      "type": "bind"
+    }
+  ],
+  "postCreateCommand": "cat .devcontainer/bashrc.override.sh >> ~/.bashrc",
+  "containerEnv": {
+    "PYTHONPATH": "/app/src/"
+  }
+}

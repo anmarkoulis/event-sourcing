@@ -1,0 +1,106 @@
+default_stages:
+  - pre-commit
+fail_fast: false
+repos:
+  - hooks:
+      - id: actionlint
+    repo: https://github.com/rhysd/actionlint
+    rev: v1.7.7
+
+  - hooks:
+      - id: detect-secrets
+        args: ["--baseline", ".secrets.baseline"]
+        exclude: (config/settings/test.py|/static|.html|local|README.md|uv.lock|infra/environments/.*_cf_parameters.json*|tests/e2e/data/.*json|tests/e2e/tokens/.*json|tests/conftest.py)
+    repo: https://github.com/Yelp/detect-secrets.git
+    rev: v1.5.0
+
+  - hooks:
+      - id: check-merge-conflict
+      - id: trailing-whitespace
+      - id: end-of-file-fixer
+      - id: debug-statements
+      - id: check-added-large-files
+      - id: check-docstring-first
+      - id: check-case-conflict
+      - id: check-builtin-literals
+      - id: mixed-line-ending
+      - id: check-json
+        files: \.(json)$
+      - id: check-toml
+        files: \.(toml)$
+      - id: check-yaml
+        files: \.(yml|yaml)$
+        # --unsafe arg ignores custom Tavern tags, checks only syntax instead of attempting to load the YAML
+        args: [--allow-multiple-documents, --unsafe]
+      - id: fix-encoding-pragma
+        args: [--remove]
+    repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v5.0.0
+
+  - hooks:
+      - entry: pylint
+        files: \.py$
+        exclude: ^\venv/.*$
+        id: PyLint
+        language: system
+        name: PyLint
+        args: ["--disable=W0718"]
+    repo: local
+
+  - hooks:
+      - id: ruff-check
+        args: ["--fix"]
+      - id: ruff-format
+      - id: ruff-check
+        name: ruff-check-no-fix
+        args: ["--ignore=I001"]
+        stages:
+          - manual
+    repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.11.10
+
+  - hooks:
+      - id: commitizen
+        stages:
+          - commit-msg
+    repo: https://github.com/commitizen-tools/commitizen
+    rev: v4.7.2
+
+  - hooks:
+      - entry: mypy
+        args: [".", "--exclude", "venv"]
+        id: mypy
+        language: system
+        name: mypy
+        pass_filenames: false
+    repo: local
+
+  - hooks:
+      - entry: hadolint
+        id: hadolint
+        name: Lint Dockerfiles
+        description: Runs hadolint to lint Dockerfiles
+        language: system
+        types: ["dockerfile"]
+    repo: local
+
+  - hooks:
+      - entry: cfn-lint
+        id: cfn-lint
+        files: infra/.*\.(json|yml|yaml)$
+        exclude: infra/environments/.*_cf_parameters.json$
+        name: Lint Cloudformation files
+    repo: https://github.com/aws-cloudformation/cfn-lint
+    rev: v1.35.3
+
+  - hooks:
+      - id: rain-format
+        files: infra/.*\.(yml|yaml)$
+    repo: https://github.com/aws-cloudformation/rain
+    rev: v1.23.0
+
+  - repo: https://github.com/phildp/alembic-check
+    rev: v1.1.0
+    hooks:
+      - id: alembic-check
+        args: ["src/event_sourcing/db/alembic/versions"]

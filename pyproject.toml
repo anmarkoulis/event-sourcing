@@ -1,0 +1,426 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "event-sourcing"
+version = "0.1.0"
+description = "This is an example Event Sourcing project"
+authors = [{name = "Antonis Markoulis"}]
+requires-python = "==3.13.3"
+keywords = ["event_sourcing"]
+dependencies = [
+    "environs==14.1.1",
+    "requests==2.32.3",
+    "fastapi==0.115.11",
+    "uvicorn==0.34.0",
+    "asgiref==3.8.1",
+    "alembic==1.15.1",
+    "sqlalchemy==2.0.39",
+    "asyncpg==0.30.0",
+    "celery[sqs]==5.3.4",
+    "psycopg2==2.9.10",    
+    "typer==0.15.2",
+    "pyyaml==6.0.2",  
+    "pydantic[email]==2.8.2",
+    "pydantic-settings==2.8.1",
+    "gunicorn==23.0.0",
+    "JSON-log-formatter==1.1.1",
+    "ddtrace==2.21.3",
+    "fastapi-cache2==0.2.2",
+]
+
+[dependency-groups]
+dev = [
+    "mypy==1.15.0",
+    "ipython==9.2.0",
+    "pre-commit==4.1.0",
+    "pylint==3.3.5",
+    "pytest-cov==6.0.0",
+    "pytest==8.3.5",
+    "types-mock==5.2.0.20250306",
+    "pylint-celery==0.3",
+    "types-pyyaml==6.0.12.20241230",
+    "faker==37.0.0",
+    "httpx==0.28.1", 
+    "greenlet==3.1.1",
+    "commitizen==4.4.1",
+]
+
+[[tool.uv.index]]
+name = "default_pypi"
+url = "https://pypi.python.org/simple"
+
+[tool.uv]
+index-strategy = "unsafe-best-match"
+
+[tool.hatch.build.targets.sdist]
+include = ["src/event_sourcing"]
+
+[tool.hatch.build.targets.wheel]
+include = ["src/event_sourcing"]
+
+[tool.hatch.build.targets.wheel.sources]
+"src/event_sourcing" = "event_sourcing"
+
+[tool.mypy]
+mypy_path = "$MYPY_CONFIG_FILE_DIR/event_sourcing"
+namespace_packages = true
+explicit_package_bases = true
+warn_redundant_casts = true
+warn_unused_ignores = true
+warn_return_any = true
+disallow_untyped_calls = false
+disallow_untyped_defs = true
+disallow_any_explicit = false
+disallow_subclassing_any = false
+ignore_missing_imports = true
+check_untyped_defs = true
+no_implicit_optional = true
+strict_optional = true
+
+[tool.commitizen]
+name = "cz_conventional_commits"
+version = "0.1.0"
+tag_format = "v$version"
+version_files = [
+    "pyproject.toml:version",
+]
+update_changelog_on_bump = true
+
+[tool.coverage.run]
+omit = ["*tests*", "*developer_tools*"]
+concurrency = ["greenlet", "thread"]
+include = ["/app/src/*", ]
+
+[tool.coverage.report]
+precision = 2
+
+[tool.pytest.ini_options]
+python_files = ["tests.py", "test_*.py", "conftest.py"]
+asyncio_mode = "auto"
+pythonpath = ["/app/src"]
+
+[tool.pylint.master]
+persistent = "no"
+load-plugins = ["pylint_celery"]
+jobs = 1
+unsafe-load-any-extension = "no"
+extension-pkg-whitelist = []
+
+[tool.pylint.messages_control]
+confidence = []
+disable = "all"
+enable = [
+    "anomalous-unicode-escape-in-string",  # No Ruff equivalent
+    "boolean-datetime",                    # No Ruff equivalent
+    "confusing-with-statement",            # No Ruff equivalent
+    "pointless-string-statement",          # No Ruff equivalent
+    "unsupported-binary-operation",        # No Ruff equivalent
+    "abstract-class-instantiated",         # Ruff not implemented
+    "access-member-before-definition",     # Ruff not implemented
+    "arguments-differ",                    # Ruff not implemented
+    "assigning-non-slot",                  # Ruff not implemented
+    "assignment-from-no-return" ,          # Ruff not implemented
+    "assignment-from-none",                # Ruff not implemented
+    "bad-except-order",                    # Ruff not implemented
+    "bad-reversed-sequence",               # Ruff not implemented
+    "bad-staticmethod-argument",           # Ruff not implemented
+    "bad-unary-operand-type",              # Ruff not implemented
+    "invalid-unary-operand-type",          # Ruff not implemented
+    "broad-except",                        # Ruff not implemented
+    "catching-non-exception",              # Ruff not implemented
+    "duplicate-argument-name",             # Ruff not implemented
+    "init-is-generator",                   # Ruff not implemented
+    "invalid-sequence-index",              # Ruff not implemented
+    "invalid-slice-index",                 # Ruff not implemented
+    "invalid-star-assignment-target",      # Ruff not implemented
+    "logging-format-interpolation",        # Ruff not implemented
+    "logging-format-truncated",            # Ruff not implemented
+    "logging-unsupported-format",          # Ruff not implemented
+    "method-hidden",                       # Ruff not implemented
+    "missing-kwoa",                        # Ruff not implemented
+    "misplaced-bare-raise",                # Ruff not implemented
+    "no-method-argument",                  # Ruff not implemented
+    "no-value-for-parameter",              # Ruff not implemented
+    "non-iterator-returned",               # Ruff not implemented
+    "nonlocal-and-global",                 # Ruff not implemented
+    "not-a-mapping",                       # Ruff not implemented
+    "not-an-iterable",                     # Ruff not implemented
+    "not-async-context-manager",           # Ruff not implemented
+    "not-callable",                        # Ruff not implemented
+    "not-context-manager",                 # Ruff not implemented
+    "redundant-keyword-arg",               # Ruff not implemented
+    "repeated-keyword",                    # Ruff not implemented
+    "return-arg-in-generator",             # Ruff not implemented
+    "star-needs-assignment-target",        # Ruff not implemented
+    "unexpected-keyword-arg",              # Ruff not implemented
+    "unexpected-special-method-signature", # Ruff not implemented
+    "unsupported-membership-test",         # Ruff not implemented
+    "unsubscriptable-object",              # Ruff not implemented
+]
+
+[tool.pylint.reports]
+output-format = "colorized"
+reports = "no"
+msg-template = '[{msg_id} {symbol}] {msg} File: {path}, line {line}, in {obj}'
+
+[tool.pylint.logging]
+logging-modules = "logging"
+
+[tool.pylint.format]
+max-line-length = 79
+ignore-long-lines = '^\s*(# )?<?https?://\S+>?$'
+single-line-if-stmt = "no"
+max-module-lines = 1000
+indent-string = '    '
+indent-after-paren = 4
+expected-line-ending-format = "LF"
+
+[tool.pylint.typecheck]
+ignore-mixin-members = "yes"
+ignored-classes = "DictField"
+
+[tool.pylint.variables]
+init-import = "no"
+dummy-variables-rgx = "_$|dummy"
+callbacks = ["cb_", "_cb"]
+
+[tool.pylint.similarities]
+min-similarity-lines = 4
+ignore-comments = "yes"
+ignore-docstrings = "yes"
+ignore-imports = "no"
+
+[tool.pylint.spelling]
+spelling-store-unknown-words = "no"
+
+[tool.pylint.miscellaneous]
+notes = ["FIXME", "XXX", "TODO"]
+
+[tool.pylint.basic]
+good-names = ["i", "j", "k", "ex", "Run", "_"]
+bad-names = ["foo", "bar", "baz", "toto", "tutu", "tata"]
+include-naming-hint = "no"
+function-rgx = "[a-z_][a-z0-9_]{2,30}$"
+variable-rgx = "[a-z_][a-z0-9_]{2,30}$"
+const-rgx = "(([A-Z_][A-Z0-9_]*)|(__.*__))$"
+attr-rgx = "[a-z_][a-z0-9_]{2,30}$"
+argument-rgx = "[a-z_][a-z0-9_]{2,30}$"
+class-attribute-rgx = "([A-Za-z_][A-Za-z0-9_]{2,30}|(__.*__))$"
+inlinevar-rgx = "[A-Za-z_][A-Za-z0-9_]*$"
+class-rgx = "[A-Z_][a-zA-Z0-9]+$"
+module-rgx = "(([a-z_][a-z0-9_]*)|([A-Z][a-zA-Z0-9]+))$"
+method-rgx = "[a-z_][a-z0-9_]{2,30}$"
+no-docstring-rgx = "^_"
+docstring-min-length = -1
+
+[tool.pylint.elif]
+max-nested-blocks = 5
+
+[tool.pylint.imports]
+deprecated-modules = ["regsub", "TERMIOS", "Bastion", "rexec"]
+
+[tool.pylint.design]
+max-args = 5
+ignored-argument-names = "_.*"
+max-locals = 15
+max-returns = 6
+max-branches = 12
+max-statements = 50
+max-parents = 7
+max-attributes = 7
+min-public-methods = 2
+max-public-methods = 20
+max-bool-expr = 5
+
+[tool.pylint.classes]
+defining-attr-methods = ["__init__", "__new__", "setUp"]
+valid-classmethod-first-arg = "cls"
+valid-metaclass-classmethod-first-arg = "mcs"
+exclude-protected = ["_asdict", "_fields", "_replace", "_source", "_make"]
+
+[tool.pylint.exceptions]
+overgeneral-exceptions = "builtins.Exception"
+
+
+[tool.ruff]
+# Exclude a variety of commonly ignored directories.
+exclude = [
+    ".bzr",
+    ".direnv",
+    ".eggs",
+    ".git",
+    ".git-rewrite",
+    ".hg",
+    ".mypy_cache",
+    ".nox",
+    ".pants.d",
+    ".pytype",
+    ".ruff_cache",
+    ".svn",
+    ".tox",
+    ".venv",
+    "__pypackages__",
+    "_build",
+    "buck-out",
+    "build",
+    "dist",
+    "node_modules",
+    "venv",
+    "docs/*",  # Added from flakeheaven exclude
+]
+
+# Same as Black.
+line-length = 79
+
+# Assume Python 3.10.
+target-version = "py310"
+
+[tool.ruff.format]
+quote-style = "double"
+docstring-code-format = true
+
+[tool.ruff.lint]
+# Allow unused variables when underscore-prefixed.
+dummy-variable-rgx = "^(_+|(_+[a-zA-Z0-9_]*[a-zA-Z0-9]+?))$"
+# Allow autofix for all enabled rules (when `--fix`) is provided.
+fixable = [
+    "A",
+    "B",
+    "C",
+    "D",
+    "E",
+    "F",
+    "G",
+    "I",
+    "N",
+    "Q",
+    "S",
+    "T",
+    "W",
+    "ANN",
+    "ARG",
+    "BLE",
+    "COM",
+    "DJ",
+    "DTZ",
+    "EM",
+    "ERA",
+    "EXE",
+    "FBT",
+    "ICN",
+    "INP",
+    "ISC",
+    "NPY",
+    "PD",
+    "PGH",
+    "PIE",
+    "PL",
+    "PT",
+    "PTH",
+    "PYI",
+    "RET",
+    "RSE",
+    "RUF",
+    "SIM",
+    "SLF",
+    "TCH",
+    "TID",
+    "TRY",
+    "UP",
+    "YTT",
+    "F401",   # import-error (autofix: remove unused import)
+    "F811",   # reimported (autofix: remove reimport)
+    "F403",   # deprecated-module (autofix: remove star import)
+    "F621",   # unpacking-non-sequence (autofix: fix unpacking)
+    "F841",   # global-at-module-level (autofix: remove unused variable)
+    "F601",   # bad-open-mode (autofix: fix open mode)
+    "F702",   # unreachable (autofix: remove unreachable code)
+    "F632",   # using-constant-test (autofix: fix test)
+    "F501",   # bad-format-character, bad-format-string, bad-format-string-key, missing-format-attribute, invalid-format-index (autofix: fix format)
+    "PIE790", # unnecessary-pass (autofix: remove pass)
+    "C417",   # unnecessary-lambda (autofix: remove lambda)
+]
+ignore = []
+# Enable pycodestyle (`E`) and Pyflakes (`F`) codes by default.
+select = [
+    "A001",
+    "PLW0406",
+    "F404",
+    "PLE0604",
+    "F822",
+    "B023",
+    "PLW0602",
+    "PLW0603",
+    "W605",
+    "F701",
+    "F702",
+    "PLE0116",
+    "PLE0101",
+    "F622",
+    "F706",
+    "B002",
+    "F704",
+    "PLE0117",
+    "B012",
+    "F631",
+    "B006",
+    "F601",
+    "PLW0120",
+    "B018",
+    "S307",
+    "S102",
+    "B018",
+    "F502",
+    "F501",
+    "F524",
+    "F506",
+    "F524",
+    "PLE1310",
+    "F522",
+    "F525",
+    "F524",
+    "E703",
+    "PLE1206",
+    "PLE1205",
+    "F901",
+    "B014",
+    "PLW0711",
+    "E722",
+    "PLE1700",
+    "I",  # This enables isort rules
+    "TID",  # This enables all tidy-imports rules
+    "S",  # flake8-bandit (Bandit) rules
+    # "B904",   # bad-exception-context, introduces too many errors
+    "F501",   # bad-format-character, bad-format-string, bad-format-string-key, missing-format-attribute, invalid-format-index
+    "F601",   # bad-open-mode
+    "B024",   # bad-super-call, non-parent-init-called (partial)
+    "B009",   # deprecated-method
+    "F403",   # deprecated-module
+    "F841",   # global-at-module-level
+    "F821",   # used-before-assignment, global-variable-undefined, undefined-loop-variable
+    "F401",   # import-error
+    ## "N805",   # no-self-argument, introduces too many errors
+    # "PLR2004",# redundant-unittest-assert, introduces too many errors
+    "F811",   # reimported
+    "C417",   # unnecessary-lambda
+    "PIE790", # unnecessary-pass
+    "F621",   # unpacking-non-sequence
+    "F702",   # unreachable
+    "F632",   # using-constant-test
+]
+
+# Per-file ignores
+[tool.ruff.lint.per-file-ignores]
+"**/__init__.py" = ["F401"]  # Unused imports in __init__.py (from flakeheaven)
+"tests/*.py" = ["S101"]
+
+
+# Add tidy-imports specific settings
+[tool.ruff.lint.flake8-tidy-imports]
+ban-relative-imports = "parents"  # From flakeheaven ban-relative-imports
+
+[tool.ruff.lint.mccabe]
+# Unlike Flake8, default to a complexity level of 10.
+max-complexity = 10

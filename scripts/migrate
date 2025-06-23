@@ -1,0 +1,10 @@
+#!/bin/bash
+
+set -o errexit
+set -o pipefail
+set -o nounset
+
+# Run migrations
+alembic  -c /app/src/event_sourcing/db/alembic/alembic.ini upgrade head
+
+exec "$@"

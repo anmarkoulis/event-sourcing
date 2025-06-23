@@ -1,0 +1,13 @@
+#!/bin/bash
+
+set -o errexit
+set -o pipefail
+set -o nounset
+
+
+if [ "${DD_ENABLED:-}" == "true" ]; then
+  ddtrace-run uvicorn event_sourcing.main:app  --host 0.0.0.0 --port 5000 --reload
+else
+  uvicorn event_sourcing.main:app  --host 0.0.0.0 --port 5000 --reload
+fi
+

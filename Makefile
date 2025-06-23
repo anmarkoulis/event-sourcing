@@ -1,13 +1,93 @@
-# Makefile for PyCon Athens Presentation
-# Event Sourcing & CQRS with FastAPI and Celery
-
-.PHONY: help install-marp install-mermaid-cli create-presentation generate-diagrams clean
-
 # Help generator
 help: ## Display this help.
 	@echo "Please use 'make <target>' where <target> is one of the following:"
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf "\033[36m%-30s\033[0m %s\n", $$1, $$2}'
 
+# Development commands
+lock: ## Update dependencies
+	make uv args="lock"
+
+# Example: manually add a package ->make uv args="add package==version"
+uv: ## Run UV commands in the container
+	docker compose run ${exec_args} --rm  \
+		fastapi sh -c " \
+		uv ${args} \
+	"
+
+up: ## Run compose
+	docker compose up -d
+
+build: ## Build docker compose
+	docker compose build
+
+down: ## Stop docker compose
+	docker compose down --remove-orphans
+
+down-volumes: ## Stop docker compose and clean up volumes
+	docker compose down --volumes --remove-orphans
+
+restart: ## Restart docker compose
+	docker compose down && docker compose up -d && docker compose logs -f -t
+
+full-restart: ## Restart docker compose with volume cleanup and rebuilding images
+	docker compose down --volumes --remove-orphans && docker buildx bake && docker compose up -d && docker compose logs -f -t
+
+logs: ## Follow logs
+	docker compose logs -f -t
+
+pre-commit: ## Run the pre-commit checks
+	docker compose run ${exec_args} --rm fastapi pre-commit run ${args}
+
+install-pre-commit: ## Install pre-commit hooks that run on Docker
+	printf '#!/usr/bin/env bash\nset -eo pipefail\nmake -f "$(PWD)/Makefile" pre-commit exec_args="-T"\n' > "$(PWD)/.git/hooks/pre-commit"
+	chmod ug+x "$(PWD)/.git/hooks/pre-commit"
+	printf '#!/bin/bash\nMSG_FILE=$$1\ndocker compose run -T fastapi cz check --allow-abort --commit-msg-file $$MSG_FILE\n' > "$(PWD)/.git/hooks/commit-msg"
+	chmod ug+x "$(PWD)/.git/hooks/commit-msg"
+
+test: ## Run the tests
+	docker compose run ${exec_args} --rm fastapi sh -c " \
+                set -e; \
+		pytest --cov --cov-report=term --cov-report=html --cov-report=xml --cov-report=json ${args}; \
+	"
+
+bash: ## Open bash
+	docker compose run ${exec_args} --rm fastapi bash
+
+make-migrations: ## Create migrations
+	docker compose run ${exec_args} --rm fastapi alembic -c /app/src/event_sourcing/infrastructure/database/alembic/alembic.ini revision --autogenerate
+
+migrate: ## Apply migrations
+	docker compose run ${exec_args} --rm fastapi alembic -c /app/src/event_sourcing/infrastructure/database/alembic/alembic.ini upgrade head
+
+rollback: ## Rollback migrations
+	docker compose run ${exec_args} --rm fastapi alembic -c /app/src/event_sourcing/infrastructure/database/alembic/alembic.ini downgrade ${args}
+
+dbshell: ## Open PSQL shell
+	docker compose exec postgres psql -U admin -d event_sourcing
+
+command: ## Run typer commands
+	docker compose run ${exec_args} --rm fastapi python $(command)
+
+swaggerhub: ## Generate SwaggerHub documentation
+	docker compose run ${exec_args} --rm fastapi python /app/src/event_sourcing/commands/generate_swagger.py test.yaml
+
+localstack: ## Open a shell on localstack
+	docker compose exec localstack bash
+
+shell: ## Open Python shell with enhanced experience
+	docker compose run ${exec_args} --rm fastapi sh -c " \
+		python -c 'from event_sourcing.main import app; from event_sourcing.config import settings' && \
+		ipython -i -c '\
+from event_sourcing.main import app; \
+from event_sourcing.config import settings; \
+from event_sourcing.db.models import *; \
+from event_sourcing.db.session import async_session; \
+from event_sourcing.config.celery_app import app as celery_app; \
+session = async_session(); \
+print(\"\"\"\nFastAPI Shell Plus\n\nAvailable imports:\n  - app: FastAPI application\n  - settings: Application settings\n  - celery_app: Celery application\n\nAvailable instances:\n  - session: Active database session\n\"\"\")' \
+	"
+
+# Presentation commands
 install-marp: ## Install marp-cli globally
 	@echo "Installing Marp CLI..."
 	npm install -g @marp-team/marp-cli
@@ -43,69 +123,30 @@ generate-diagrams: install-mermaid-cli create-directories ## Generate diagrams f
 		echo "Example architecture diagram created!"; \
 	fi
 
-create-presentation: install-marp generate-diagrams ## Generate presentation PDF from markdown
+pdf: install-marp generate-diagrams ## Generate presentation PDF from markdown
 	@echo "Generating presentation PDF..."
-	marp presentation.md --pdf --allow-local-files --output presentation.pdf
+	marp docs/presentation.md --pdf --allow-local-files --output docs/presentation.pdf
 	@echo "Presentation PDF generated successfully!"
 
-create-html: install-marp generate-diagrams ## Generate presentation HTML from markdown
+html: install-marp generate-diagrams ## Generate presentation HTML from markdown
 	@echo "Generating presentation HTML..."
-	marp presentation.md --html --allow-local-files --output presentation.html
+	marp docs/presentation.md --html --allow-local-files --output docs/presentation.html
 	@echo "Presentation HTML generated successfully!"
 
-create-pptx: install-marp generate-diagrams ## Generate presentation PowerPoint from markdown
+pptx: install-marp generate-diagrams ## Generate presentation PowerPoint from markdown
 	@echo "Generating presentation PowerPoint..."
-	marp presentation.md --pptx --allow-local-files --output presentation.pptx
+	marp docs/presentation.md --pptx --allow-local-files --output docs/presentation.pptx
 	@echo "Presentation PowerPoint generated successfully!"
-
-serve-presentation: install-marp generate-diagrams ## Serve presentation locally for preview
-	@echo "Starting local server for presentation preview..."
-	@echo "Open http://localhost:8080 in your browser"
-	marp presentation.md --server --allow-local-files
 
 clean: ## Clean generated files
 	@echo "Cleaning generated files..."
-	rm -f presentation.pdf presentation.html presentation.pptx
+	rm -f docs/presentation.pdf docs/presentation.html docs/presentation.pptx
 	rm -rf diagrams/generated/*
 	@echo "Cleanup completed!"
 
 setup: install-marp install-mermaid-cli create-directories ## Complete setup for presentation development
 	@echo "Setup completed! You can now:"
-	@echo "  - Run 'make create-presentation' to generate PDF"
-	@echo "  - Run 'make serve-presentation' to preview locally"
+	@echo "  - Run 'make pdf' to generate PDF"
 	@echo "  - Add Mermaid diagrams to diagrams/source/"
 
-watch: ## Watch for changes and regenerate presentation
-	@echo "Watching for changes in presentation.md..."
-	@echo "Press Ctrl+C to stop"
-	@while true; do \
-		inotifywait -e modify presentation.md; \
-		echo "Change detected, regenerating..."; \
-		make create-presentation; \
-	done
-
-# Development helpers
-check-marp: ## Check if Marp is installed
-	@if command -v marp >/dev/null 2>&1; then \
-		echo "Marp CLI is installed"; \
-		marp --version; \
-	else \
-		echo "Marp CLI is not installed. Run 'make install-marp'"; \
-	fi
-
-check-mermaid: ## Check if Mermaid CLI is installed
-	@if command -v mmdc >/dev/null 2>&1; then \
-		echo "Mermaid CLI is installed"; \
-		mmdc --version; \
-	else \
-		echo "Mermaid CLI is not installed. Run 'make install-mermaid-cli'"; \
-	fi
-
-validate: check-marp check-mermaid ## Validate all dependencies are installed
-	@echo "All dependencies validated!"
-
-# Quick commands
-pdf: create-presentation ## Quick alias for create-presentation
-html: create-html ## Quick alias for create-html
-pptx: create-pptx ## Quick alias for create-pptx
-serve: serve-presentation ## Quick alias for serve-presentation 
+.PHONY: $(shell grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | cut -d ':' -f 1)

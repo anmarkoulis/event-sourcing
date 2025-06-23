@@ -1,0 +1,21 @@
+{
+    "branches": ["main"],
+    "plugins": [
+        "@semantic-release/commit-analyzer",
+        "@semantic-release/release-notes-generator",
+        "@semantic-release/github",
+        [
+            "@semantic-release/changelog",
+            {
+                "changelogFile": "CHANGELOG.md"
+            }
+        ],
+        [
+            "@semantic-release/exec",
+            {
+                "analyzeCommitsCmd": "echo \"VERSION=${lastRelease.version}\" >> $GITHUB_OUTPUT",
+                "publishCmd": "echo \"VERSION=${nextRelease.version}\" >> $GITHUB_OUTPUT"
+            }
+        ]
+    ]
+}

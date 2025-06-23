@@ -1,161 +1,80 @@
-# PyCon Athens 2024 Presentation
+# Event Sourcing
 
-**How I Learned to Stop Worrying and Love Raw Events: Event Sourcing & CQRS with FastAPI and Celery**
+This is an example Event Sourcing project
 
-## Overview
+## Prerequisites
 
-This repository contains the presentation materials for the PyCon Athens 2024 talk about Event Sourcing and CQRS using Python technologies.
+In order to be able to run Event Sourcing locally the following are required:
 
-## Files
+* `docker`. Use instructions from [here](https://docs.docker.com/get-docker/) and [here](https://docs.docker.com/engine/install/linux-postinstall/)
+* `docker compose`. Use instructions from [here](https://docs.docker.com/compose/install/)
 
-- `presentation.md` - The main presentation in Marp format
-- `notes.md` - Detailed speaker notes for each slide
-- `Makefile` - Build automation for generating PDFs and diagrams
-- `diagrams/source/` - Mermaid diagram source files
-- `diagrams/generated/` - Generated diagram images (created by Makefile)
+## Installation
 
-## Quick Start
-
-### 1. Setup
+1. Clone the repository:
 
 ```bash
-# Install dependencies and setup directories
-make setup
+git clone git@github.com:anmarkoulis/pycon-gr.git
 ```
 
-This will install:
-- Marp CLI for presentation generation
-- Mermaid CLI for diagram generation
-- Create necessary directories
-
-### 2. Generate Presentation
+2. Navigate to the project directory:
 
 ```bash
-# Generate PDF
-make create-presentation
-
-# Generate HTML
-make create-html
-
-# Generate PowerPoint
-make create-pptx
+cd pycon-gr
 ```
 
-### 3. Preview Locally
+3. Build the Docker image:
 
 ```bash
-# Start local server for preview
-make serve-presentation
-```
+make build
+````
 
-Then open http://localhost:8080 in your browser.
+## Usage
 
-## Available Commands
-
-Run `make help` to see all available commands:
+To run the application, use the following command:
 
 ```bash
-make help
-```
+make up
+````
 
-### Key Commands
+## Testing
 
-- `make setup` - Complete initial setup
-- `make create-presentation` - Generate PDF presentation
-- `make serve-presentation` - Preview locally
-- `make generate-diagrams` - Generate diagrams from Mermaid files
-- `make clean` - Clean generated files
-- `make watch` - Watch for changes and auto-regenerate
+To test the application, use the following command:
 
-## Customization
-
-### Adding Diagrams
-
-1. Create Mermaid files in `diagrams/source/` with `.mmd` extension
-2. Run `make generate-diagrams` to generate PNG images
-3. Reference images in your presentation
-
-Example diagram file (`diagrams/source/my-diagram.mmd`):
-```mermaid
-graph TD
-    A[Start] --> B[Process]
-    B --> C[End]
-```
-
-### Modifying the Presentation
-
-1. Edit `presentation.md` using the Marp syntax
-2. Run `make create-presentation` to regenerate PDF
-3. Use `make serve-presentation` for live preview
-
-### Updating Speaker Notes
-
-1. Edit `notes.md` with your speaking notes
-2. Each slide has timing, key points, and speaking notes
-3. Adjust timing and content as needed
-
-## Presentation Structure
-
-The presentation follows this 30-minute structure:
-
-1. **Intro & Motivation** (7 min) - Slides 1-5
-2. **Core Concepts** (5 min) - Slides 6-8  
-3. **Architecture Walkthrough** (12 min) - Slides 9-16
-4. **Real-World Patterns** (8 min) - Slides 17-22
-5. **Key Takeaways** (3 min) - Slides 23-27
-
-## Theme
-
-The presentation uses a Python-themed color scheme:
-- Primary: `#306998` (Python Blue)
-- Secondary: `#FFD43B` (Python Yellow)
-- Background: `#1E1E1E` (Dark)
-- Text: `#E0E0E0` (Light)
-
-## Dependencies
-
-- Node.js and npm (for Marp and Mermaid CLI)
-- Make (for build automation)
-
-## Troubleshooting
-
-### Marp Installation Issues
-
+Run
 ```bash
-# If global install fails, try:
-npm install -g @marp-team/marp-cli --unsafe-perm
+make test
 ```
 
-### Mermaid Installation Issues
+It will run the tests, compute the coverage and export coverage reports in the console and in html and xml format.
 
-```bash
-# If global install fails, try:
-npm install -g @mermaid-js/mermaid-cli --unsafe-perm
-```
+## Development commands
 
-### Permission Issues
+The following make commands are available for development and interaction with the service:
 
-```bash
-# On macOS/Linux, you might need:
-sudo npm install -g @marp-team/marp-cli @mermaid-js/mermaid-cli
-```
+* `make down`:  Stops the running containers
+* `make down-volumes`: Stops the running containers and deletes the volumes.
+* `make restart`:  Stops, restarts the containers and shows the logs of the application.
+* `aws-vault exec [aws-role] -- make full-restart`: Stops the running containers and removes their volumes, builds and restarts the containers and shows the logs of the application.
+* `make logs`:  Shows the logs of the application.
+* `make install-pre-commit`: Install pre-commit via docker.
+* `make pre-commit args="<args>"`: Runs precommits based on the provided args.
+* `make make-migrations`: Populates the migrations.
+* `make migrate`: Executes the migrations.
+* `make rollback args="<args>"`. Rollback to the specified migration
+* `make bash`: Open bash inside the fastapi container.
+* `make dbshell`: Opens a PSQL shell.
+* `make uv args="<command>"`: Execute commands via uv.
+* `make lock`: Lock dependencies using uv.
+* `make command command=<command>"`. Execute the given command based on its path.
+* `make swaggerhub`. Populate the swaggerhub definition.
+* `make localstack`. Open bash inside the localstack container.
 
-## Demo Code
+## Built With
 
-The presentation references a demo that should be built separately. Consider creating:
+* [FastAPI](https://fastapi.tiangolo.com/) - The web framework used
 
-- FastAPI application with event sourcing
-- Celery workers for event processing
-- SQLite event store
-- Real-time event replay functionality
+## Versioning
 
-## Resources
-
-- [Marp Documentation](https://marp.app/)
-- [Mermaid Documentation](https://mermaid.js.org/)
-- [Event Sourcing Resources](https://martinfowler.com/eaaDev/EventSourcing.html)
-- [CQRS Resources](https://martinfowler.com/bliki/CQRS.html)
-
-## License
-
-This presentation is created for PyCon Athens 2024. Feel free to adapt and use for your own presentations. 
+We use [SemVer](http://semver.org/) for versioning. For the versions available, see the [releases on this repository](https://github.com/anmarkoulis/pycon-gr/releases).
+A new version is automatically released if new code is merged in the main branch.

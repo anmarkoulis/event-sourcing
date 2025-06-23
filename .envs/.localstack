@@ -1,0 +1,7 @@
+SERVICES=sqs,cloudformation
+DEBUG=1
+DATA_DIR=/tmp/localstack/data
+HOST_TMP_FOLDER=/tmp/localstack
+DISABLE_CORS_CHECKS=1
+AWS_DEFAULT_REGION=us-east-1
+LOCALSTACK_HOST=localstack
