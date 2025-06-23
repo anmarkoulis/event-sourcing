@@ -4,7 +4,8 @@ from fastapi import Depends
 from .context import lifespan_context
 from ..infrastructure.factory import InfrastructureFactory
 from ..config.settings import settings
-from ..application.services.dependency_service import DependencyService, get_infrastructure_factory
+from ..application.services.dependency_service import DependencyService
+from ..application.services.infrastructure import get_infrastructure_factory
 
 
 def get_database_url() -> str:

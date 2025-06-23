@@ -1,9 +1,11 @@
 from typing import Annotated
 from fastapi import Depends
 
+from .infrastructure import get_infrastructure_factory
 from ...infrastructure.factory import InfrastructureFactory
 from ...config.settings import settings
 from ..commands.handlers.process_salesforce_event import ProcessSalesforceEventCommandHandler
+from ..commands.handlers.async_process_salesforce_event import AsyncProcessSalesforceEventCommandHandler
 from ..services.backfill import BackfillService
 
 
@@ -36,6 +38,11 @@ class DependencyService:
             event_publisher=event_publisher,
             backfill_service=backfill_service
         )
+    
+    @staticmethod
+    def get_async_process_salesforce_event_command_handler() -> AsyncProcessSalesforceEventCommandHandler:
+        """Get AsyncProcessSalesforceEventCommandHandler (no dependencies needed)"""
+        return AsyncProcessSalesforceEventCommandHandler()
     
     @staticmethod
     def get_read_model(

@@ -13,8 +13,8 @@ app = Celery("event_sourcing", broker=settings.CELERY_CONFIG.broker_url)
 #   should have a `CELERY_` prefix.
 app.config_from_object(settings.CELERY_CONFIG)
 
-# Load task modules from all domains.
-app.autodiscover_tasks(packages=["event_sourcing.tasks"])
+# Load task modules from application layer.
+app.autodiscover_tasks(packages=["event_sourcing.application.tasks"])
 
 
 @setup_logging.connect
