@@ -1,1 +1,1 @@
-# Domain layer - Business logic and domain models 
+# Domain layer - Business logic and domain models

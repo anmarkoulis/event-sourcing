@@ -1,1 +1,1 @@
-# Infrastructure layer - External concerns and implementations 
+# Infrastructure layer - External concerns and implementations

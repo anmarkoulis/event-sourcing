@@ -32,7 +32,7 @@ services:
     command: /start
     depends_on:
       - postgres
-      
+
 
   migrator:
     <<: *fastapi-common
@@ -50,7 +50,7 @@ services:
     depends_on:
       - postgres
       - migrator
-      
+
 
   postgres:
     image: postgres:16.6
@@ -67,9 +67,9 @@ services:
       - event_sourcing_local_postgres_data_backups:/backups:z
     env_file:
       - ./.envs/.postgres
-  
 
-  
+
+
   localstack:
     container_name: event_sourcing_localstack
     image: localstack/localstack:3.5.0
@@ -88,7 +88,7 @@ services:
     volumes:
       - "./localstack/scripts:/etc/localstack/init/ready.d/"
       - "/var/run/docker.sock:/var/run/docker.sock"
-  
+
 
   celeryworker:
     <<: *fastapi-common

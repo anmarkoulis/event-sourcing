@@ -1,11 +1,10 @@
-from typing import Generator
-from fastapi import Depends
-
-from .context import lifespan_context
-from ..infrastructure.factory import InfrastructureFactory
-from ..config.settings import settings
-from ..application.services.dependency_service import DependencyService
-from ..application.services.infrastructure import get_infrastructure_factory
+from event_sourcing.application.services.dependency_service import (
+    DependencyService,
+)
+from event_sourcing.application.services.infrastructure import (
+    get_infrastructure_factory,
+)
+from event_sourcing.config.settings import settings
 
 
 def get_database_url() -> str:

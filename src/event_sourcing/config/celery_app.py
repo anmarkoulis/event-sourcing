@@ -3,6 +3,7 @@ from typing import Any
 
 from celery import Celery
 from celery.signals import setup_logging
+
 from event_sourcing.config.settings import settings
 
 app = Celery("event_sourcing", broker=settings.CELERY_CONFIG.broker_url)

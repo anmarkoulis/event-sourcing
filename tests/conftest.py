@@ -1,5 +1,5 @@
-
 from typing import Any, AsyncGenerator
+
 import asyncpg
 import httpx
 import pytest
@@ -9,10 +9,13 @@ from sqlalchemy.ext.asyncio import (
     AsyncSession,
     create_async_engine,
 )
-from event_sourcing.db.models.base import Base
+
 from event_sourcing.api.depends import get_db
 from event_sourcing.config.settings import settings
+from event_sourcing.db.models.base import Base
 from event_sourcing.main import app
+
+
 async def create_database_if_not_exists() -> None:
     test_database_url = make_url(settings.TEST_DATABASE_URL)
     try:
@@ -61,9 +64,12 @@ async def db(db_engine: Any) -> AsyncGenerator:
     await connection.rollback()
     await connection.close()
 
+
 @pytest.fixture(scope="session")
 def anyio_backend() -> str:
     return "asyncio"
+
+
 @pytest.fixture(scope="function")
 async def app_with_test_db(db: AsyncSession) -> Any:
     """
@@ -78,10 +84,10 @@ async def app_with_test_db(db: AsyncSession) -> Any:
 
     app.dependency_overrides.clear()
 
+
 @pytest.fixture
 async def async_client() -> AsyncGenerator:
     async with httpx.AsyncClient(
-        transport=httpx.ASGITransport(app=app),
-          base_url="http://test"
+        transport=httpx.ASGITransport(app=app), base_url="http://test"
     ) as client:
         yield client

@@ -1,20 +1,19 @@
-from typing import Dict, Any, Optional, List
-from datetime import datetime
 import logging
+from datetime import datetime
+from typing import Any, Dict, List, Optional
 
-from .salesforce import SalesforceAggregate
-from ..events.base import DomainEvent
-from ..events.client import ClientCreatedEvent, ClientUpdatedEvent, ClientDeletedEvent
+from event_sourcing.domain.aggregates.salesforce import SalesforceAggregate
+from event_sourcing.domain.events.base import DomainEvent
 
 logger = logging.getLogger(__name__)
 
 
 class ClientAggregate(SalesforceAggregate):
     """Client domain aggregate - encapsulates client business logic"""
-    
+
     def __init__(self, aggregate_id: str):
         super().__init__(aggregate_id, "Account")
-        
+
         # Client-specific attributes
         self.name: Optional[str] = None
         self.parent_id: Optional[str] = None
@@ -30,7 +29,7 @@ class ClientAggregate(SalesforceAggregate):
         self.last_modified_date: Optional[datetime] = None
         self.system_modified_stamp: Optional[datetime] = None
         self.last_activity_date: Optional[datetime] = None
-    
+
     def apply(self, event: DomainEvent) -> None:
         """Apply a domain event to the client aggregate state"""
         if event.event_type == "Created":
@@ -41,13 +40,13 @@ class ClientAggregate(SalesforceAggregate):
             self._apply_deleted_event(event)
         else:
             logger.warning(f"Unknown event type: {event.event_type}")
-        
+
         self.increment_version()
-    
+
     def create_from_salesforce(self, data: dict) -> None:
         """Create client from Salesforce data"""
         mapped_data = self.apply_mappings(data)
-        
+
         # Apply mapped data to aggregate state
         self.name = mapped_data.get("name")
         self.parent_id = mapped_data.get("parent_id")
@@ -63,20 +62,20 @@ class ClientAggregate(SalesforceAggregate):
         self.last_modified_date = mapped_data.get("last_modified_date")
         self.system_modified_stamp = mapped_data.get("system_modified_stamp")
         self.last_activity_date = mapped_data.get("last_activity_date")
-        
+
         # Set creation timestamp
         created_date = mapped_data.get("created_date")
         if created_date:
             self.set_created_at(created_date)
         else:
             self.set_created_at(datetime.utcnow())
-        
+
         self.increment_version()
-    
+
     def update_from_salesforce(self, data: dict) -> None:
         """Update client from Salesforce data"""
         mapped_data = self.apply_mappings(data)
-        
+
         # Update only provided fields
         if "name" in mapped_data:
             self.name = mapped_data["name"]
@@ -106,14 +105,14 @@ class ClientAggregate(SalesforceAggregate):
             self.system_modified_stamp = mapped_data["system_modified_stamp"]
         if "last_activity_date" in mapped_data:
             self.last_activity_date = mapped_data["last_activity_date"]
-        
+
         self.increment_version()
-    
+
     def delete_from_salesforce(self, data: dict) -> None:
         """Mark client as deleted from Salesforce data"""
         self.is_deleted = True
         self.increment_version()
-    
+
     def _apply_created_event(self, event: DomainEvent) -> None:
         """Apply client created event"""
         data = event.data
@@ -131,14 +130,14 @@ class ClientAggregate(SalesforceAggregate):
         self.last_modified_date = data.get("last_modified_date")
         self.system_modified_stamp = data.get("system_modified_stamp")
         self.last_activity_date = data.get("last_activity_date")
-        
+
         # Set creation timestamp
         created_date = data.get("created_date")
         if created_date:
             self.set_created_at(created_date)
         else:
             self.set_created_at(event.timestamp)
-    
+
     def _apply_updated_event(self, event: DomainEvent) -> None:
         """Apply client updated event"""
         data = event.data
@@ -171,11 +170,11 @@ class ClientAggregate(SalesforceAggregate):
             self.system_modified_stamp = data["system_modified_stamp"]
         if "last_activity_date" in data:
             self.last_activity_date = data["last_activity_date"]
-    
+
     def _apply_deleted_event(self, event: DomainEvent) -> None:
         """Apply client deleted event"""
         self.is_deleted = True
-    
+
     def get_snapshot(self) -> Dict[str, Any]:
         """Return current client state snapshot"""
         base_snapshot = super().get_snapshot()
@@ -195,4 +194,4 @@ class ClientAggregate(SalesforceAggregate):
             "system_modified_stamp": self.system_modified_stamp,
             "last_activity_date": self.last_activity_date,
         }
-        return {**base_snapshot, **client_snapshot} 
+        return {**base_snapshot, **client_snapshot}

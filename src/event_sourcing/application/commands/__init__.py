@@ -1,1 +1,1 @@
-# Commands - Intentions to change system state 
+# Commands - Intentions to change system state

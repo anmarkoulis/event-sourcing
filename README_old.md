@@ -99,7 +99,7 @@ graph TD
 The presentation follows this 30-minute structure:
 
 1. **Intro & Motivation** (7 min) - Slides 1-5
-2. **Core Concepts** (5 min) - Slides 6-8  
+2. **Core Concepts** (5 min) - Slides 6-8
 3. **Architecture Walkthrough** (12 min) - Slides 9-16
 4. **Real-World Patterns** (8 min) - Slides 17-22
 5. **Key Takeaways** (3 min) - Slides 23-27
@@ -158,4 +158,4 @@ The presentation references a demo that should be built separately. Consider cre
 
 ## License
 
-This presentation is created for PyCon Athens 2025. Feel free to adapt and use for your own presentations. 
+This presentation is created for PyCon Athens 2025. Feel free to adapt and use for your own presentations.

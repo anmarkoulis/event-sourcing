@@ -14,7 +14,9 @@ class RequestLoggingMiddleware(BaseHTTPMiddleware):
     Middleware to log all incoming requests, including headers, method, and payload.
     """
 
-    async def dispatch(self, request: Request, call_next: Callable) -> Response:
+    async def dispatch(
+        self, request: Request, call_next: Callable
+    ) -> Response:
         try:
             body = await request.json()
         except json.JSONDecodeError:

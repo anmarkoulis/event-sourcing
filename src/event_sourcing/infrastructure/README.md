@@ -180,4 +180,4 @@ await factory.close()
 - Database connection pool metrics
 - Query performance monitoring
 - Event processing latency
-- Error rates and retry counts 
+- Error rates and retry counts

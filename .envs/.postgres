@@ -6,4 +6,3 @@ POSTGRES_DB=event_sourcing
 POSTGRES_USER=admin
 POSTGRES_PASSWORD=admin  # pragma: allowlist secret
 DATABASE_URL=postgresql+asyncpg://admin:admin@postgres:5432/event_sourcing  # pragma: allowlist secret
-

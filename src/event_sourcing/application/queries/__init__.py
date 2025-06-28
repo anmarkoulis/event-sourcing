@@ -1,1 +1,1 @@
-# Queries - Read-only operations against read model 
+# Queries - Read-only operations against read model

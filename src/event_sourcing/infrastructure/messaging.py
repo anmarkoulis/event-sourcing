@@ -1,26 +1,24 @@
-from abc import ABC, abstractmethod
-from typing import Dict, Any
-import json
 import logging
+from abc import ABC, abstractmethod
+from typing import Any, Dict
 
 logger = logging.getLogger(__name__)
 
 
 class EventPublisher(ABC):
     """Abstract event publisher interface"""
-    
+
     @abstractmethod
     async def publish(self, event_data: Dict[str, Any]) -> None:
         """Publish event data"""
-        pass
 
 
 class EventBridgePublisher(EventPublisher):
     """EventBridge implementation of event publisher"""
-    
+
     def __init__(self, region_name: str = "us-east-1"):
         self.region_name = region_name
-    
+
     async def publish(self, event_data: Dict[str, Any]) -> None:
         """Publish normalized entity to EventBridge"""
         try:
@@ -34,8 +32,10 @@ class EventBridgePublisher(EventPublisher):
             #         'EventBusName': 'default'
             #     }]
             # )
-            
-            logger.info(f"Published event to EventBridge: {event_data.get('aggregate_id')}")
+
+            logger.info(
+                f"Published event to EventBridge: {event_data.get('aggregate_id')}"
+            )
         except Exception as e:
             logger.error(f"Failed to publish event to EventBridge: {e}")
             raise EventPublishException(f"Failed to publish event: {e}")
@@ -43,4 +43,3 @@ class EventBridgePublisher(EventPublisher):
 
 class EventPublishException(Exception):
     """Raised when event publishing fails"""
-    pass 

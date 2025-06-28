@@ -1,7 +1,7 @@
 from logging import getLogger
 from typing import List
-from environs import Env
 
+from environs import Env
 from pydantic import BaseModel
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
@@ -16,8 +16,8 @@ def get_logging_config(log_level: str, log_format: str = "json") -> dict:
         "formatters": {
             "verbose": {
                 "format": "{levelname} {asctime} {process} {thread} "
-                          "{pathname}:{funcName}:{lineno} - {message}",
-                'style': '{',
+                "{pathname}:{funcName}:{lineno} - {message}",
+                "style": "{",
             },
         },
         "handlers": {
@@ -33,7 +33,7 @@ def get_logging_config(log_level: str, log_format: str = "json") -> dict:
                 "level": log_level,
                 "propagate": False,
             },
-        }
+        },
     }
 
 
@@ -51,14 +51,14 @@ class CeleryConfig(BaseModel):
     )
     broker_transport_options: dict = {
         # 'visibility_timeout': 3600,
-        'polling_interval': 10,
+        "polling_interval": 10,
         "wait_time_seconds": 10,  # valid values: 0 - 20
         # 'region': 'us-east-1'
-        'predefined_queues': {
-            'celery': {
-                'url': env.str("CELERY_QUEUE_URL"),
+        "predefined_queues": {
+            "celery": {
+                "url": env.str("CELERY_QUEUE_URL"),
             }
-        }
+        },
     }
     broker_transport: str = "sqs"
     worker_send_task_events: bool = True
@@ -77,16 +77,14 @@ class Settings(BaseSettings):
     BACKEND_CORS_ORIGINS: List = env.list("BACKEND_CORS_ORIGINS")
     ALLOWED_HOSTS: List = env.list("ALLOWED_HOSTS")
     DATABASE_URL: str = env.str("DATABASE_URL", "")
-    TEST_DATABASE_URL: str = DATABASE_URL.replace(
-        "event_sourcing", "test"
-    )
+    TEST_DATABASE_URL: str = DATABASE_URL.replace("event_sourcing", "test")
     # Celery
     # ------------------------------------------------------------------------------
     CELERY_CONFIG: CeleryConfig = CeleryConfig()
     DEBUG: bool = False
     LOGGING_CONFIG: dict = get_logging_config(
-        env.str("LOGGING_LEVEL", "INFO"),
-        env.str("LOGGING_FORMAT", "json"))
+        env.str("LOGGING_LEVEL", "INFO"), env.str("LOGGING_FORMAT", "json")
+    )
 
 
 settings = Settings()

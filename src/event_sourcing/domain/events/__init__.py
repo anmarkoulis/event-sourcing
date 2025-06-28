@@ -1,1 +1,1 @@
-# Domain events - Business events that have occurred 
+# Domain events - Business events that have occurred

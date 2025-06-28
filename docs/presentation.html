@@ -154,10 +154,10 @@ app = FastAPI()
         name=command.name,
         email=command.email
     )
-    
+
     <span class="hljs-keyword">await</span> event_store.append(event)
     <span class="hljs-keyword">await</span> event_bus.publish(event)
-    
+
     <span class="hljs-keyword">return</span> {<span class="hljs-string">&quot;user_id&quot;</span>: event.user_id, <span class="hljs-string">&quot;status&quot;</span>: <span class="hljs-string">&quot;processing&quot;</span>}
 </code></pre>
 </section>
@@ -176,10 +176,10 @@ celery_app = Celery(<span class="hljs-string">&#x27;event_processor&#x27;</span>
         email=event.email,
         created_at=event.timestamp
     )
-    
+
     <span class="hljs-comment"># Update read model</span>
     read_model.save_user(user)
-    
+
     <span class="hljs-comment"># Send welcome email</span>
     email_service.send_welcome(event.email)
 
@@ -187,7 +187,7 @@ celery_app = Celery(<span class="hljs-string">&#x27;event_processor&#x27;</span>
 <span class="hljs-keyword">def</span> <span class="hljs-title function_">process_user_name_changed</span>(<span class="hljs-params">event: UserNameChanged</span>):
     <span class="hljs-comment"># Update read model</span>
     read_model.update_user_name(event.user_id, event.new_name)
-    
+
     <span class="hljs-comment"># Notify other services</span>
     notification_service.notify_name_change(event)
 </code></pre>
@@ -197,23 +197,23 @@ celery_app = Celery(<span class="hljs-string">&#x27;event_processor&#x27;</span>
 <pre is="marp-pre" data-auto-scaling="downscale-only"><code class="language-python"><span class="hljs-keyword">class</span> <span class="hljs-title class_">EventStore</span>:
     <span class="hljs-keyword">def</span> <span class="hljs-title function_">__init__</span>(<span class="hljs-params">self, db: Database</span>):
         <span class="hljs-variable language_">self</span>.db = db
-    
+
     <span class="hljs-keyword">async</span> <span class="hljs-keyword">def</span> <span class="hljs-title function_">append</span>(<span class="hljs-params">self, event: Event</span>):
         <span class="hljs-comment"># Append-only operation</span>
         <span class="hljs-keyword">await</span> <span class="hljs-variable language_">self</span>.db.execute(<span class="hljs-string">&quot;&quot;&quot;
             INSERT INTO events (stream_id, event_type, data, version)
             VALUES ($1, $2, $3, $4)
-        &quot;&quot;&quot;</span>, event.stream_id, event.__class__.__name__, 
+        &quot;&quot;&quot;</span>, event.stream_id, event.__class__.__name__,
              event.model_dump(), event.version)
-    
+
     <span class="hljs-keyword">async</span> <span class="hljs-keyword">def</span> <span class="hljs-title function_">get_stream</span>(<span class="hljs-params">self, stream_id: <span class="hljs-built_in">str</span>, from_version: <span class="hljs-built_in">int</span> = <span class="hljs-number">0</span></span>):
         <span class="hljs-comment"># Get all events for a stream</span>
         rows = <span class="hljs-keyword">await</span> <span class="hljs-variable language_">self</span>.db.fetch(<span class="hljs-string">&quot;&quot;&quot;
-            SELECT * FROM events 
+            SELECT * FROM events
             WHERE stream_id = $1 AND version &gt; $2
             ORDER BY version
         &quot;&quot;&quot;</span>, stream_id, from_version)
-        
+
         <span class="hljs-keyword">return</span> [deserialize_event(row) <span class="hljs-keyword">for</span> row <span class="hljs-keyword">in</span> rows]
 </code></pre>
 </section>
@@ -225,7 +225,7 @@ celery_app = Celery(<span class="hljs-string">&#x27;event_processor&#x27;</span>
         <span class="hljs-variable language_">self</span>.name = <span class="hljs-literal">None</span>
         <span class="hljs-variable language_">self</span>.email = <span class="hljs-literal">None</span>
         <span class="hljs-variable language_">self</span>.version = <span class="hljs-number">0</span>
-    
+
     <span class="hljs-keyword">def</span> <span class="hljs-title function_">apply</span>(<span class="hljs-params">self, event: Event</span>):
         <span class="hljs-keyword">if</span> <span class="hljs-built_in">isinstance</span>(event, UserCreated):
             <span class="hljs-variable language_">self</span>.<span class="hljs-built_in">id</span> = event.user_id
@@ -233,16 +233,16 @@ celery_app = Celery(<span class="hljs-string">&#x27;event_processor&#x27;</span>
             <span class="hljs-variable language_">self</span>.email = event.email
         <span class="hljs-keyword">elif</span> <span class="hljs-built_in">isinstance</span>(event, UserNameChanged):
             <span class="hljs-variable language_">self</span>.name = event.new_name
-        
+
         <span class="hljs-variable language_">self</span>.version += <span class="hljs-number">1</span>
 
 <span class="hljs-keyword">def</span> <span class="hljs-title function_">build_user_state</span>(<span class="hljs-params">user_id: <span class="hljs-built_in">str</span></span>) -&gt; UserAggregate:
     events = event_store.get_stream(<span class="hljs-string">f&quot;user-<span class="hljs-subst">{user_id}</span>&quot;</span>)
     user = UserAggregate()
-    
+
     <span class="hljs-keyword">for</span> event <span class="hljs-keyword">in</span> events:
         user.apply(event)
-    
+
     <span class="hljs-keyword">return</span> user
 </code></pre>
 </section>
@@ -251,25 +251,25 @@ celery_app = Celery(<span class="hljs-string">&#x27;event_processor&#x27;</span>
 <pre is="marp-pre" data-auto-scaling="downscale-only"><code class="language-python"><span class="hljs-keyword">class</span> <span class="hljs-title class_">UserReadModel</span>:
     <span class="hljs-keyword">def</span> <span class="hljs-title function_">__init__</span>(<span class="hljs-params">self, db: Database</span>):
         <span class="hljs-variable language_">self</span>.db = db
-    
+
     <span class="hljs-keyword">async</span> <span class="hljs-keyword">def</span> <span class="hljs-title function_">get_user_by_id</span>(<span class="hljs-params">self, user_id: <span class="hljs-built_in">int</span></span>) -&gt; UserDTO:
         <span class="hljs-comment"># Fast, direct query</span>
         row = <span class="hljs-keyword">await</span> <span class="hljs-variable language_">self</span>.db.fetchrow(<span class="hljs-string">&quot;&quot;&quot;
             SELECT id, name, email, created_at, updated_at
             FROM users WHERE id = $1
         &quot;&quot;&quot;</span>, user_id)
-        
+
         <span class="hljs-keyword">return</span> UserDTO(**row) <span class="hljs-keyword">if</span> row <span class="hljs-keyword">else</span> <span class="hljs-literal">None</span>
-    
+
     <span class="hljs-keyword">async</span> <span class="hljs-keyword">def</span> <span class="hljs-title function_">search_users</span>(<span class="hljs-params">self, name_pattern: <span class="hljs-built_in">str</span></span>) -&gt; <span class="hljs-type">List</span>[UserDTO]:
         <span class="hljs-comment"># Optimized search</span>
         rows = <span class="hljs-keyword">await</span> <span class="hljs-variable language_">self</span>.db.fetch(<span class="hljs-string">&quot;&quot;&quot;
             SELECT id, name, email, created_at
-            FROM users 
+            FROM users
             WHERE name ILIKE $1
             ORDER BY created_at DESC
         &quot;&quot;&quot;</span>, <span class="hljs-string">f&quot;%<span class="hljs-subst">{name_pattern}</span>%&quot;</span>)
-        
+
         <span class="hljs-keyword">return</span> [UserDTO(**row) <span class="hljs-keyword">for</span> row <span class="hljs-keyword">in</span> rows]
 </code></pre>
 </section>
@@ -282,7 +282,7 @@ celery_app = Celery(<span class="hljs-string">&#x27;event_processor&#x27;</span>
     event = UserNameChanged(user_id, new_name)
     <span class="hljs-keyword">await</span> event_store.append(event)
     <span class="hljs-keyword">await</span> event_bus.publish(event)
-    
+
     <span class="hljs-keyword">return</span> {<span class="hljs-string">&quot;status&quot;</span>: <span class="hljs-string">&quot;processing&quot;</span>}  <span class="hljs-comment"># Immediate response</span>
 
 <span class="hljs-comment"># Query side - eventually consistent</span>
@@ -305,17 +305,17 @@ celery_app = Celery(<span class="hljs-string">&#x27;event_processor&#x27;</span>
 <span class="hljs-keyword">def</span> <span class="hljs-title function_">build_user_state</span>(<span class="hljs-params">user_id: <span class="hljs-built_in">str</span></span>) -&gt; UserAggregate:
     events = event_store.get_stream(<span class="hljs-string">f&quot;user-<span class="hljs-subst">{user_id}</span>&quot;</span>)  <span class="hljs-comment"># Could be 1000s of events</span>
     user = UserAggregate()
-    
+
     <span class="hljs-keyword">for</span> event <span class="hljs-keyword">in</span> events:  <span class="hljs-comment"># Expensive!</span>
         user.apply(event)
-    
+
     <span class="hljs-keyword">return</span> user
 </code></pre>
 <h2 id="with-snapshots">With snapshots:</h2>
 <pre is="marp-pre" data-auto-scaling="downscale-only"><code class="language-python"><span class="hljs-keyword">def</span> <span class="hljs-title function_">build_user_state</span>(<span class="hljs-params">user_id: <span class="hljs-built_in">str</span></span>) -&gt; UserAggregate:
     <span class="hljs-comment"># Try to get latest snapshot</span>
     snapshot = snapshot_store.get_latest(<span class="hljs-string">f&quot;user-<span class="hljs-subst">{user_id}</span>&quot;</span>)
-    
+
     <span class="hljs-keyword">if</span> snapshot:
         user = snapshot.state
         <span class="hljs-comment"># Only replay events after snapshot</span>
@@ -323,10 +323,10 @@ celery_app = Celery(<span class="hljs-string">&#x27;event_processor&#x27;</span>
     <span class="hljs-keyword">else</span>:
         user = UserAggregate()
         events = event_store.get_stream(<span class="hljs-string">f&quot;user-<span class="hljs-subst">{user_id}</span>&quot;</span>)
-    
+
     <span class="hljs-keyword">for</span> event <span class="hljs-keyword">in</span> events:
         user.apply(event)
-    
+
     <span class="hljs-keyword">return</span> user
 </code></pre>
 </section>
@@ -337,7 +337,7 @@ celery_app = Celery(<span class="hljs-string">&#x27;event_processor&#x27;</span>
 <span class="hljs-keyword">async</span> <span class="hljs-keyword">def</span> <span class="hljs-title function_">debug_user_issue</span>(<span class="hljs-params">user_id: <span class="hljs-built_in">int</span>, timestamp: datetime</span>):
     <span class="hljs-comment"># Get all events for the user</span>
     events = <span class="hljs-keyword">await</span> event_store.get_stream(<span class="hljs-string">f&quot;user-<span class="hljs-subst">{user_id}</span>&quot;</span>)
-    
+
     <span class="hljs-comment"># Replay to any point in time</span>
     user_state = UserAggregate()
     <span class="hljs-keyword">for</span> event <span class="hljs-keyword">in</span> events:
@@ -345,7 +345,7 @@ celery_app = Celery(<span class="hljs-string">&#x27;event_processor&#x27;</span>
             user_state.apply(event)
         <span class="hljs-keyword">else</span>:
             <span class="hljs-keyword">break</span>
-    
+
     <span class="hljs-keyword">return</span> user_state
 
 <span class="hljs-comment"># Compare states at different times</span>
@@ -369,10 +369,10 @@ UPDATE users SET name = <span class="hljs-string">&#x27;correct_name&#x27;</span
         new_name=correct_name,
         reason=<span class="hljs-string">&quot;Data correction&quot;</span>
     )
-    
+
     <span class="hljs-keyword">await</span> event_store.append(event)
     <span class="hljs-keyword">await</span> event_bus.publish(event)
-    
+
     <span class="hljs-comment"># All projections will be updated automatically</span>
 </code></pre>
 </section>
@@ -393,7 +393,7 @@ UPDATE users SET name = <span class="hljs-string">&#x27;correct_name&#x27;</span
 <span class="hljs-keyword">async</span> <span class="hljs-keyword">def</span> <span class="hljs-title function_">append_event</span>(<span class="hljs-params">event: Event</span>):
     expected_version = event.version
     actual_version = <span class="hljs-keyword">await</span> get_current_version(event.stream_id)
-    
+
     <span class="hljs-keyword">if</span> expected_version != actual_version:
         <span class="hljs-keyword">raise</span> ConcurrencyError(<span class="hljs-string">&quot;Version mismatch&quot;</span>)
 </code></pre>
@@ -436,12 +436,12 @@ read_db = get_shard_connection(shard_id)
         events = [
             UserCreated(user_id=<span class="hljs-number">1</span>, name=<span class="hljs-string">&quot;John&quot;</span>, email=<span class="hljs-string">&quot;john@example.com&quot;</span>)
         ]
-        
+
         <span class="hljs-comment"># When</span>
         user = UserAggregate()
         <span class="hljs-keyword">for</span> event <span class="hljs-keyword">in</span> events:
             user.apply(event)
-        
+
         <span class="hljs-comment"># Then</span>
         <span class="hljs-keyword">assert</span> user.name == <span class="hljs-string">&quot;John&quot;</span>
         <span class="hljs-keyword">assert</span> user.email == <span class="hljs-string">&quot;john@example.com&quot;</span>
@@ -450,11 +450,11 @@ read_db = get_shard_connection(shard_id)
     <span class="hljs-keyword">async</span> <span class="hljs-keyword">def</span> <span class="hljs-title function_">test_event_append_and_retrieve</span>(<span class="hljs-params">self</span>):
         <span class="hljs-comment"># Given</span>
         event = UserCreated(user_id=<span class="hljs-number">1</span>, name=<span class="hljs-string">&quot;John&quot;</span>, email=<span class="hljs-string">&quot;john@example.com&quot;</span>)
-        
+
         <span class="hljs-comment"># When</span>
         <span class="hljs-keyword">await</span> event_store.append(event)
         retrieved_events = <span class="hljs-keyword">await</span> event_store.get_stream(<span class="hljs-string">&quot;user-1&quot;</span>)
-        
+
         <span class="hljs-comment"># Then</span>
         <span class="hljs-keyword">assert</span> <span class="hljs-built_in">len</span>(retrieved_events) == <span class="hljs-number">1</span>
         <span class="hljs-keyword">assert</span> retrieved_events[<span class="hljs-number">0</span>].name == <span class="hljs-string">&quot;John&quot;</span>
@@ -468,7 +468,7 @@ read_db = get_shard_connection(shard_id)
 <span class="hljs-keyword">async</span> <span class="hljs-keyword">def</span> <span class="hljs-title function_">create_user</span>(<span class="hljs-params">command: CreateUserCommand</span>):
     <span class="hljs-comment"># Old way</span>
     <span class="hljs-keyword">await</span> old_db.create_user(command)
-    
+
     <span class="hljs-comment"># New way</span>
     event = UserCreated(user_id=generate_id(), **command.<span class="hljs-built_in">dict</span>())
     <span class="hljs-keyword">await</span> event_store.append(event)

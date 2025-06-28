@@ -10,8 +10,6 @@ from sqlalchemy.schema import SchemaItem
 
 from event_sourcing.config.settings import settings
 from event_sourcing.infrastructure.database.base import Base  # noqa
-from event_sourcing.infrastructure.database.models.event import Event
-from event_sourcing.infrastructure.database.models.client import Client
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.
@@ -133,4 +131,4 @@ async def run_migrations_online() -> None:
 if context.is_offline_mode():
     run_migrations_offline()
 else:
-    asyncio.run(run_migrations_online()) 
+    asyncio.run(run_migrations_online())

@@ -382,7 +382,7 @@
 
 **Timing Breakdown:**
 - Section 1: Intro & Motivation (Slides 1-7): 4 minutes
-- Section 2: Core Concepts (Slides 8-12): 5.5 minutes  
+- Section 2: Core Concepts (Slides 8-12): 5.5 minutes
 - Section 3: Architecture Walkthrough (Slides 13-20): 12 minutes
 - Section 4: Real-World Patterns (Slides 21-27): 7 minutes
 - Section 5: Key Takeaways (Slides 28-32): 3 minutes

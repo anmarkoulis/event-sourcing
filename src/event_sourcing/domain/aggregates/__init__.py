@@ -1,1 +1,1 @@
-# Domain aggregates - Business logic encapsulation 
+# Domain aggregates - Business logic encapsulation

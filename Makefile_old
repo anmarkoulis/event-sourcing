@@ -67,4 +67,4 @@ clean: ## Clean generated files
 setup: install-marp install-mermaid-cli create-directories ## Complete setup for presentation development
 	@echo "Setup completed! You can now:"
 	@echo "  - Run 'make pdf' to generate PDF"
-	@echo "  - Add Mermaid diagrams to diagrams/source/" 
+	@echo "  - Add Mermaid diagrams to diagrams/source/"

@@ -225,7 +225,7 @@ class ClientMappings:
 
 class MappingRegistry:
     """Central registry for all entity mappings"""
-    
+
     _mappings = {
         "Account": ClientMappings,
         "Platform__c": PlatformMappings,
@@ -234,11 +234,11 @@ class MappingRegistry:
         "OpportunityLineItem": ServiceMappings,
         "Product2": SubserviceMappings,
     }
-    
+
     @classmethod
     def get_mappings(cls, entity_name: str) -> Type[BaseMappings]:
         return cls._mappings.get(entity_name)
-    
+
     @classmethod
     def get_normalized_entity_name(cls, entity_name: str) -> str:
         normalization_dict = {
@@ -294,36 +294,36 @@ class ProcessSalesforceEventCommandHandler:
         self.projection_service = projection_service
         self.event_publisher = event_publisher
         self.backfill_service = backfill_service
-    
+
     async def handle(self, command: ProcessSalesforceEventCommand):
         logger.info(f"Processing Salesforce event: {command.data.raw_event}")
-        
+
         # 1. Parse and validate raw event
         parsed_events = self._parse_salesforce_event(command.data.raw_event)
-        
+
         for parsed_event in parsed_events:
             # 2. Validate event ordering and consistency
             is_valid = await self._validate_event_ordering(parsed_event)
             if not is_valid:
                 logger.warning(f"Event validation failed: {parsed_event}")
                 continue
-            
+
             # 3. Store raw event
             await self.event_store.save_event(parsed_event)
-            
+
             # 4. Reconstruct aggregate with mappings
             client = await self._reconstruct_aggregate(parsed_event.aggregate_id)
-            
+
             # 5. Update read model
             await self.projection_service.project_client(client)
-            
+
             # 6. Publish normalized entity
             await self.event_publisher.publish(client.get_snapshot())
-    
+
     async def _validate_event_ordering(self, event: DomainEvent) -> bool:
         """Validate event ordering and consistency"""
         existing_events = await self.event_store.get_events(event.aggregate_id, event.aggregate_type)
-        
+
         if event.event_type == "Created":
             if existing_events:
                 logger.warning(f"Creation event received for existing aggregate {event.aggregate_id}")
@@ -334,31 +334,31 @@ class ProcessSalesforceEventCommandHandler:
                 # Trigger backfill
                 await self.backfill_service.trigger_backfill(event.aggregate_id, event.aggregate_type)
                 return False
-        
+
         return True
-    
+
     async def _reconstruct_aggregate(self, aggregate_id: str) -> ClientAggregate:
         """Reconstruct aggregate from events with mappings applied"""
         events = await self.event_store.get_events(aggregate_id, "client")
         client = ClientAggregate(aggregate_id)
-        
+
         for event in events:
             # Apply mappings during reconstruction
             mapped_data = self._apply_mappings(event.data, "Account")
             event.data = mapped_data
             client.apply(event)
-        
+
         return client
-    
+
     def _apply_mappings(self, raw_data: dict, entity_name: str) -> dict:
         """Apply field mappings to raw data"""
         mappings_class = MappingRegistry.get_mappings(entity_name)
         if not mappings_class:
             return raw_data
-        
+
         mappings = mappings_class.get_mappings()
         mapped_data = {}
-        
+
         for key, mapping in mappings.items():
             try:
                 mapped_data[key] = (
@@ -368,7 +368,7 @@ class ProcessSalesforceEventCommandHandler:
                 )
             except KeyError:
                 continue
-        
+
         return mapped_data
 ```
 
@@ -390,55 +390,55 @@ class BackfillService:
         self.salesforce_client = salesforce_client
         self.command_bus = command_bus
         self.event_store = event_store
-    
+
     async def backfill_entity_type(self, entity_name: str) -> None:
         """Backfill all entities of a specific type"""
         logger.info(f"Starting backfill for entity type: {entity_name}")
-        
+
         page = 1
         page_size = 50
-        
+
         while True:
             has_next = await self._backfill_page(entity_name, page, page_size)
             if not has_next:
                 break
             page += 1
-        
+
         logger.info(f"Completed backfill for entity type: {entity_name}")
-    
+
     async def _backfill_page(self, entity_name: str, page: int, page_size: int) -> bool:
         """Process a single page of entities for backfill"""
         logger.debug(f"Fetching {entity_name} from Salesforce, page {page}")
-        
+
         entities_page = await self.salesforce_client.get_entities(
             entity=entity_name, page=page, page_size=page_size
         )
-        
+
         if not entities_page.results:
             logger.debug("No more entities to fetch")
             return False
-        
+
         for entity in entities_page.results:
             # Generate creation command for each entity
             creation_command = self._create_creation_command(entity, entity_name)
             await self.command_bus.send(creation_command)
-        
+
         return bool(entities_page.next)
-    
+
     async def trigger_backfill(self, aggregate_id: str, aggregate_type: str) -> None:
         """Trigger backfill for a specific aggregate"""
         logger.info(f"Triggering backfill for {aggregate_type} {aggregate_id}")
-        
+
         # Get entity from Salesforce
         entity = await self.salesforce_client.get_entity(aggregate_id, aggregate_type)
         if entity:
             creation_command = self._create_creation_command(entity, aggregate_type)
             await self.command_bus.send(creation_command)
-    
+
     def _create_creation_command(self, entity: dict, entity_name: str) -> Command:
         """Create a creation command from entity data"""
         normalized_entity_name = MappingRegistry.get_normalized_entity_name(entity_name)
-        
+
         if normalized_entity_name == "client":
             return CreateClientCommand(
                 client_id=entity["Id"],
@@ -446,7 +446,7 @@ class BackfillService:
                 metadata={"source": "backfill", "entity_name": entity_name}
             )
         # Add other entity types as needed
-    
+
     async def get_backfill_status(self, entity_type: str) -> Dict[str, Any]:
         """Get status of backfill operation"""
         # Implementation for tracking backfill progress
@@ -466,26 +466,26 @@ class BackfillService:
 ```python
 class EventValidator:
     """Validate events before processing"""
-    
+
     @staticmethod
     async def validate_event(event: DomainEvent, existing_events: List[DomainEvent]) -> ValidationResult:
         """Validate event ordering and consistency"""
         validation_result = ValidationResult()
-        
+
         # Check event ordering
         if not EventValidator._validate_ordering(event, existing_events):
             validation_result.add_error("Event ordering violation")
-        
+
         # Check data consistency
         if not EventValidator._validate_consistency(event, existing_events):
             validation_result.add_error("Data consistency violation")
-        
+
         # Check business rules
         if not EventValidator._validate_business_rules(event):
             validation_result.add_error("Business rule violation")
-        
+
         return validation_result
-    
+
     @staticmethod
     def _validate_ordering(event: DomainEvent, existing_events: List[DomainEvent]) -> bool:
         """Validate event ordering"""
@@ -493,13 +493,13 @@ class EventValidator:
             return len(existing_events) == 0
         else:
             return len(existing_events) > 0
-    
+
     @staticmethod
     def _validate_consistency(event: DomainEvent, existing_events: List[DomainEvent]) -> bool:
         """Validate data consistency"""
         # Implementation for data consistency checks
         return True
-    
+
     @staticmethod
     def _validate_business_rules(event: DomainEvent) -> bool:
         """Validate business rules"""
@@ -508,17 +508,17 @@ class EventValidator:
 
 class ValidationResult:
     """Result of event validation"""
-    
+
     def __init__(self):
         self.errors = []
         self.warnings = []
-    
+
     def add_error(self, error: str):
         self.errors.append(error)
-    
+
     def add_warning(self, warning: str):
         self.warnings.append(warning)
-    
+
     @property
     def is_valid(self) -> bool:
         return len(self.errors) == 0
@@ -569,7 +569,7 @@ class ValidationResult:
 class PostgreSQLEventStore:
     def __init__(self, database_url: str):
         self.database_url = database_url
-    
+
     async def save_event(self, event: DomainEvent) -> None:
         """Save event with validation metadata"""
         async with self.get_connection() as conn:
@@ -584,27 +584,27 @@ class PostgreSQLEventStore:
                 json.dumps(event.data), json.dumps(event.metadata),
                 json.dumps(event.validation_info or {})
             ))
-    
-    async def get_events(self, aggregate_id: str, aggregate_type: str, 
-                        start_time: Optional[datetime] = None, 
+
+    async def get_events(self, aggregate_id: str, aggregate_type: str,
+                        start_time: Optional[datetime] = None,
                         end_time: Optional[datetime] = None) -> List[DomainEvent]:
         """Get events with optional time filtering"""
         query = """
-            SELECT * FROM events 
+            SELECT * FROM events
             WHERE aggregate_id = $1 AND aggregate_type = $2
         """
         params = [aggregate_id, aggregate_type]
-        
+
         if start_time:
             query += " AND timestamp >= $3"
             params.append(start_time)
-        
+
         if end_time:
             query += " AND timestamp <= $4"
             params.append(end_time)
-        
+
         query += " ORDER BY timestamp ASC"
-        
+
         async with self.get_connection() as conn:
             rows = await conn.fetch(query, *params)
             return [DomainEvent(**row) for row in rows]
@@ -625,7 +625,7 @@ class PostgreSQLEventStore:
 class PostgreSQLReadModel:
     def __init__(self, database_url: str):
         self.database_url = database_url
-    
+
     async def save_client(self, client: ClientReadModel) -> None:
         """Save client to read model"""
         async with self.get_connection() as conn:
@@ -656,28 +656,28 @@ class PostgreSQLReadModel:
                 client.sso_id, client.sso_id_c, client.sso_id_r,
                 client.description, client.is_deleted
             ))
-    
+
     async def search_clients(self, query: SearchClientsQuery) -> List[ClientDTO]:
         """Search clients with filtering and pagination"""
         sql_query = "SELECT * FROM clients WHERE 1=1"
         params = []
         param_count = 1
-        
+
         if query.search_term:
             sql_query += f" AND (name ILIKE ${param_count} OR description ILIKE ${param_count})"
             params.append(f"%{query.search_term}%")
             param_count += 1
-        
+
         if query.status:
             sql_query += f" AND status = ${param_count}"
             params.append(query.status)
             param_count += 1
-        
+
         # Add pagination
         offset = (query.page - 1) * query.page_size
         sql_query += f" ORDER BY created_at DESC LIMIT ${param_count} OFFSET ${param_count + 1}"
         params.extend([query.page_size, offset])
-        
+
         async with self.get_connection() as conn:
             rows = await conn.fetch(sql_query, *params)
             return [ClientDTO(**row) for row in rows]
@@ -731,10 +731,10 @@ class EventRepository(ABC):
     @abstractmethod
     async def save_event(self, event: DomainEvent) -> None:
         pass
-    
+
     @abstractmethod
-    async def get_events(self, aggregate_id: str, aggregate_type: str, 
-                        start_time: Optional[datetime] = None, 
+    async def get_events(self, aggregate_id: str, aggregate_type: str,
+                        start_time: Optional[datetime] = None,
                         end_time: Optional[datetime] = None) -> List[DomainEvent]:
         pass
 
@@ -742,11 +742,11 @@ class ClientRepository(ABC):
     @abstractmethod
     async def save_client(self, client: Client) -> None:
         pass
-    
+
     @abstractmethod
     async def get_client(self, client_id: str) -> Optional[Client]:
         pass
-    
+
     @abstractmethod
     async def search_clients(self, query: SearchClientsQuery) -> List[ClientDTO]:
         pass
@@ -1118,4 +1118,4 @@ class NormalizedEntityEvent(BaseModel):
 4. **Validation**: Simple validation → Complex business rule validation
 5. **Backfill**: Basic backfill → Advanced backfill with progress tracking
 
-This architecture provides a solid foundation for building scalable, maintainable, and auditable systems while leveraging the power of event sourcing and CQRS patterns, with proper handling of field mappings, event validation, backfill capabilities, and normalized entity broadcasting in a domain-driven design approach. 
+This architecture provides a solid foundation for building scalable, maintainable, and auditable systems while leveraging the power of event sourcing and CQRS patterns, with proper handling of field mappings, event validation, backfill capabilities, and normalized entity broadcasting in a domain-driven design approach.

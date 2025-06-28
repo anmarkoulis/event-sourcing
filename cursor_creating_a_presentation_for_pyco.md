@@ -7,7 +7,7 @@ _Exported on 22/06/2025 at 11:11:24 EEST from Cursor (1.1.3)_
 
 Hello! In i want to create a presentation for the next pycon conference in Athens
 
-The title is 
+The title is
 
 How I Learned to Stop Worrying and Love Raw Events: Event Sourcing & CQRS with FastAPI and Celery.
 
@@ -150,7 +150,7 @@ style: |
 i want to use the colors of python itself
 
 
-I also want to create a Makefile that will help me generate the pdf from the CSV like 
+I also want to create a Makefile that will help me generate the pdf from the CSV like
 
 # Help generator
 help: ## Display this help.
@@ -436,10 +436,10 @@ async def create_user(command: CreateUserCommand):
         name=command.name,
         email=command.email
     )
-    
+
     await event_store.append(event)
     await event_bus.publish(event)
-    
+
     return {"user_id": event.user_id, "status": "processing"}
 ```
 
@@ -461,10 +461,10 @@ def process_user_created(event: UserCreated):
         email=event.email,
         created_at=event.timestamp
     )
-    
+
     # Update read model
     read_model.save_user(user)
-    
+
     # Send welcome email
     email_service.send_welcome(event.email)
 
@@ -472,7 +472,7 @@ def process_user_created(event: UserCreated):
 def process_user_name_changed(event: UserNameChanged):
     # Update read model
     read_model.update_user_name(event.user_id, event.new_name)
-    
+
     # Notify other services
     notification_service.notify_name_change(event)
 ```
@@ -485,23 +485,23 @@ def process_user_name_changed(event: UserNameChanged):
 class EventStore:
     def __init__(self, db: Database):
         self.db = db
-    
+
     async def append(self, event: Event):
         # Append-only operation
         await self.db.execute("""
             INSERT INTO events (stream_id, event_type, data, version)
             VALUES ($1, $2, $3, $4)
-        """, event.stream_id, event.__class__.__name__, 
+        """, event.stream_id, event.__class__.__name__,
              event.model_dump(), event.version)
-    
+
     async def get_stream(self, stream_id: str, from_version: int = 0):
         # Get all events for a stream
         rows = await self.db.fetch("""
-            SELECT * FROM events 
+            SELECT * FROM events
             WHERE stream_id = $1 AND version > $2
             ORDER BY version
         """, stream_id, from_version)
-        
+
         return [deserialize_event(row) for row in rows]
 ```
 
@@ -516,7 +516,7 @@ class UserAggregate:
         self.name = None
         self.email = None
         self.version = 0
-    
+
     def apply(self, event: Event):
         if isinstance(event, UserCreated):
             self.id = event.user_id
@@ -524,16 +524,16 @@ class UserAggregate:
             self.email = event.email
         elif isinstance(event, UserNameChanged):
             self.name = event.new_name
-        
+
         self.version += 1
 
 def build_user_state(user_id: str) -> UserAggregate:
     events = event_store.get_stream(f"user-{user_id}")
     user = UserAggregate()
-    
+
     for event in events:
         user.apply(event)
-    
+
     return user
 ```
 
@@ -545,25 +545,25 @@ def build_user_state(user_id: str) -> UserAggregate:
 class UserReadModel:
     def __init__(self, db: Database):
         self.db = db
-    
+
     async def get_user_by_id(self, user_id: int) -> UserDTO:
         # Fast, direct query
         row = await self.db.fetchrow("""
             SELECT id, name, email, created_at, updated_at
             FROM users WHERE id = $1
         """, user_id)
-        
+
         return UserDTO(**row) if row else None
-    
+
     async def search_users(self, name_pattern: str) -> List[UserDTO]:
         # Optimized search
         rows = await self.db.fetch("""
             SELECT id, name, email, created_at
-            FROM users 
+            FROM users
             WHERE name ILIKE $1
             ORDER BY created_at DESC
         """, f"%{name_pattern}%")
-        
+
         return [UserDTO(**row) for row in rows]
 ```
 
@@ -580,7 +580,7 @@ async def change_name(user_id: int, new_name: str):
     event = UserNameChanged(user_id, new_name)
     await event_store.append(event)
     await event_bus.publish(event)
-    
+
     return {"status": "processing"}  # Immediate response
 
 # Query side - eventually consistent
@@ -606,10 +606,10 @@ async def get_user(user_id: int):
 def build_user_state(user_id: str) -> UserAggregate:
     events = event_store.get_stream(f"user-{user_id}")  # Could be 1000s of events
     user = UserAggregate()
-    
+
     for event in events:  # Expensive!
         user.apply(event)
-    
+
     return user
 ```
 
@@ -619,7 +619,7 @@ def build_user_state(user_id: str) -> UserAggregate:
 def build_user_state(user_id: str) -> UserAggregate:
     # Try to get latest snapshot
     snapshot = snapshot_store.get_latest(f"user-{user_id}")
-    
+
     if snapshot:
         user = snapshot.state
         # Only replay events after snapshot
@@ -627,10 +627,10 @@ def build_user_state(user_id: str) -> UserAggregate:
     else:
         user = UserAggregate()
         events = event_store.get_stream(f"user-{user_id}")
-    
+
     for event in events:
         user.apply(event)
-    
+
     return user
 ```
 
@@ -645,7 +645,7 @@ def build_user_state(user_id: str) -> UserAggregate:
 async def debug_user_issue(user_id: int, timestamp: datetime):
     # Get all events for the user
     events = await event_store.get_stream(f"user-{user_id}")
-    
+
     # Replay to any point in time
     user_state = UserAggregate()
     for event in events:
@@ -653,7 +653,7 @@ async def debug_user_issue(user_id: int, timestamp: datetime):
             user_state.apply(event)
         else:
             break
-    
+
     return user_state
 
 # Compare states at different times
@@ -681,10 +681,10 @@ def fix_user_name(user_id: int, correct_name: str):
         new_name=correct_name,
         reason="Data correction"
     )
-    
+
     await event_store.append(event)
     await event_bus.publish(event)
-    
+
     # All projections will be updated automatically
 ```
 
@@ -711,7 +711,7 @@ class UserCreatedV2:
 async def append_event(event: Event):
     expected_version = event.version
     actual_version = await get_current_version(event.stream_id)
-    
+
     if expected_version != actual_version:
         raise ConcurrencyError("Version mismatch")
 ```
@@ -768,12 +768,12 @@ class TestUserAggregate:
         events = [
             UserCreated(user_id=1, name="John", email="john@example.com")
         ]
-        
+
         # When
         user = UserAggregate()
         for event in events:
             user.apply(event)
-        
+
         # Then
         assert user.name == "John"
         assert user.email == "john@example.com"
@@ -782,11 +782,11 @@ class TestEventStore:
     async def test_event_append_and_retrieve(self):
         # Given
         event = UserCreated(user_id=1, name="John", email="john@example.com")
-        
+
         # When
         await event_store.append(event)
         retrieved_events = await event_store.get_stream("user-1")
-        
+
         # Then
         assert len(retrieved_events) == 1
         assert retrieved_events[0].name == "John"
@@ -804,7 +804,7 @@ class TestEventStore:
 async def create_user(command: CreateUserCommand):
     # Old way
     await old_db.create_user(command)
-    
+
     # New way
     event = UserCreated(user_id=generate_id(), **command.dict())
     await event_store.append(event)
@@ -1230,7 +1230,7 @@ Now let me create the detailed notes for each slide:
 
 **Timing Breakdown:**
 - Intro & Motivation (Slides 1-5): 7 minutes
-- Core Concepts (Slides 6-8): 5 minutes  
+- Core Concepts (Slides 6-8): 5 minutes
 - Architecture Walkthrough (Slides 9-16): 12 minutes
 - Real-World Patterns (Slides 17-22): 8 minutes
 - Key Takeaways (Slides 23-27): 3 minutes
@@ -1388,7 +1388,7 @@ graph TD
     F --> G[Business Logic]
     G --> H[Read Model]
     H --> I[Client Response]
-    
+
     style A fill:#FFD43B
     style B fill:#306998
     style C fill:#306998
@@ -1408,17 +1408,17 @@ sequenceDiagram
     participant EventBus
     participant Celery
     participant ReadModel
-    
+
     Client->>FastAPI: POST /users
     FastAPI->>EventStore: Append UserCreated event
     FastAPI->>EventBus: Publish UserCreated event
     FastAPI->>Client: Return user_id (immediate)
-    
+
     EventBus->>Celery: Trigger process_user_created task
     Celery->>ReadModel: Update user table
     Celery->>Celery: Send welcome email
     Celery->>Celery: Notify other services
-    
+
     Note over Client,ReadModel: Eventual consistency - read model updated asynchronously
 ```
 
@@ -1428,16 +1428,16 @@ graph LR
     B --> C[UserCreated Event]
     C --> D[UserNameChanged Event]
     D --> E[UserEmailChanged Event]
-    
+
     F[UserAggregate] --> G[Apply UserCreated]
     G --> H[Apply UserNameChanged]
     H --> I[Apply UserEmailChanged]
     I --> J[Current State]
-    
+
     C --> F
     D --> F
     E --> F
-    
+
     style A fill:#4B8BBE
     style F fill:#FFD43B
     style J fill:#306998
@@ -1548,7 +1548,7 @@ graph TD
 The presentation follows this 30-minute structure:
 
 1. **Intro & Motivation** (7 min) - Slides 1-5
-2. **Core Concepts** (5 min) - Slides 6-8  
+2. **Core Concepts** (5 min) - Slides 6-8
 3. **Architecture Walkthrough** (12 min) - Slides 9-16
 4. **Real-World Patterns** (8 min) - Slides 17-22
 5. **Key Takeaways** (3 min) - Slides 23-27
@@ -1854,7 +1854,7 @@ style: |
     color: #E0E0E0 !important;
     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   }
-  
+
   /* Headings */
   h1 {
     font-size: 1.8em !important;
@@ -1862,18 +1862,18 @@ style: |
     border-bottom: 2px solid #306998 !important;
     margin-bottom: 0.5em;
   }
-  
+
   h2 {
     color: #306998 !important;
     font-size: 1.4em;
     margin-top: 0.5em;
   }
-  
+
   h3 {
     color: #4B8BBE !important;
     font-size: 1.2em;
   }
-  
+
   /* Code blocks */
   code {
     font-size: 0.9em !important;
@@ -1882,7 +1882,7 @@ style: |
     padding: 0.2em 0.4em;
     border-radius: 4px;
   }
-  
+
   pre {
     background-color: #2D2D2D !important;
     color: #E0E0E0 !important;
@@ -1890,36 +1890,36 @@ style: |
     border-radius: 8px;
     border: 1px solid #404040;
   }
-  
+
   pre code {
     background-color: transparent !important;
     padding: 0;
   }
-  
+
   /* Text styling */
   strong {
     color: #FFD43B !important;
     font-weight: bold;
   }
-  
+
   a {
     color: #306998 !important;
     text-decoration: underline;
   }
-  
+
   /* Lists */
   ul li::marker {
     color: #FFD43B !important;
   }
-  
+
   ol li::marker {
     color: #FFD43B !important;
   }
-  
+
   li {
     margin-bottom: 0.3em;
   }
-  
+
   /* Blockquotes */
   blockquote {
     border-left: 4px solid #306998 !important;
@@ -1928,7 +1928,7 @@ style: |
     margin: 1em 0;
     font-style: italic;
   }
-  
+
   /* Lead slides */
   section.lead {
     text-align: center !important;
@@ -1937,23 +1937,23 @@ style: |
     justify-content: center !important;
     align-items: center !important;
   }
-  
+
   section.lead h1 {
     font-size: 2.5em !important;
     margin-bottom: 0.5em;
   }
-  
+
   section.lead h2 {
     font-size: 1.8em !important;
     margin-bottom: 1em;
   }
-  
+
   /* Custom classes */
   .highlight {
     color: #FFD43B !important;
     font-weight: bold;
   }
-  
+
   .code-block {
     background-color: #2D2D2D !important;
     padding: 1em;
@@ -1962,17 +1962,17 @@ style: |
     font-size: 0.8em;
     border: 1px solid #404040;
   }
-  
+
   /* Override any theme defaults */
   * {
     box-sizing: border-box;
   }
-  
+
   /* Ensure proper contrast */
   p {
     color: #E0E0E0 !important;
   }
-  
+
   /* Table styling */
   table {
     background-color: #2D2D2D !important;
@@ -1980,13 +1980,13 @@ style: |
     border-collapse: collapse;
     width: 100%;
   }
-  
+
   th, td {
     border: 1px solid #404040;
     padding: 0.5em;
     text-align: left;
   }
-  
+
   th {
     background-color: #306998 !important;
     color: #FFFFFF !important;
@@ -2167,10 +2167,10 @@ async def create_user(command: CreateUserCommand):
         name=command.name,
         email=command.email
     )
-    
+
     await event_store.append(event)
     await event_bus.publish(event)
-    
+
     return {"user_id": event.user_id, "status": "processing"}
 ```
 
@@ -2192,10 +2192,10 @@ def process_user_created(event: UserCreated):
         email=event.email,
         created_at=event.timestamp
     )
-    
+
     # Update read model
     read_model.save_user(user)
-    
+
     # Send welcome email
     email_service.send_welcome(event.email)
 
@@ -2203,7 +2203,7 @@ def process_user_created(event: UserCreated):
 def process_user_name_changed(event: UserNameChanged):
     # Update read model
     read_model.update_user_name(event.user_id, event.new_name)
-    
+
     # Notify other services
     notification_service.notify_name_change(event)
 ```
@@ -2216,23 +2216,23 @@ def process_user_name_changed(event: UserNameChanged):
 class EventStore:
     def __init__(self, db: Database):
         self.db = db
-    
+
     async def append(self, event: Event):
         # Append-only operation
         await self.db.execute("""
             INSERT INTO events (stream_id, event_type, data, version)
             VALUES ($1, $2, $3, $4)
-        """, event.stream_id, event.__class__.__name__, 
+        """, event.stream_id, event.__class__.__name__,
              event.model_dump(), event.version)
-    
+
     async def get_stream(self, stream_id: str, from_version: int = 0):
         # Get all events for a stream
         rows = await self.db.fetch("""
-            SELECT * FROM events 
+            SELECT * FROM events
             WHERE stream_id = $1 AND version > $2
             ORDER BY version
         """, stream_id, from_version)
-        
+
         return [deserialize_event(row) for row in rows]
 ```
 
@@ -2247,7 +2247,7 @@ class UserAggregate:
         self.name = None
         self.email = None
         self.version = 0
-    
+
     def apply(self, event: Event):
         if isinstance(event, UserCreated):
             self.id = event.user_id
@@ -2255,16 +2255,16 @@ class UserAggregate:
             self.email = event.email
         elif isinstance(event, UserNameChanged):
             self.name = event.new_name
-        
+
         self.version += 1
 
 def build_user_state(user_id: str) -> UserAggregate:
     events = event_store.get_stream(f"user-{user_id}")
     user = UserAggregate()
-    
+
     for event in events:
         user.apply(event)
-    
+
     return user
 ```
 
@@ -2276,25 +2276,25 @@ def build_user_state(user_id: str) -> UserAggregate:
 class UserReadModel:
     def __init__(self, db: Database):
         self.db = db
-    
+
     async def get_user_by_id(self, user_id: int) -> UserDTO:
         # Fast, direct query
         row = await self.db.fetchrow("""
             SELECT id, name, email, created_at, updated_at
             FROM users WHERE id = $1
         """, user_id)
-        
+
         return UserDTO(**row) if row else None
-    
+
     async def search_users(self, name_pattern: str) -> List[UserDTO]:
         # Optimized search
         rows = await self.db.fetch("""
             SELECT id, name, email, created_at
-            FROM users 
+            FROM users
             WHERE name ILIKE $1
             ORDER BY created_at DESC
         """, f"%{name_pattern}%")
-        
+
         return [UserDTO(**row) for row in rows]
 ```
 
@@ -2311,7 +2311,7 @@ async def change_name(user_id: int, new_name: str):
     event = UserNameChanged(user_id, new_name)
     await event_store.append(event)
     await event_bus.publish(event)
-    
+
     return {"status": "processing"}  # Immediate response
 
 # Query side - eventually consistent
@@ -2337,10 +2337,10 @@ async def get_user(user_id: int):
 def build_user_state(user_id: str) -> UserAggregate:
     events = event_store.get_stream(f"user-{user_id}")  # Could be 1000s of events
     user = UserAggregate()
-    
+
     for event in events:  # Expensive!
         user.apply(event)
-    
+
     return user
 ```
 
@@ -2350,7 +2350,7 @@ def build_user_state(user_id: str) -> UserAggregate:
 def build_user_state(user_id: str) -> UserAggregate:
     # Try to get latest snapshot
     snapshot = snapshot_store.get_latest(f"user-{user_id}")
-    
+
     if snapshot:
         user = snapshot.state
         # Only replay events after snapshot
@@ -2358,10 +2358,10 @@ def build_user_state(user_id: str) -> UserAggregate:
     else:
         user = UserAggregate()
         events = event_store.get_stream(f"user-{user_id}")
-    
+
     for event in events:
         user.apply(event)
-    
+
     return user
 ```
 
@@ -2376,7 +2376,7 @@ def build_user_state(user_id: str) -> UserAggregate:
 async def debug_user_issue(user_id: int, timestamp: datetime):
     # Get all events for the user
     events = await event_store.get_stream(f"user-{user_id}")
-    
+
     # Replay to any point in time
     user_state = UserAggregate()
     for event in events:
@@ -2384,7 +2384,7 @@ async def debug_user_issue(user_id: int, timestamp: datetime):
             user_state.apply(event)
         else:
             break
-    
+
     return user_state
 
 # Compare states at different times
@@ -2412,10 +2412,10 @@ def fix_user_name(user_id: int, correct_name: str):
         new_name=correct_name,
         reason="Data correction"
     )
-    
+
     await event_store.append(event)
     await event_bus.publish(event)
-    
+
     # All projections will be updated automatically
 ```
 
@@ -2442,7 +2442,7 @@ class UserCreatedV2:
 async def append_event(event: Event):
     expected_version = event.version
     actual_version = await get_current_version(event.stream_id)
-    
+
     if expected_version != actual_version:
         raise ConcurrencyError("Version mismatch")
 ```
@@ -2499,12 +2499,12 @@ class TestUserAggregate:
         events = [
             UserCreated(user_id=1, name="John", email="john@example.com")
         ]
-        
+
         # When
         user = UserAggregate()
         for event in events:
             user.apply(event)
-        
+
         # Then
         assert user.name == "John"
         assert user.email == "john@example.com"
@@ -2513,11 +2513,11 @@ class TestEventStore:
     async def test_event_append_and_retrieve(self):
         # Given
         event = UserCreated(user_id=1, name="John", email="john@example.com")
-        
+
         # When
         await event_store.append(event)
         retrieved_events = await event_store.get_stream("user-1")
-        
+
         # Then
         assert len(retrieved_events) == 1
         assert retrieved_events[0].name == "John"
@@ -2535,7 +2535,7 @@ class TestEventStore:
 async def create_user(command: CreateUserCommand):
     # Old way
     await old_db.create_user(command)
-    
+
     # New way
     event = UserCreated(user_id=generate_id(), **command.dict())
     await event_store.append(event)
@@ -2649,7 +2649,7 @@ Here’s a summary of what I’ve fixed and what you should do next:
 
 ### 1. **Makefile Simplification**
 - Only the quick commands remain: `pdf`, `html`, `pptx`, `serve`, `clean`, `setup`, and `help`.
-- The main build commands are now:  
+- The main build commands are now:
   - `make pdf` (for PDF)
   - `make html` (for HTML)
   - `make pptx` (for PowerPoint)
@@ -2659,7 +2659,7 @@ Here’s a summary of what I’ve fixed and what you should do next:
 
 ### 2. **Serve Command Fix**
 - The previous error (`is not directory`) was due to a Marp CLI bug with the `--server` flag if the file path is wrong or if the file is missing.
-- The Makefile now uses:  
+- The Makefile now uses:
   `marp presentation.md --server --allow-local-files --server-port 8080`
 - Make sure `presentation.md` exists in your project root (which it does).
 
@@ -2696,7 +2696,7 @@ Here’s a summary of what I’ve fixed and what you should do next:
 
 ---
 
-**You can now proceed with your comments for the presentation content!**  
+**You can now proceed with your comments for the presentation content!**
 Let me know if the look and feel is now correct, or if you need further tweaks.
 
 ```plaintext
@@ -2892,7 +2892,7 @@ Thank you for the detailed output. This is a known Marp CLI bug that can be trig
 ## **How to Fix**
 
 ### 1. **Minimize the Frontmatter**
-Move your custom CSS to a separate file and reference it in the frontmatter.  
+Move your custom CSS to a separate file and reference it in the frontmatter.
 Marp supports this via the `style` directive with a local file.
 
 **Steps:**
@@ -2949,7 +2949,7 @@ and see if the error persists.
 ---
 
 ### 3. **Check for Hidden Characters**
-Sometimes, invisible characters or a BOM at the start of the file can break Marp.  
+Sometimes, invisible characters or a BOM at the start of the file can break Marp.
 Try running:
 ```sh
 file presentation.md
@@ -3129,7 +3129,7 @@ Senior Staff Engineer @Orfium
 
 **Cursor**
 
-Thank you for sharing your reference!  
+Thank you for sharing your reference!
 Your meetup example is a great Marp frontmatter: it’s minimal, uses the built-in `beam` theme, and applies a small, focused CSS block. This is the best practice for Marp and avoids the “is not directory” bug.
 
 **Let’s apply this approach to your PyCon presentation:**
@@ -3229,7 +3229,7 @@ style: |
 
 ---
 
-**Would you like me to update your `presentation.md` with this frontmatter now?**  
+**Would you like me to update your `presentation.md` with this frontmatter now?**
 If yes, I’ll do it right away!
 
 ```markdown
@@ -3356,14 +3356,14 @@ The file is still being detected as a "Python script text executable" (even afte
 
 ## Please do the following:
 
-1. **Check the first line of `presentation.md`**  
+1. **Check the first line of `presentation.md`**
    - The very first line should be `---` (the start of the frontmatter).
    - There should be **no shebang** (like `#!/usr/bin/env python`) or any other text before the frontmatter.
 
-2. **Remove any hidden characters**  
+2. **Remove any hidden characters**
    - Open the file in a plain text editor and make sure there is nothing before the `---`.
 
-3. **Convert to plain UTF-8 text**  
+3. **Convert to plain UTF-8 text**
    Run:
    ```sh
    tail -n +1 presentation.md > tmp.md && mv tmp.md presentation.md
@@ -3376,8 +3376,8 @@ The file is still being detected as a "Python script text executable" (even afte
 
 ---
 
-### If you want, I can check the first few lines of your file for you. Would you like me to do that?  
-Or, you can open it and confirm:  
+### If you want, I can check the first few lines of your file for you. Would you like me to do that?
+Or, you can open it and confirm:
 - The first line is `---`
 - There is no Python shebang or any other text before the frontmatter
 
@@ -3395,7 +3395,7 @@ Let me know if this solves the issue!
 
 **User**
 
-this is too complex, let's remove serve and also remove development helpers. then we should focus on @presentation.md and @notes.md 
+this is too complex, let's remove serve and also remove development helpers. then we should focus on @presentation.md and @notes.md
 
 i need to follow more the outline
 
@@ -3449,11 +3449,11 @@ i need to follow more the outline
 
 Great! Here’s the plan:
 
-1. **Simplify the Makefile**:  
+1. **Simplify the Makefile**:
    - Remove the `serve` target and all development helpers.
    - Only keep: `help`, `pdf`, `html`, `pptx`, `clean`, `setup`, and diagram generation.
 
-2. **Refocus the Presentation**:  
+2. **Refocus the Presentation**:
    - Restructure `presentation.md` and `notes.md` to follow your exact outline and timing.
    - Make each section and slide map directly to your outline, with clear transitions and focus.
 
@@ -3548,14 +3548,14 @@ setup: install-marp install-mermaid-cli create-directories ## Complete setup for
 
 ```
 
-The Makefile is now simplified:  
-- No `serve` target  
-- No development helpers  
+The Makefile is now simplified:
+- No `serve` target
+- No development helpers
 - Only the essential build and diagram commands remain.
 
 ---
 
-**Next:**  
+**Next:**
 I will restructure `presentation.md` and `notes.md` to follow your exact outline, with clear sections and transitions, and ensure the slides and notes are tightly aligned to your requested flow.
 
 Would you like:
@@ -3779,7 +3779,7 @@ class UserAggregate:
         self.name = None
         self.email = None
         self.version = 0
-    
+
     def apply(self, event: Event):
         if isinstance(event, UserCreated):
             self.id = event.user_id
@@ -3787,16 +3787,16 @@ class UserAggregate:
             self.email = event.email
         elif isinstance(event, UserNameChanged):
             self.name = event.new_name
-        
+
         self.version += 1
 
 def build_user_state(user_id: str) -> UserAggregate:
     events = event_store.get_stream(f"user-{user_id}")
     user = UserAggregate()
-    
+
     for event in events:
         user.apply(event)
-    
+
     return user
 ```
 
@@ -3888,10 +3888,10 @@ async def create_user(command: CreateUserCommand):
         name=command.name,
         email=command.email
     )
-    
+
     await event_store.append(event)
     await event_bus.publish(event)
-    
+
     return {"user_id": event.user_id, "status": "processing"}
 ```
 
@@ -3913,10 +3913,10 @@ def process_user_created(event: UserCreated):
         email=event.email,
         created_at=event.timestamp
     )
-    
+
     # Update read model
     read_model.save_user(user)
-    
+
     # Send welcome email
     email_service.send_welcome(event.email)
 
@@ -3924,7 +3924,7 @@ def process_user_created(event: UserCreated):
 def process_user_name_changed(event: UserNameChanged):
     # Update read model
     read_model.update_user_name(event.user_id, event.new_name)
-    
+
     # Notify other services
     notification_service.notify_name_change(event)
 ```
@@ -3937,23 +3937,23 @@ def process_user_name_changed(event: UserNameChanged):
 class EventStore:
     def __init__(self, db: Database):
         self.db = db
-    
+
     async def append(self, event: Event):
         # Append-only operation
         await self.db.execute("""
             INSERT INTO events (stream_id, event_type, data, version)
             VALUES ($1, $2, $3, $4)
-        """, event.stream_id, event.__class__.__name__, 
+        """, event.stream_id, event.__class__.__name__,
              event.model_dump(), event.version)
-    
+
     async def get_stream(self, stream_id: str, from_version: int = 0):
         # Get all events for a stream
         rows = await self.db.fetch("""
-            SELECT * FROM events 
+            SELECT * FROM events
             WHERE stream_id = $1 AND version > $2
             ORDER BY version
         """, stream_id, from_version)
-        
+
         return [deserialize_event(row) for row in rows]
 ```
 
@@ -3965,25 +3965,25 @@ class EventStore:
 class UserReadModel:
     def __init__(self, db: Database):
         self.db = db
-    
+
     async def get_user_by_id(self, user_id: int) -> UserDTO:
         # Fast, direct query
         row = await self.db.fetchrow("""
             SELECT id, name, email, created_at, updated_at
             FROM users WHERE id = $1
         """, user_id)
-        
+
         return UserDTO(**row) if row else None
-    
+
     async def search_users(self, name_pattern: str) -> List[UserDTO]:
         # Optimized search
         rows = await self.db.fetch("""
             SELECT id, name, email, created_at
-            FROM users 
+            FROM users
             WHERE name ILIKE $1
             ORDER BY created_at DESC
         """, f"%{name_pattern}%")
-        
+
         return [UserDTO(**row) for row in rows]
 ```
 
@@ -3997,7 +3997,7 @@ class UserCommandService:
     def __init__(self, event_store: EventStore, event_bus: EventBus):
         self.event_store = event_store
         self.event_bus = event_bus
-    
+
     async def create_user(self, command: CreateUserCommand):
         event = UserCreated(user_id=generate_id(), **command.dict())
         await self.event_store.append(event)
@@ -4010,7 +4010,7 @@ class UserCommandService:
 class UserQueryService:
     def __init__(self, read_model: UserReadModel):
         self.read_model = read_model
-    
+
     async def get_user(self, user_id: int) -> UserDTO:
         return await self.read_model.get_user_by_id(user_id)
 ```
@@ -4051,7 +4051,7 @@ async def change_name(user_id: int, new_name: str):
     event = UserNameChanged(user_id, new_name)
     await event_store.append(event)
     await event_bus.publish(event)
-    
+
     return {"status": "processing"}  # Immediate response
 
 # Query side - eventually consistent
@@ -4077,10 +4077,10 @@ async def get_user(user_id: int):
 def build_user_state(user_id: str) -> UserAggregate:
     events = event_store.get_stream(f"user-{user_id}")  # Could be 1000s of events
     user = UserAggregate()
-    
+
     for event in events:  # Expensive!
         user.apply(event)
-    
+
     return user
 ```
 
@@ -4090,7 +4090,7 @@ def build_user_state(user_id: str) -> UserAggregate:
 def build_user_state(user_id: str) -> UserAggregate:
     # Try to get latest snapshot
     snapshot = snapshot_store.get_latest(f"user-{user_id}")
-    
+
     if snapshot:
         user = snapshot.state
         # Only replay events after snapshot
@@ -4098,10 +4098,10 @@ def build_user_state(user_id: str) -> UserAggregate:
     else:
         user = UserAggregate()
         events = event_store.get_stream(f"user-{user_id}")
-    
+
     for event in events:
         user.apply(event)
-    
+
     return user
 ```
 
@@ -4116,7 +4116,7 @@ def build_user_state(user_id: str) -> UserAggregate:
 def backfill_user_events():
     # Get users from existing system
     users = legacy_db.get_all_users()
-    
+
     for user in users:
         # Create events for existing state
         event = UserCreated(
@@ -4125,11 +4125,11 @@ def backfill_user_events():
             email=user.email,
             created_at=user.created_at
         )
-        
+
         # Store in event store
         event_store.append(event)
         event_bus.publish(event)
-        
+
         # Update read model
         read_model.save_user(user)
 ```
@@ -4154,10 +4154,10 @@ def fix_user_name(user_id: int, correct_name: str):
         new_name=correct_name,
         reason="Data correction"
     )
-    
+
     await event_store.append(event)
     await event_bus.publish(event)
-    
+
     # All projections will be updated automatically
 ```
 
@@ -4172,7 +4172,7 @@ def fix_user_name(user_id: int, correct_name: str):
 async def debug_user_issue(user_id: int, timestamp: datetime):
     # Get all events for the user
     events = await event_store.get_stream(f"user-{user_id}")
-    
+
     # Replay to any point in time
     user_state = UserAggregate()
     for event in events:
@@ -4180,7 +4180,7 @@ async def debug_user_issue(user_id: int, timestamp: datetime):
             user_state.apply(event)
         else:
             break
-    
+
     return user_state
 
 # Compare states at different times
@@ -4201,12 +4201,12 @@ class TestUserAggregate:
         events = [
             UserCreated(user_id=1, name="John", email="john@example.com")
         ]
-        
+
         # When
         user = UserAggregate()
         for event in events:
             user.apply(event)
-        
+
         # Then
         assert user.name == "John"
         assert user.email == "john@example.com"
@@ -4215,11 +4215,11 @@ class TestEventStore:
     async def test_event_append_and_retrieve(self):
         # Given
         event = UserCreated(user_id=1, name="John", email="john@example.com")
-        
+
         # When
         await event_store.append(event)
         retrieved_events = await event_store.get_stream("user-1")
-        
+
         # Then
         assert len(retrieved_events) == 1
         assert retrieved_events[0].name == "John"
@@ -4681,7 +4681,7 @@ Now let me update the notes to match the new structure:
 
 **Timing Breakdown:**
 - Section 1: Intro & Motivation (Slides 1-7): 4 minutes
-- Section 2: Core Concepts (Slides 8-12): 5.5 minutes  
+- Section 2: Core Concepts (Slides 8-12): 5.5 minutes
 - Section 3: Architecture Walkthrough (Slides 13-20): 12 minutes
 - Section 4: Real-World Patterns (Slides 21-27): 7 minutes
 - Section 5: Key Takeaways (Slides 28-32): 3 minutes
@@ -4824,7 +4824,7 @@ Experience
             Sep 2018 - Nov 2019 · 1 yr 3 mosSep 2018 to Nov 2019 · 1 yr 3 mos Athens, GreeeceAthens, Greeece
                     • Involved in architectural decisions concerning Enorasys SocStreams.
                     • Development of Enorasys SocStreams' integration layer with security and notification systems
-                    • Involved in architectural decisions concerning Enorasys SocStreams. • Development of Enorasys SocStreams' integration layer with security and notification systems 
+                    • Involved in architectural decisions concerning Enorasys SocStreams. • Development of Enorasys SocStreams' integration layer with security and notification systems
             Software DeveloperSoftware Developer
             Apr 2018 - Sep 2018 · 6 mosApr 2018 to Sep 2018 · 6 mos Athens, GreeceAthens, Greece
                     • Development of Enorasys SocStreams' integration layer with security and notification systems using Python on top of Apache Stackstorm.• Development of Enorasys SocStreams' integration layer with security and notification systems using Python on top of Apache Stackstorm.
@@ -4835,7 +4835,7 @@ Experience
             Jul 2016 - Mar 2018 · 1 yr 9 mosJul 2016 to Mar 2018 · 1 yr 9 mos Thessaloniki, GreeceThessaloniki, Greece
                     • Frontend/Backend development of Fieldscale products using C++, Python languages and frameworks/libraries such as Qt, PyQt, VTK and Matplotlib
                     • Setup of Continuous Integration for Fieldscale products
-                    • Design and implementation of automated testing mechanism • Frontend/Backend development of Fieldscale products using C++, Python languages and frameworks/libraries such as Qt, PyQt, VTK and Matplotlib • Setup of Continuous Integration for Fieldscale products • Design and implementation of automated testing mechanism 
+                    • Design and implementation of automated testing mechanism • Frontend/Backend development of Fieldscale products using C++, Python languages and frameworks/libraries such as Qt, PyQt, VTK and Matplotlib • Setup of Continuous Integration for Fieldscale products • Design and implementation of automated testing mechanism
             Software DeveloperSoftware Developer
             Jan 2015 - Jun 2016 · 1 yr 6 mosJan 2015 to Jun 2016 · 1 yr 6 mos ThessalonikiThessaloniki
                     • Frontend/Backend development of Fieldscale products using C++ and frameworks/libraries such as Qt, VTK
@@ -4855,7 +4855,7 @@ Experience
             Mar 2013 - Jan 2014 · 11 mosMar 2013 to Jan 2014 · 11 mos 113 Combat Wing - Thessaloniki Airport113 Combat Wing - Thessaloniki Airport
             Weather SpotterWeather Spotter
             Jul 2013 - Aug 2013 · 2 mosJul 2013 to Aug 2013 · 2 mos 135 Combat Group - Skyros Airport135 Combat Group - Skyros Airport
-                    Worked in the meteorological station of Skyros airport as the composer of the METAR and SYNOP messages used in reporting current weather information. Worked in the meteorological station of Skyros airport as the composer of the METAR and SYNOP messages used in reporting current weather information. 
+                    Worked in the meteorological station of Skyros airport as the composer of the METAR and SYNOP messages used in reporting current weather information. Worked in the meteorological station of Skyros airport as the composer of the METAR and SYNOP messages used in reporting current weather information.
 
 Who your viewers also viewedWho your viewers also viewed
 
@@ -4912,7 +4912,7 @@ Status is online
 1
 
 
-how can i create a nice 1 paragraph biography in @proposal.md 
+how can i create a nice 1 paragraph biography in @proposal.md
 
 ---
 
@@ -5116,7 +5116,7 @@ Perfect! I've rewritten the biography to:
 
 This new version:
 - Uses first person throughout
-- Presents the physics-to-SWE transition as a "journey" 
+- Presents the physics-to-SWE transition as a "journey"
 - Creates a clever contrast between immutable laws of nature and mutable code
 - Adds a humorous twist with "though sometimes I wish it were!"
 - Maintains the playful tone while being more personal
@@ -5156,7 +5156,7 @@ The biography now tells a story about discovering simulations as the perfect tra
 
 i do not like the usage of bridge in the first sentence.
 
-let's start from the beginning. I want this biography to accompany my presentation on pycon. you can see my linked in profile. please create sth meaningful. I want to metnion the carreer switch from Physics to SWE through simulations 
+let's start from the beginning. I want this biography to accompany my presentation on pycon. you can see my linked in profile. please create sth meaningful. I want to metnion the carreer switch from Physics to SWE through simulations
 
 let's create something new. Please create multiple proposals under biography
 
@@ -5260,7 +5260,7 @@ All options now end cleanly with your passion for creating industrial software p
 
 i do not like the format. Let's start the first sentence with my current role as Senior Staff Engineer at Orfium. I work with multiple teams and i am responsible for the tech grownth of engineers on those teams and about the quality of the software
 
-then i would like to mention about my background in Physics and how thourhg my master in computation physics i started coding for simulation, this was my door to swe. 
+then i would like to mention about my background in Physics and how thourhg my master in computation physics i started coding for simulation, this was my door to swe.
 
 then I would like to mention some things about the work experience that i have in multiple undustries. I also want to somehow mention the fact that i have seen the full product development lifecycle and i am passionate about bringing quality software into customers with effective way ( i do not like how i said that but please propose sth better )
 
@@ -5310,11 +5310,11 @@ Each version avoids the awkward phrasing you mentioned and presents your passion
 
 **User**
 
-i want 
+i want
 
    I am a Senior Staff Engineer at Orfium, where I work with multiple teams and am responsible for the technical growth of engineers and software quality across the organization.
 
-the best sentence for the transition is 
+the best sentence for the transition is
 
 My path to software engineering started with Physics and evolved through a Master's in Computational Physics, where I discovered my passion for coding through simulation work.
 
@@ -5413,7 +5413,7 @@ This makes the narrative more coherent since simulations were your entry point i
 
 **User**
 
-i do not like 
+i do not like
 
 Having worked across diverse industries including simulations, security platforms, and music technology, I've navigated both small startups and larger organizations, experiencing the complete development lifecycle from end to end.
 
@@ -5458,4 +5458,3 @@ Each option now has different variations on how to express these ideas:
 - **Option 5**: "I've worked across..." + "From small startups to larger organizations..."
 
 The sentences are now much easier to read and understand, with each focusing on one clear idea. Which option feels most natural to you?
-

@@ -1,17 +1,20 @@
 from fastapi import FastAPI
+
 from event_sourcing.api.handlers import (
-    configure_logging,
     configure_exception_handlers,
-    configure_middlewares,
-    configure_routers,
-    configure_openapi_tags,
     configure_lifespan,
+    configure_logging,
+    configure_middlewares,
+    configure_openapi_tags,
+    configure_routers,
 )
 from event_sourcing.config.settings import settings
 
 app = FastAPI(
     title=settings.PROJECT_NAME,
-    openapi_url=f"{settings.API_V1_STR}/openapi.json" if settings.ENABLE_SWAGGER else None,
+    openapi_url=f"{settings.API_V1_STR}/openapi.json"
+    if settings.ENABLE_SWAGGER
+    else None,
     description=settings.DESCRIPTION,
     debug=settings.DEBUG,
     contact={

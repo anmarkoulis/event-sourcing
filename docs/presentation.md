@@ -276,13 +276,13 @@ async def create_user(command: CreateUserCommand):
         name=command.name,
         email=command.email
     )
-    
+
     # Store event (append-only)
     await event_store.append(event)
-    
+
     # Publish to event bus
     await event_bus.publish(event)
-    
+
     # Return immediately (async processing)
     return {"status": "accepted", "user_id": command.user_id}
 ```
@@ -303,10 +303,10 @@ def process_user_created(event: UserCreated):
         email=event.email,
         created_at=event.timestamp
     )
-    
+
     # Update read model
     read_model.save_user(user)
-    
+
     # Side effects
     send_welcome_email(user.email)
     notify_analytics(user)
@@ -331,11 +331,11 @@ class EventStore:
             INSERT INTO events (stream_id, event_type, data, version)
             VALUES ($1, $2, $3, $4)
         """, event.stream_id, event.type, event.data, event.version)
-    
+
     async def get_stream(self, stream_id: str, from_version: int = 0):
         # Get all events for a stream
         return await self.db.fetch("""
-            SELECT * FROM events 
+            SELECT * FROM events
             WHERE stream_id = $1 AND version >= $2
             ORDER BY version
         """, stream_id, from_version)
@@ -359,17 +359,17 @@ class UserReadModel:
                 email = EXCLUDED.email,
                 status = EXCLUDED.status
         """, user.id, user.name, user.email, user.status, user.created_at)
-    
+
     async def get_user(self, user_id: str) -> User:
         # Fast, simple query
         return await self.db.fetchrow(
             "SELECT * FROM users_view WHERE id = $1", user_id
         )
-    
+
     async def search_users(self, query: str) -> List[User]:
         # Complex search queries
         return await self.db.fetch("""
-            SELECT * FROM users_view 
+            SELECT * FROM users_view
             WHERE name ILIKE $1 OR email ILIKE $1
             ORDER BY created_at DESC
         """, f"%{query}%")
@@ -387,7 +387,7 @@ class UserCommandService:
     def __init__(self, event_store: EventStore, event_bus: EventBus):
         self.event_store = event_store
         self.event_bus = event_bus
-    
+
     async def create_user(self, command: CreateUserCommand):
         # Business logic
         event = UserCreated(
@@ -395,7 +395,7 @@ class UserCommandService:
             name=command.name,
             email=command.email
         )
-        
+
         # Store and publish
         await self.event_store.append(event)
         await self.event_bus.publish(event)
@@ -404,7 +404,7 @@ class UserCommandService:
 class UserQueryService:
     def __init__(self, read_model: UserReadModel):
         self.read_model = read_model
-    
+
     async def get_user(self, user_id: str) -> User:
         return await self.read_model.get_user(user_id)
 ```
@@ -488,7 +488,7 @@ def get_user_state(user_id: str, at_time: datetime):
 def backfill_from_salesforce():
     # Get all users from Salesforce
     sf_users = salesforce_client.get_all_users()
-    
+
     for sf_user in sf_users:
         # Create events for existing data
         event = UserCreated(
@@ -497,7 +497,7 @@ def backfill_from_salesforce():
             email=sf_user.email,
             source="salesforce_backfill"
         )
-        
+
         # Store and process
         event_store.append(event)
         process_user_created.delay(event.dict())
@@ -516,10 +516,10 @@ def backfill_from_salesforce():
 @celery_app.task
 def reprocess_user_events(user_id: str):
     events = event_store.get_stream(user_id)
-    
+
     # Clear read model
     read_model.delete_user(user_id)
-    
+
     # Replay with fix
     for event in events:
         if event.type == "UserCreated":
@@ -538,11 +538,11 @@ def reprocess_user_events(user_id: str):
 # See exactly what happened
 def debug_user_issue(user_id: str, timestamp: datetime):
     events = event_store.get_events(user_id, around=timestamp)
-    
+
     print(f"User {user_id} events around {timestamp}:")
     for event in events:
         print(f"  {event.timestamp}: {event.type} - {event.data}")
-    
+
     # Replay to see state
     state = replay_events(events)
     print(f"Final state: {state}")
@@ -563,11 +563,11 @@ def debug_user_issue(user_id: str, timestamp: datetime):
 # Test aggregates by applying events
 def test_user_aggregate():
     user = UserAggregate()
-    
+
     # Apply events
     user.apply(UserCreated(user_id="123", name="John", email="john@example.com"))
     user.apply(UserNameChanged(user_id="123", old_name="John", new_name="Johnny"))
-    
+
     # Assert final state
     assert user.name == "Johnny"
     assert user.email == "john@example.com"
@@ -575,11 +575,11 @@ def test_user_aggregate():
 # Test event store
 def test_event_store():
     event = UserCreated(user_id="123", name="John", email="john@example.com")
-    
+
     # Store and retrieve
     event_store.append(event)
     events = event_store.get_stream("123")
-    
+
     assert len(events) == 1
     assert events[0].type == "UserCreated"
 ```

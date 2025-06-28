@@ -1,1 +1,1 @@
-# Field mapping system - Centralized transformation of Salesforce data to domain models 
+# Field mapping system - Centralized transformation of Salesforce data to domain models

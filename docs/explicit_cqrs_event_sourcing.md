@@ -126,23 +126,23 @@ DynamoDB → Event Replay → Apply Mappings → Aggregate State
 async def process_event(self, event: Any) -> None:
     # 1. Parse Salesforce CDC event
     parsed_events = self._parse_events(event)
-    
+
     for parsed_event in parsed_events:
         # 2. Validate event ordering
         if not await self._is_event_valid(parsed_event):
             continue
-            
+
         # 3. Store raw event
         await self._persist_event(parsed_event)
-        
+
         # 4. Reconstruct aggregate state
         full_model = await self._compute_aggregate(
             parsed_event.data.id, parsed_event.entity_name
         )
-        
+
         # 5. Apply mappings and normalize
         normalized_event = self._normalize_event(full_model)
-        
+
         # 6. Broadcast and persist
         await self.publish_normalized_event(normalized_event)
         await self.persist_normalized_event(normalized_event)
@@ -196,21 +196,21 @@ class DynamoDBEventDao(EventDaoInterface):
     def __init__(self, table_name: str, region_name: str = "us-east-1"):
         self.table_name = table_name
         self.region_name = region_name
-    
+
     async def save_event(self, event: Event) -> None:
         # Store event with entity-based partitioning
         entity_key = self._create_entity_key(event.entity_name, event.data.id)
         item = event.to_dynamodb_compatible()
         item["entity_key"] = entity_key
         await table.put_item(Item=item)
-    
+
     async def get_events(self, entity_id: str, entity_name: str) -> List[Event]:
         # Query events by partition key
         entity_key = self._create_entity_key(entity_name, entity_id)
         key_condition = Key("entity_key").eq(entity_key)
         response = await table.query(KeyConditionExpression=key_condition)
         return [Event(**item) for item in response.get("Items", [])]
-    
+
     def _create_entity_key(self, entity_name: str, entity_id: str) -> str:
         return f"{entity_name}#{entity_id}"
 ```
@@ -239,7 +239,7 @@ class OpenSearchEntityDao(EntityDaoInterface):
     def __init__(self, opensearch_client: AsyncOpenSearchClient, domain_name: str):
         self.opensearch_client = opensearch_client
         self.domain_name = domain_name
-    
+
     async def save_entity_from_event(self, event: Event) -> None:
         # Store normalized entity in OpenSearch
         index_name = f"{event.entity_name.lower()}_index"
@@ -248,15 +248,15 @@ class OpenSearchEntityDao(EntityDaoInterface):
         await self.opensearch_client.index_document(
             index_name, document_id, document["data"]["values"]
         )
-    
-    async def get(self, entity_name: str, output_schema: Type[BaseModel], 
+
+    async def get(self, entity_name: str, output_schema: Type[BaseModel],
                   filters=None, sort=None, page=1, page_size=10) -> List[BaseModel]:
         # Query with pagination, filtering, and sorting
         index_name = f"{entity_name.lower()}_index"
         query = self.build_query(filters, sort, page, page_size)
         results = await self.opensearch_client.search_documents(index_name, query)
         return [output_schema(**hit["_source"]) for hit in results["hits"]["hits"]]
-    
+
     def build_query(self, filters, sort, page=1, page_size=10, count=False):
         # Build complex OpenSearch queries from filters and sorts
         query = {"query": {"bool": {"must": []}}}
@@ -317,7 +317,7 @@ def _normalize_event(self, event: Event) -> Event:
             )
         except KeyError:
             continue
-    
+
     return Event(
         event_id=event.event_id,
         entity_name=entity,
@@ -636,4 +636,4 @@ class SortDTO(BaseModel):
 4. **Data synchronization** during transition
 5. **Complete switch** once stable
 
-This architecture provides a solid, production-ready foundation for event sourcing and CQRS patterns, with the infrastructure and patterns in place to evolve toward domain-driven design when needed. 
+This architecture provides a solid, production-ready foundation for event sourcing and CQRS patterns, with the infrastructure and patterns in place to evolve toward domain-driven design when needed.

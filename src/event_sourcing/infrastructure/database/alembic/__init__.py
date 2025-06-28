@@ -1,1 +1,1 @@
-# Alembic migrations for event sourcing database 
+# Alembic migrations for event sourcing database

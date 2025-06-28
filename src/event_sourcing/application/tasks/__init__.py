@@ -1,4 +1,4 @@
-# Application tasks package 
+# Application tasks package
 from .process_salesforce_event import process_salesforce_event_task
 from .publish_snapshot import publish_snapshot_task
 from .reconstruct_aggregate import reconstruct_aggregate_task

@@ -95,4 +95,4 @@ src/event_sourcing/
 - Infrastructure concerns are abstracted behind interfaces
 - Field mappings can be updated without data migration
 - Event validation ensures data consistency
-- Backfill support handles historical data ingestion 
+- Backfill support handles historical data ingestion

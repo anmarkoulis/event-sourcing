@@ -1,4 +1,5 @@
 from logging import config
+
 from event_sourcing.config.settings import settings
 
 

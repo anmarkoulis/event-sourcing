@@ -1,10 +1,10 @@
 from fastapi import FastAPI
-from event_sourcing.api.middlewares import RequestLoggingMiddleware
-from event_sourcing.config.settings import settings
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.trustedhost import TrustedHostMiddleware
 
+from event_sourcing.api.middlewares import RequestLoggingMiddleware
+from event_sourcing.config.settings import settings
 
-from fastapi.middleware.cors import CORSMiddleware
 
 def configure_middlewares(app: FastAPI) -> None:
     """

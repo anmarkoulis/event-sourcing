@@ -1,1 +1,1 @@
-# Database infrastructure - SQLAlchemy models and session management 
+# Database infrastructure - SQLAlchemy models and session management

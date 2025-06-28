@@ -1,4 +1,5 @@
 from fastapi import FastAPI
+
 from event_sourcing.api.routers.api_router import api_router
 
 

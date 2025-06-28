@@ -1,16 +1,20 @@
-from typing import Dict, Any, Optional
-from datetime import datetime
 import uuid
+from datetime import datetime
+from typing import Any, Dict, Optional
 
 from .base import DomainEvent
 
 
 class ClientCreatedEvent(DomainEvent):
     """Client created event"""
-    
+
     @classmethod
-    def create(cls, client_id: str, data: Dict[str, Any], 
-               metadata: Optional[Dict[str, Any]] = None) -> "ClientCreatedEvent":
+    def create(
+        cls,
+        client_id: str,
+        data: Dict[str, Any],
+        metadata: Optional[Dict[str, Any]] = None,
+    ) -> "ClientCreatedEvent":
         """Create a client created event"""
         return cls(
             event_id=str(uuid.uuid4()),
@@ -21,16 +25,20 @@ class ClientCreatedEvent(DomainEvent):
             version="1.0.0",
             data=data,
             metadata=metadata or {},
-            validation_info={}
+            validation_info={},
         )
 
 
 class ClientUpdatedEvent(DomainEvent):
     """Client updated event"""
-    
+
     @classmethod
-    def create(cls, client_id: str, data: Dict[str, Any], 
-               metadata: Optional[Dict[str, Any]] = None) -> "ClientUpdatedEvent":
+    def create(
+        cls,
+        client_id: str,
+        data: Dict[str, Any],
+        metadata: Optional[Dict[str, Any]] = None,
+    ) -> "ClientUpdatedEvent":
         """Create a client updated event"""
         return cls(
             event_id=str(uuid.uuid4()),
@@ -41,16 +49,20 @@ class ClientUpdatedEvent(DomainEvent):
             version="1.0.0",
             data=data,
             metadata=metadata or {},
-            validation_info={}
+            validation_info={},
         )
 
 
 class ClientDeletedEvent(DomainEvent):
     """Client deleted event"""
-    
+
     @classmethod
-    def create(cls, client_id: str, data: Dict[str, Any], 
-               metadata: Optional[Dict[str, Any]] = None) -> "ClientDeletedEvent":
+    def create(
+        cls,
+        client_id: str,
+        data: Dict[str, Any],
+        metadata: Optional[Dict[str, Any]] = None,
+    ) -> "ClientDeletedEvent":
         """Create a client deleted event"""
         return cls(
             event_id=str(uuid.uuid4()),
@@ -61,5 +73,5 @@ class ClientDeletedEvent(DomainEvent):
             version="1.0.0",
             data=data,
             metadata=metadata or {},
-            validation_info={}
-        ) 
+            validation_info={},
+        )

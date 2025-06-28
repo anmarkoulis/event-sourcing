@@ -1,8 +1,11 @@
-import pytest
-from unittest.mock import AsyncMock, MagicMock, patch
 from logging import getLogger
-from event_sourcing.tasks.create_foo import create_foo, create_foo_task
+from unittest.mock import AsyncMock, MagicMock, patch
+
+import pytest
+
 from event_sourcing.dto import FooInDTO
+from event_sourcing.tasks.create_foo import create_foo, create_foo_task
+
 logger = getLogger(__name__)
 
 
