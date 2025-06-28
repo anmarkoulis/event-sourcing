@@ -5,6 +5,6 @@ set -o pipefail
 set -o nounset
 
 # Run migrations
-alembic  -c /app/src/event_sourcing/db/alembic/alembic.ini upgrade head
+alembic  -c /app/src/event_sourcing/infrastructure/database/alembic/alembic.ini upgrade head
 
 exec "$@"

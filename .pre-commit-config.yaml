@@ -103,4 +103,4 @@ repos:
     rev: v1.1.0
     hooks:
       - id: alembic-check
-        args: ["src/event_sourcing/db/alembic/versions"]
+        args: ["src/event_sourcing/infrastructure/database/alembic/versions"]

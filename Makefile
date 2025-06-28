@@ -57,10 +57,10 @@ make-migrations: ## Create migrations
 	docker compose run ${exec_args} --rm fastapi alembic -c /app/src/event_sourcing/infrastructure/database/alembic/alembic.ini revision --autogenerate
 
 migrate: ## Apply migrations
-	docker compose run ${exec_args} --rm fastapi alembic -c /app/src/event_sourcing/infrastructure/database/alembic/alembic.ini upgrade head
+	docker compose run ${exec_args} --rm migrator alembic -c /app/src/event_sourcing/infrastructure/database/alembic/alembic.ini upgrade head
 
 rollback: ## Rollback migrations
-	docker compose run ${exec_args} --rm fastapi alembic -c /app/src/event_sourcing/infrastructure/database/alembic/alembic.ini downgrade ${args}
+	docker compose run ${exec_args} --rm migrator alembic -c /app/src/event_sourcing/infrastructure/database/alembic/alembic.ini downgrade ${args}
 
 dbshell: ## Open PSQL shell
 	docker compose exec postgres psql -U admin -d event_sourcing

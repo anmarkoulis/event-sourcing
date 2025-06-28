@@ -126,7 +126,6 @@ enable = [
     "bad-except-order",                    # Ruff not implemented
     "bad-reversed-sequence",               # Ruff not implemented
     "bad-staticmethod-argument",           # Ruff not implemented
-    "bad-unary-operand-type",              # Ruff not implemented
     "invalid-unary-operand-type",          # Ruff not implemented
     "broad-except",                        # Ruff not implemented
     "catching-non-exception",              # Ruff not implemented

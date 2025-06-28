@@ -10,6 +10,7 @@ style: |
     font-size: 1.5em;
     background-color: #1E1E1E;
     color: #E0E0E0;
+    text-align: left;
   }
   h1 {
     font-size: 1.8em;
@@ -45,16 +46,17 @@ style: |
   }
   section.lead h1 {
     font-size: 2.5em;
+    text-align: center;
   }
   section.lead h2 {
     font-size: 1.8em;
+    text-align: center;
   }
   section.lead {
     text-align: center;
   }
 ---
 
-<!-- _class: lead -->
 # How I Learned to Stop Worrying and Love Raw Events
 
 ## Event Sourcing & CQRS with FastAPI and Celery
@@ -63,8 +65,7 @@ style: |
 
 ---
 
-<!-- _class: lead -->
-# 1. Intro & Motivation (3-4 min)
+# 1. Intro & Motivation
 
 - Who am I?
 - What are raw events? And why would anyone love them?
@@ -75,10 +76,12 @@ style: |
 
 # Who Am I?
 
-- **Staff Engineer** with 10+ years in Python
+- **Senior Staff Engineer** at Orfium
+- **10+ years** in Python and software engineering
 - Built systems handling **millions of events** daily
 - **Event sourcing evangelist** (recovering from traditional architectures)
 - Love for **immutable data** and **audit trails**
+- **Real implementation**: Built complete event sourcing systems
 
 ---
 
@@ -87,31 +90,19 @@ style: |
 ## Instead of storing current state...
 
 ```python
-# Traditional approach
-class UserService:
-    def update_user(self, user_id: int, data: dict):
-        user = self.db.get_user(user_id)
-        user.name = data['name']  # Mutate state
-        user.email = data['email']
-        self.db.save(user)  # Overwrite history
+# Traditional approach - we overwrite history
+user.name = "John Doe"
+user.email = "john@example.com"
+db.save(user)  # Previous state is lost forever
 ```
 
 ## We store **every change** as an immutable event
 
 ```python
-# Event sourcing approach
-class UserCreated:
-    user_id: int
-    name: str
-    email: str
-    timestamp: datetime
-
-class UserNameChanged:
-    user_id: int
-    old_name: str
-    new_name: str
-    timestamp: datetime
-    reason: str
+# Event sourcing approach - we remember everything
+UserCreated(user_id="123", name="John", email="john@example.com")
+UserNameChanged(user_id="123", old_name="John", new_name="Johnny")
+UserEmailChanged(user_id="123", old_email="john@example.com", new_email="johnny@example.com")
 ```
 
 ---
@@ -125,6 +116,7 @@ class UserNameChanged:
 - **Debugging superpowers** - see exactly what happened
 - **Data integrity** - no more "lost" changes
 - **Scalability** - separate read and write concerns
+- **External system integration** - handle external events seamlessly
 
 ---
 
@@ -136,6 +128,7 @@ class UserNameChanged:
 - **Poor auditability** - who changed what when?
 - **Mutable state** - data corruption risks
 - **Scaling challenges** - read/write conflicts
+- **External system sync** - how do you handle external changes?
 
 ## The result: systems that can't explain themselves
 
@@ -145,23 +138,21 @@ class UserNameChanged:
 
 ## What does it look like?
 
-```python
-# Every action is an event
-UserCreated(user_id=123, name="John", email="john@example.com")
-UserNameChanged(user_id=123, old_name="John", new_name="Johnny")
-UserEmailChanged(user_id=123, old_email="john@example.com", new_email="johnny@example.com")
+```
+Every action becomes an event:
+UserCreated → UserNameChanged → UserEmailChanged → UserStatusChanged
 ```
 
 ## Benefits:
 - **Complete history** - nothing is ever lost
-- **Temporal queries** - "what was the state at 3pm?"
+- **Temporal queries** - "what was the user state at 3pm?"
 - **Event replay** - rebuild state from scratch
 - **Audit by design** - every change is recorded
+- **External system integration** - seamless external sync
 
 ---
 
-<!-- _class: lead -->
-# 2. Core Concepts (5-6 min)
+# 2. Core Concepts
 
 - Event Sourcing: Store every change as an immutable event
 - System state = the result of replaying events
@@ -177,9 +168,9 @@ UserEmailChanged(user_id=123, old_email="john@example.com", new_email="johnny@ex
 
 > **System state = The result of replaying all events**
 
-```python
-# Instead of: current_state = database.get()
-# We have: current_state = replay_all_events()
+```
+Instead of: current_state = database.get()
+We have: current_state = replay_all_events()
 ```
 
 ## Key principles:
@@ -192,141 +183,120 @@ UserEmailChanged(user_id=123, old_email="john@example.com", new_email="johnny@ex
 
 # Event Sourcing in Practice
 
-```python
-class UserAggregate:
-    def __init__(self):
-        self.id = None
-        self.name = None
-        self.email = None
-        self.version = 0
-    
-    def apply(self, event: Event):
-        if isinstance(event, UserCreated):
-            self.id = event.user_id
-            self.name = event.name
-            self.email = event.email
-        elif isinstance(event, UserNameChanged):
-            self.name = event.new_name
-        
-        self.version += 1
+## How it works:
 
-def build_user_state(user_id: str) -> UserAggregate:
-    events = event_store.get_stream(f"user-{user_id}")
-    user = UserAggregate()
-    
-    for event in events:
-        user.apply(event)
-    
-    return user
+1. **Events are stored** in an append-only log
+2. **Aggregates apply events** to build state
+3. **State is reconstructed** by replaying events
+4. **Current state** = result of all applied events
+
+## Example:
+```
+UserCreated → UserNameChanged → UserEmailChanged
+     ↓              ↓                ↓
+   State 1      State 2         Current State
 ```
 
 ---
 
 # CQRS: Command Query Responsibility Segregation
 
-## Separation of concerns:
+## Separate concerns:
 
-### Commands (Write Model)
-```python
-class CreateUserCommand:
-    name: str
-    email: str
+**Commands** (Write Model):
+- Handle business logic
+- Emit events
+- Change system state
 
-class ChangeUserNameCommand:
-    user_id: int
-    new_name: str
-    reason: str
-```
+**Queries** (Read Model):
+- Optimized for fast reads
+- Denormalized for performance
+- No business logic
 
-### Queries (Read Model)
-```python
-class UserQuery:
-    def get_user_by_id(self, user_id: int) -> UserDTO:
-        # Optimized for reading
-        return self.read_db.get_user(user_id)
-```
+## Benefits:
+- **Independent scaling** of read/write
+- **Technology flexibility** - different DBs
+- **Performance optimization** per use case
 
 ---
 
 # CQRS Benefits
 
-## Why this separation matters:
+## What you get:
 
 - **Auditability** - commands emit events, queries are optimized
 - **Modularity** - different models for different concerns
 - **Scalability** - read/write workloads differ
 - **Technology flexibility** - different DBs for different needs
 
-## **You don't need Kafka to start!**
+## Key point: **You don't need Kafka to start with CQRS**
+
+Start simple, evolve as needed!
 
 ---
 
-<!-- _class: lead -->
-# 3. Architecture Walkthrough (10-12 min)
+# 3. Architecture Walkthrough
 
 - High-level flow: External event → queue → processing → publish → read model
-- Tools & layers: Celery, FastAPI, Internal Event Bus
-- Key components: Raw event ingestion, Event store, Replaying events, Read DB
-- Design flexibility: Services + repositories, Async + decoupling
+- Tools & layers: Celery, FastAPI, Event Bus
+- Key components: Event ingestion, event store, replay, read DB
+- Design flexibility: Services + repositories, async + decoupling
 
 ---
 
 # High-Level Architecture Flow
 
+## The complete picture:
+
 ```
-External Request → Command → Event Store → Event Bus → Read Model
+External Request → FastAPI → Command → Event Store
+                                        ↓
+Read Model ← Event Bus ← Celery Workers ← Event
 ```
 
 ## Key components:
-- **FastAPI** - API surface (commands + queries)
-- **Celery** - async event processing
-- **Event Store** - append-only event log
-- **Read Model** - optimized for queries
-- **Event Bus** - pub/sub communication
+- **FastAPI**: API surface for commands/queries
+- **Celery**: Async task runner, scalable workers
+- **Event Store**: Append-only log (source of truth)
+- **Read Model**: Optimized for queries
+- **Event Bus**: Pub/sub communication
 
 ---
 
 # FastAPI: The Command Interface
 
+## Real implementation:
+
 ```python
-from fastapi import FastAPI, HTTPException
-from pydantic import BaseModel
-
-app = FastAPI()
-
-class CreateUserCommand(BaseModel):
-    name: str
-    email: str
-
-@app.post("/users")
+@router.post("/users")
 async def create_user(command: CreateUserCommand):
-    # Validate command
-    # Emit event
-    # Return immediately (async)
+    # Validate and create event
     event = UserCreated(
-        user_id=generate_id(),
+        user_id=command.user_id,
         name=command.name,
         email=command.email
     )
     
+    # Store event (append-only)
     await event_store.append(event)
+    
+    # Publish to event bus
     await event_bus.publish(event)
     
-    return {"user_id": event.user_id, "status": "processing"}
+    # Return immediately (async processing)
+    return {"status": "accepted", "user_id": command.user_id}
 ```
 
 ---
 
 # Celery: Async Task Runner & Scalable Workers
 
+## Event processing tasks:
+
 ```python
-from celery import Celery
-
-celery_app = Celery('event_processor')
-
 @celery_app.task
 def process_user_created(event: UserCreated):
-    # Business logic here
+    # Business logic
     user = User(
         id=event.user_id,
         name=event.name,
@@ -337,102 +307,106 @@ def process_user_created(event: UserCreated):
     # Update read model
     read_model.save_user(user)
     
-    # Send welcome email
-    email_service.send_welcome(event.email)
-
-@celery_app.task
-def process_user_name_changed(event: UserNameChanged):
-    # Update read model
-    read_model.update_user_name(event.user_id, event.new_name)
-    
-    # Notify other services
-    notification_service.notify_name_change(event)
+    # Side effects
+    send_welcome_email(user.email)
+    notify_analytics(user)
 ```
+
+## Benefits:
+- **Independent scaling** per event type
+- **Fault tolerance** - retry on failure
+- **Async processing** - don't block the API
 
 ---
 
 # Event Store: The Source of Truth
 
+## Append-only operations:
+
 ```python
 class EventStore:
-    def __init__(self, db: Database):
-        self.db = db
-    
     async def append(self, event: Event):
-        # Append-only operation
+        # Never update or delete
         await self.db.execute("""
             INSERT INTO events (stream_id, event_type, data, version)
             VALUES ($1, $2, $3, $4)
-        """, event.stream_id, event.__class__.__name__, 
-             event.model_dump(), event.version)
+        """, event.stream_id, event.type, event.data, event.version)
     
     async def get_stream(self, stream_id: str, from_version: int = 0):
         # Get all events for a stream
-        rows = await self.db.fetch("""
+        return await self.db.fetch("""
             SELECT * FROM events 
-            WHERE stream_id = $1 AND version > $2
+            WHERE stream_id = $1 AND version >= $2
             ORDER BY version
         """, stream_id, from_version)
-        
-        return [deserialize_event(row) for row in rows]
 ```
 
 ---
 
 # Read Model: Search-Optimized Database
 
+## Optimized for fast queries:
+
 ```python
 class UserReadModel:
-    def __init__(self, db: Database):
-        self.db = db
+    async def save_user(self, user: User):
+        # Optimized for fast reads
+        await self.db.execute("""
+            INSERT INTO users_view (id, name, email, status, created_at)
+            VALUES ($1, $2, $3, $4, $5)
+            ON CONFLICT (id) DO UPDATE SET
+                name = EXCLUDED.name,
+                email = EXCLUDED.email,
+                status = EXCLUDED.status
+        """, user.id, user.name, user.email, user.status, user.created_at)
     
-    async def get_user_by_id(self, user_id: int) -> UserDTO:
-        # Fast, direct query
-        row = await self.db.fetchrow("""
-            SELECT id, name, email, created_at, updated_at
-            FROM users WHERE id = $1
-        """, user_id)
-        
-        return UserDTO(**row) if row else None
+    async def get_user(self, user_id: str) -> User:
+        # Fast, simple query
+        return await self.db.fetchrow(
+            "SELECT * FROM users_view WHERE id = $1", user_id
+        )
     
-    async def search_users(self, name_pattern: str) -> List[UserDTO]:
-        # Optimized search
-        rows = await self.db.fetch("""
-            SELECT id, name, email, created_at
-            FROM users 
-            WHERE name ILIKE $1
+    async def search_users(self, query: str) -> List[User]:
+        # Complex search queries
+        return await self.db.fetch("""
+            SELECT * FROM users_view 
+            WHERE name ILIKE $1 OR email ILIKE $1
             ORDER BY created_at DESC
-        """, f"%{name_pattern}%")
-        
-        return [UserDTO(**row) for row in rows]
+        """, f"%{query}%")
 ```
 
 ---
 
 # Design Flexibility: Services + Repositories
 
-## Command side:
+## Clean separation of concerns:
+
 ```python
+# Command side service
 class UserCommandService:
     def __init__(self, event_store: EventStore, event_bus: EventBus):
         self.event_store = event_store
         self.event_bus = event_bus
     
     async def create_user(self, command: CreateUserCommand):
-        event = UserCreated(user_id=generate_id(), **command.dict())
+        # Business logic
+        event = UserCreated(
+            user_id=command.user_id,
+            name=command.name,
+            email=command.email
+        )
+        
+        # Store and publish
         await self.event_store.append(event)
         await self.event_bus.publish(event)
-        return event.user_id
-```
 
-## Query side:
-```python
+# Query side service
 class UserQueryService:
     def __init__(self, read_model: UserReadModel):
         self.read_model = read_model
     
-    async def get_user(self, user_id: int) -> UserDTO:
-        return await self.read_model.get_user_by_id(user_id)
+    async def get_user(self, user_id: str) -> User:
+        return await self.read_model.get_user(user_id)
 ```
 
 ---
@@ -447,10 +421,12 @@ class UserQueryService:
 - **Technology flexibility** - different DBs for different needs
 - **Eventual consistency** - a feature, not a bug
 
+## Real performance:
+Systems process external events with proper choreography and maintain complete audit trails.
+
 ---
 
-<!-- _class: lead -->
-# 4. Real-World Patterns & Gotchas (6-7 min)
+# 4. Real-World Patterns & Gotchas
 
 - Eventual consistency: why it's a feature, not a bug
 - Snapshots for performance on replay
@@ -462,151 +438,120 @@ class UserQueryService:
 
 # Eventual Consistency: Feature, Not Bug
 
-## Why eventual consistency is powerful:
+## Why it's powerful:
 
-```python
-# Command side - immediate response
-@app.post("/users/{user_id}/name")
-async def change_name(user_id: int, new_name: str):
-    event = UserNameChanged(user_id, new_name)
-    await event_store.append(event)
-    await event_bus.publish(event)
-    
-    return {"status": "processing"}  # Immediate response
-
-# Query side - eventually consistent
-@app.get("/users/{user_id}")
-async def get_user(user_id: int):
-    # May not reflect latest changes yet
-    return await read_model.get_user_by_id(user_id)
+```
+User creates account → Event stored → API returns success
+                    ↓
+              Event processing (async)
+                    ↓
+              Read model updated (eventually)
 ```
 
 ## Benefits:
-- **High availability** - system stays responsive
-- **Scalability** - independent read/write scaling
-- **Resilience** - failures don't cascade
+- **High availability** - API responds immediately
+- **Scalability** - processing can be distributed
+- **Fault tolerance** - retry on failure
+- **Performance** - no blocking operations
 
 ---
 
-# Snapshots for Performance on Replay
+# Snapshots for Performance
 
 ## The replay problem:
 
 ```python
-# Without snapshots - slow for old aggregates
-def build_user_state(user_id: str) -> UserAggregate:
-    events = event_store.get_stream(f"user-{user_id}")  # Could be 1000s of events
-    user = UserAggregate()
-    
-    for event in events:  # Expensive!
-        user.apply(event)
-    
-    return user
+# Without snapshots - slow for long histories
+def get_user_state(user_id: str, at_time: datetime):
+    events = event_store.get_events(user_id, until=at_time)
+    return replay_events(events)  # Could be thousands of events
 ```
 
 ## With snapshots:
 
 ```python
-def build_user_state(user_id: str) -> UserAggregate:
-    # Try to get latest snapshot
-    snapshot = snapshot_store.get_latest(f"user-{user_id}")
-    
-    if snapshot:
-        user = snapshot.state
-        # Only replay events after snapshot
-        events = event_store.get_stream(f"user-{user_id}", snapshot.version)
-    else:
-        user = UserAggregate()
-        events = event_store.get_stream(f"user-{user_id}")
-    
-    for event in events:
-        user.apply(event)
-    
-    return user
+# With snapshots - fast state reconstruction
+def get_user_state(user_id: str, at_time: datetime):
+    snapshot = get_latest_snapshot(user_id, before=at_time)
+    events = event_store.get_events(user_id, from_version=snapshot.version, until=at_time)
+    return replay_events_from_snapshot(snapshot, events)  # Much faster
 ```
 
 ---
 
-# Initial Backfill: Bootstrapping from Source APIs
+# Initial Backfill: Bootstrapping
 
-## How to migrate existing data:
+## From external systems:
 
 ```python
 @celery_app.task
-def backfill_user_events():
-    # Get users from existing system
-    users = legacy_db.get_all_users()
+def backfill_from_salesforce():
+    # Get all users from Salesforce
+    sf_users = salesforce_client.get_all_users()
     
-    for user in users:
-        # Create events for existing state
+    for sf_user in sf_users:
+        # Create events for existing data
         event = UserCreated(
-            user_id=user.id,
-            name=user.name,
-            email=user.email,
-            created_at=user.created_at
+            user_id=sf_user.id,
+            name=sf_user.name,
+            email=sf_user.email,
+            source="salesforce_backfill"
         )
         
-        # Store in event store
+        # Store and process
         event_store.append(event)
-        event_bus.publish(event)
-        
-        # Update read model
-        read_model.save_user(user)
+        process_user_created.delay(event.dict())
 ```
 
 ---
 
 # Fixes by Reprocessing History
 
-## Instead of manual data patches:
+## No manual data patching:
 
 ```python
-# Traditional approach - scary!
-UPDATE users SET name = 'correct_name' WHERE id = 123;
+# Instead of: UPDATE users SET name = 'John' WHERE id = '123'
 
-# Event sourcing approach - safe!
+# We do: Reprocess all events with the fix
 @celery_app.task
-def fix_user_name(user_id: int, correct_name: str):
-    # Emit correction event
-    event = UserNameCorrected(
-        user_id=user_id,
-        old_name=get_current_name(user_id),
-        new_name=correct_name,
-        reason="Data correction"
-    )
+def reprocess_user_events(user_id: str):
+    events = event_store.get_stream(user_id)
     
-    await event_store.append(event)
-    await event_bus.publish(event)
+    # Clear read model
+    read_model.delete_user(user_id)
     
-    # All projections will be updated automatically
+    # Replay with fix
+    for event in events:
+        if event.type == "UserCreated":
+            process_user_created.delay(event.dict())
+        elif event.type == "UserNameChanged":
+            process_user_name_changed.delay(event.dict())
 ```
 
 ---
 
 # Debugging in an Immutable World
 
-## The debugging superpowers:
+## What debugging looks like:
 
 ```python
 # See exactly what happened
-async def debug_user_issue(user_id: int, timestamp: datetime):
-    # Get all events for the user
-    events = await event_store.get_stream(f"user-{user_id}")
+def debug_user_issue(user_id: str, timestamp: datetime):
+    events = event_store.get_events(user_id, around=timestamp)
     
-    # Replay to any point in time
-    user_state = UserAggregate()
+    print(f"User {user_id} events around {timestamp}:")
     for event in events:
-        if event.timestamp <= timestamp:
-            user_state.apply(event)
-        else:
-            break
+        print(f"  {event.timestamp}: {event.type} - {event.data}")
     
-    return user_state
-
-# Compare states at different times
-state_3pm = await debug_user_issue(user_id, datetime(2025, 1, 1, 15, 0))
-state_4pm = await debug_user_issue(user_id, datetime(2025, 1, 1, 16, 0))
+    # Replay to see state
+    state = replay_events(events)
+    print(f"Final state: {state}")
 ```
+
+## Benefits:
+- **Complete visibility** - every change is recorded
+- **Time travel** - see state at any point
+- **No lost data** - nothing is ever overwritten
 
 ---
 
@@ -615,40 +560,38 @@ state_4pm = await debug_user_issue(user_id, datetime(2025, 1, 1, 16, 0))
 ## Testing strategies:
 
 ```python
-class TestUserAggregate:
-    def test_user_creation(self):
-        # Given
-        events = [
-            UserCreated(user_id=1, name="John", email="john@example.com")
-        ]
-        
-        # When
-        user = UserAggregate()
-        for event in events:
-            user.apply(event)
-        
-        # Then
-        assert user.name == "John"
-        assert user.email == "john@example.com"
+# Test aggregates by applying events
+def test_user_aggregate():
+    user = UserAggregate()
+    
+    # Apply events
+    user.apply(UserCreated(user_id="123", name="John", email="john@example.com"))
+    user.apply(UserNameChanged(user_id="123", old_name="John", new_name="Johnny"))
+    
+    # Assert final state
+    assert user.name == "Johnny"
+    assert user.email == "john@example.com"
 
-class TestEventStore:
-    async def test_event_append_and_retrieve(self):
-        # Given
-        event = UserCreated(user_id=1, name="John", email="john@example.com")
-        
-        # When
-        await event_store.append(event)
-        retrieved_events = await event_store.get_stream("user-1")
-        
-        # Then
-        assert len(retrieved_events) == 1
-        assert retrieved_events[0].name == "John"
+# Test event store
+def test_event_store():
+    event = UserCreated(user_id="123", name="John", email="john@example.com")
+    
+    # Store and retrieve
+    event_store.append(event)
+    events = event_store.get_stream("123")
+    
+    assert len(events) == 1
+    assert events[0].type == "UserCreated"
 ```
+
+## Benefits:
+- **Predictable testing** - immutability makes tests reliable
+- **Event-based testing** - test business logic through events
+- **Integration testing** - test full event processing pipeline
 
 ---
 
-<!-- _class: lead -->
-# 5. Key Takeaways & Reflections (2-3 min)
+# 5. Key Takeaways & Reflections
 
 - Raw events are scary — until you realize how powerful they are
 - Python + Celery + FastAPI are more than capable for serious architecture
@@ -659,13 +602,19 @@ class TestEventStore:
 
 # Key Takeaways
 
-## What you should remember:
+## The mindset shift:
 
-1. **Raw events are powerful** - complete audit trail, time travel, debugging superpowers
-2. **Python ecosystem is ready** - FastAPI + Celery + async/await = perfect combination
-3. **Start simple** - you don't need Kafka or complex infrastructure to begin
-4. **Event sourcing is a mindset** - think in terms of "what happened" not "what is"
-5. **Your system should explain itself** - 6 months from now, you'll thank yourself
+- **Raw events are scary** — until you realize how powerful they are
+- **Python + Celery + FastAPI** are more than capable for serious architecture
+- **Event sourcing is a mindset shift**, not a silver bullet — but it's fun
+- **The system you build today** should be able to explain itself 6 months from now
+
+## Start simple, evolve as needed:
+
+1. **Begin with basic event sourcing** - store events, replay for state
+2. **Add CQRS gradually** - separate read/write concerns
+3. **Scale with async processing** - Celery for background work
+4. **Embrace eventual consistency** - it's a feature, not a bug
 
 ---
 
@@ -675,26 +624,32 @@ class TestEventStore:
 
 - **What if I stored every change instead of just current state?**
 - **How would I debug this if I could replay every action?**
-- **What would it mean to have complete audit trails?**
-- **Could I separate my read and write concerns?**
+- **What would complete audit trails mean for my business?**
+- **Could I separate read and write concerns?**
 - **What if my data was immutable?**
+- **How would I handle external system changes?**
+
+## These questions will help you think differently about your architecture.
 
 ---
 
-<!-- _class: lead -->
-# Thank You!
+# Questions & Discussion
 
-## Questions & Discussion
+## Let's talk about:
 
-**Slides & Code**: [GitHub Link]
+- **Your experiences** with event sourcing
+- **Challenges** you've faced with traditional architectures
+- **Questions** about implementation details
+- **Next steps** for your projects
 
-**Twitter**: @yourhandle
+## Resources:
 
-**Email**: your.email@example.com
+- **Code examples**: Available on GitHub
+- **Architecture docs**: Detailed implementation guide
+- **Community**: Event sourcing meetups and conferences
 
 ---
 
-<!-- _class: lead -->
 # Resources
 
 ## Further Reading:
@@ -710,4 +665,16 @@ class TestEventStore:
 - **Celery** - Distributed task queue
 - **Pydantic** - Data validation
 - **SQLAlchemy** - Database ORM
-- **Redis** - Event store & caching
+- **PostgreSQL** - Event store & read model
+
+---
+
+# Thank You!
+
+## How I Learned to Stop Worrying and Love Raw Events
+
+**Event Sourcing & CQRS with FastAPI and Celery**
+
+**PyCon Athens 2025**
+
+Questions? Let's discuss!

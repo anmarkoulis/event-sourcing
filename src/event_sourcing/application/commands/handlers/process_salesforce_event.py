@@ -5,9 +5,9 @@ import uuid
 
 from ....domain.events.base import DomainEvent
 from ....domain.events.client import ClientCreatedEvent, ClientUpdatedEvent, ClientDeletedEvent
-from ....domain.aggregates.client import ClientAggregate
 from ....domain.mappings.registry import MappingRegistry
 from ..salesforce import ProcessSalesforceEventCommand
+from ..aggregate import AsyncReconstructAggregateCommand, AsyncUpdateReadModelCommand, AsyncPublishSnapshotCommand
 from ....infrastructure.event_store import EventStore
 from ....infrastructure.read_model import ReadModel
 from ....infrastructure.messaging import EventPublisher
@@ -36,6 +36,7 @@ class ProcessSalesforceEventCommandHandler:
         
         for parsed_event in parsed_events:
             logger.info(f"Processing parsed event: {parsed_event}")
+            
             # 2. Validate event ordering and consistency
             is_valid = await self._validate_event_ordering(parsed_event)
             if not is_valid:
@@ -46,14 +47,32 @@ class ProcessSalesforceEventCommandHandler:
             await self.event_store.save_event(parsed_event)
             logger.info(f"Saved event: {parsed_event}")
             
-            # 4. Reconstruct aggregate with mappings
-            client = await self._reconstruct_aggregate(parsed_event.aggregate_id)
-            logger.info(f"Reconstructed aggregate: {client}")
-            # 5. Update read model
-            await self.read_model.save_client(client.get_snapshot())
-            logger.info(f"Updated read model: {client.get_snapshot()}")
-            # 6. Publish normalized entity
-            await self.event_publisher.publish(client.get_snapshot())
+            # 4. Create async commands for the next steps
+            await self._create_async_follow_up_commands(parsed_event, command.data['entity_name'])
+    
+    async def _create_async_follow_up_commands(self, event: DomainEvent, entity_name: str) -> None:
+        """Create async follow-up commands that will trigger Celery tasks"""
+        
+        # Only trigger the reconstruct aggregate command first
+        # The subsequent steps will be triggered by the completion of this step
+        reconstruct_command = AsyncReconstructAggregateCommand.create(
+            aggregate_id=event.aggregate_id,
+            aggregate_type=event.aggregate_type,
+            entity_name=entity_name
+        )
+        
+        # Process only the reconstruct command (this will trigger the chain)
+        await self._process_reconstruct_command(reconstruct_command)
+    
+    async def _process_reconstruct_command(self, reconstruct_command: AsyncReconstructAggregateCommand) -> None:
+        """Process the reconstruct command by triggering Celery task"""
+        
+        # Trigger reconstruct aggregate task
+        from .async_reconstruct_aggregate import AsyncReconstructAggregateCommandHandler
+        reconstruct_handler = AsyncReconstructAggregateCommandHandler()
+        await reconstruct_handler.handle(reconstruct_command)
+        
+        logger.info(f"Triggered reconstruct aggregate command for: {reconstruct_command.data['aggregate_id']}")
     
     def _parse_salesforce_event(self, raw_event: dict) -> List[DomainEvent]:
         """Parse Salesforce CDC event into domain events"""
@@ -134,38 +153,4 @@ class ProcessSalesforceEventCommandHandler:
                 await self.backfill_service.trigger_backfill(event.aggregate_id, event.aggregate_type)
                 return False
         
-        return True
-    
-    async def _reconstruct_aggregate(self, aggregate_id: str) -> ClientAggregate:
-        """Reconstruct aggregate from events with mappings applied"""
-        events = await self.event_store.get_events(aggregate_id, "client")
-        client = ClientAggregate(aggregate_id)
-        
-        for event in events:
-            # Apply mappings during reconstruction
-            mapped_data = self._apply_mappings(event.data, "Account")
-            event.data = mapped_data
-            client.apply(event)
-        
-        return client
-    
-    def _apply_mappings(self, raw_data: dict, entity_name: str) -> dict:
-        """Apply field mappings to raw data"""
-        mappings_class = MappingRegistry.get_mappings(entity_name)
-        if not mappings_class:
-            return raw_data
-        
-        mappings = mappings_class.get_mappings()
-        mapped_data = {}
-        
-        for key, mapping in mappings.items():
-            try:
-                mapped_data[key] = (
-                    mapping.operation(raw_data, mapping.value)
-                    if callable(mapping.operation)
-                    else mapping.value
-                )
-            except KeyError:
-                continue
-        
-        return mapped_data 
+        return True 

@@ -44,13 +44,9 @@ class PostgreSQLReadModel(ReadModel):
         aggregate_id = client_data.get('aggregate_id')
         logger.info(f"Saving client {aggregate_id} to PostgreSQL")
         
-        # Create or update client model
-        client_model = ClientModel(
-            aggregate_id=aggregate_id,
-            name=client_data.get('name'),
-            parent_id=client_data.get('parent_id'),
-            status=client_data.get('status')
-        )
+        if not aggregate_id:
+            logger.error(f"Cannot save client: aggregate_id is missing from data: {client_data}")
+            return
         
         async with AsyncDBContextManager(self.database_manager) as session:
             # Check if client exists
@@ -70,6 +66,12 @@ class PostgreSQLReadModel(ReadModel):
                 existing_client.updated_at = datetime.utcnow()
             else:
                 # Create new client
+                client_model = ClientModel(
+                    aggregate_id=aggregate_id,
+                    name=client_data.get('name'),
+                    parent_id=client_data.get('parent_id'),
+                    status=client_data.get('status')
+                )
                 session.add(client_model)
             
             await session.commit()
