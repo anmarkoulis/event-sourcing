@@ -1,19 +1,10 @@
 import asyncio
 import logging
-from typing import Any, Dict
 
 from asgiref.sync import async_to_sync
 
 from event_sourcing.application.commands.aggregate import (
-    AsyncPublishSnapshotCommand,
-    AsyncUpdateReadModelCommand,
     ReconstructAggregateCommand,
-)
-from event_sourcing.application.commands.handlers.async_publish_snapshot import (
-    AsyncPublishSnapshotCommandHandler,
-)
-from event_sourcing.application.commands.handlers.async_update_read_model import (
-    AsyncUpdateReadModelCommandHandler,
 )
 from event_sourcing.application.commands.handlers.reconstruct_aggregate import (
     ReconstructAggregateCommandHandler,
@@ -32,9 +23,9 @@ async def reconstruct_aggregate_async(
     aggregate_id: str,
     aggregate_type: str,
     entity_name: str,
-) -> Dict[str, Any]:
+) -> None:
     """
-    Reconstruct aggregate asynchronously.
+    Reconstruct aggregate asynchronously for business logic validation.
 
     :param command_id: The ID of the command
     :param aggregate_id: The aggregate ID
@@ -45,53 +36,26 @@ async def reconstruct_aggregate_async(
     infrastructure_factory = get_infrastructure_factory()
     event_store = infrastructure_factory.event_store
 
-    # Create handler
-    handler = ReconstructAggregateCommandHandler(event_store)
+    # Create reconstruction handler
+    reconstruct_handler = ReconstructAggregateCommandHandler(event_store)
 
-    # Create command directly
+    # Create command
     command = ReconstructAggregateCommand(
         aggregate_id=aggregate_id,
         aggregate_type=aggregate_type,
         entity_name=entity_name,
     )
 
-    # Process command
-    snapshot: Dict[str, Any] = await handler.handle(command)
+    # Reconstruct aggregate (for business logic validation)
+    aggregate = await reconstruct_handler.handle(command)
+
+    if not aggregate:
+        logger.warning(f"No aggregate reconstructed for {aggregate_id}")
+        return
 
     logger.info(
-        f"Successfully reconstructed aggregate asynchronously: {command_id}"
+        f"Successfully reconstructed aggregate for business logic validation: {command_id}"
     )
-    return snapshot
-
-
-async def trigger_next_steps(
-    aggregate_id: str, aggregate_type: str, snapshot: Dict[str, Any]
-) -> None:
-    """Trigger the next steps in the processing chain"""
-    logger.info(f"Triggering next steps for aggregate: {aggregate_id}")
-
-    # Create and trigger update read model command
-    update_command = AsyncUpdateReadModelCommand(
-        aggregate_id=aggregate_id,
-        aggregate_type=aggregate_type,
-        snapshot=snapshot,
-    )
-
-    update_handler = AsyncUpdateReadModelCommandHandler()
-    await update_handler.handle(update_command)
-
-    # Create and trigger publish snapshot command
-    publish_command = AsyncPublishSnapshotCommand(
-        aggregate_id=aggregate_id,
-        aggregate_type=aggregate_type,
-        snapshot=snapshot,
-        event_type="Updated",  # This should come from the original event
-    )
-
-    publish_handler = AsyncPublishSnapshotCommandHandler()
-    await publish_handler.handle(publish_command)
-
-    logger.info(f"Triggered next steps for aggregate: {aggregate_id}")
 
 
 @app.task(
@@ -103,8 +67,8 @@ def reconstruct_aggregate_task(
     aggregate_id: str,
     aggregate_type: str,
     entity_name: str,
-) -> Dict[str, Any]:
-    """Reconstruct aggregate via Celery task."""
+) -> None:
+    """Reconstruct aggregate for business logic validation via Celery task."""
     logger.info(
         f"Starting Celery task for reconstruct aggregate command: {command_id}"
     )
@@ -113,28 +77,18 @@ def reconstruct_aggregate_task(
     reconstruct_aggregate_async_sync = async_to_sync(
         reconstruct_aggregate_async
     )
-    trigger_next_steps_sync = async_to_sync(trigger_next_steps)
 
     # Set the event loop for the sync function
     reconstruct_aggregate_async_sync.main_event_loop = asyncio.get_event_loop()  # type: ignore
-    trigger_next_steps_sync.main_event_loop = asyncio.get_event_loop()  # type: ignore
 
     # Execute the async function
-    snapshot = reconstruct_aggregate_async_sync(
+    reconstruct_aggregate_async_sync(
         command_id=command_id,
         aggregate_id=aggregate_id,
         aggregate_type=aggregate_type,
         entity_name=entity_name,
     )
 
-    # Trigger the next steps in the chain
-    trigger_next_steps_sync(
-        aggregate_id=aggregate_id,
-        aggregate_type=aggregate_type,
-        snapshot=snapshot,
-    )
-
     logger.info(
         f"Completed Celery task for reconstruct aggregate command: {command_id}"
     )
-    return snapshot

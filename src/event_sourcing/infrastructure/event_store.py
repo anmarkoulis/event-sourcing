@@ -1,7 +1,7 @@
 import logging
 from abc import ABC, abstractmethod
 from datetime import datetime
-from typing import List, Optional
+from typing import Any, List, Optional
 
 from sqlalchemy import select
 
@@ -36,13 +36,18 @@ class EventStore(ABC):
 
 
 class PostgreSQLEventStore(EventStore):
-    """PostgreSQL implementation of event store"""
+    """PostgreSQL implementation of event store with automatic projection triggering"""
 
-    def __init__(self, database_manager: DatabaseManager):
+    def __init__(
+        self,
+        database_manager: DatabaseManager,
+        projection_manager: Optional[Any] = None,
+    ):
         self.database_manager = database_manager
+        self.projection_manager = projection_manager
 
     async def save_event(self, event: DomainEvent) -> None:
-        """Save event with validation metadata"""
+        """Save event with validation metadata and trigger projections"""
         logger.info(f"Saving event {event.event_id} to PostgreSQL")
 
         # Create database model from domain event
@@ -64,6 +69,20 @@ class PostgreSQLEventStore(EventStore):
             session.add(event_model)
             await session.commit()
             logger.info(f"Event {event.event_id} saved successfully")
+
+        # Trigger projections automatically (event-driven)
+        if self.projection_manager:
+            try:
+                await self.projection_manager.handle_event(event)
+                logger.info(
+                    f"Projections triggered for event {event.event_id}"
+                )
+            except Exception as e:
+                logger.error(
+                    f"Error triggering projections for event {event.event_id}: {e}"
+                )
+                # Don't fail the event save if projections fail
+                # Projections can be retried later
 
     async def get_events(
         self,

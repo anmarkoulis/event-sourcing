@@ -1,5 +1,5 @@
 import logging
-from typing import Any, Dict
+from typing import Any
 
 from event_sourcing.application.commands.aggregate import (
     ReconstructAggregateCommand,
@@ -17,10 +17,8 @@ class ReconstructAggregateCommandHandler:
     def __init__(self, event_store: EventStore):
         self.event_store = event_store
 
-    async def handle(
-        self, command: ReconstructAggregateCommand
-    ) -> Dict[str, Any]:
-        """Handle reconstruct aggregate command"""
+    async def handle(self, command: ReconstructAggregateCommand) -> Any:
+        """Handle reconstruct aggregate command - returns the aggregate instance"""
         aggregate_id = command.aggregate_id
         aggregate_type = command.aggregate_type
         entity_name = command.entity_name
@@ -38,7 +36,7 @@ class ReconstructAggregateCommandHandler:
             logger.warning(
                 f"No events found for aggregate: {aggregate_type} {aggregate_id}"
             )
-            return {}
+            return None
 
         logger.info(f"Events found for aggregate: {events}")
 
@@ -48,7 +46,7 @@ class ReconstructAggregateCommandHandler:
             logger.error(
                 f"No aggregate class found for type: {aggregate_type}"
             )
-            return {}
+            return None
 
         # Create aggregate instance and apply events
         aggregate = aggregate_class(aggregate_id)
@@ -61,50 +59,12 @@ class ReconstructAggregateCommandHandler:
             event.data = mapped_data
             aggregate.apply(event)
 
-        # Build read model from events (not from aggregate state)
-        read_model = self._build_read_model_from_events(events, entity_name)
-
-        logger.info(
-            f"Generated read model for {aggregate_type} {aggregate_id}: {read_model}"
-        )
-
         logger.info(
             f"Successfully reconstructed aggregate: {aggregate_type} {aggregate_id}"
         )
-        return read_model
+        return aggregate
 
-    def _build_read_model_from_events(
-        self, events: list, entity_name: str
-    ) -> Dict[str, Any]:
-        """Build read model from events instead of aggregate state"""
-        read_model = {
-            "aggregate_id": events[0].aggregate_id if events else None,
-            "entity_name": entity_name,
-        }
-
-        # Apply each event to build the current state
-        for event in events:
-            mapped_data = self._apply_mappings(event.data, entity_name)
-
-            if event.event_type == "Created":
-                read_model.update(mapped_data)
-                read_model["created_at"] = event.timestamp
-                read_model["updated_at"] = event.timestamp
-            elif event.event_type == "Updated":
-                # Only update fields that are present in the event
-                for key, value in mapped_data.items():
-                    if value is not None:
-                        read_model[key] = value
-                read_model["updated_at"] = event.timestamp
-            elif event.event_type == "Deleted":
-                read_model["is_deleted"] = True
-                read_model["updated_at"] = event.timestamp
-
-        return read_model
-
-    def _apply_mappings(
-        self, event_data: Dict[str, Any], entity_name: str
-    ) -> Dict[str, Any]:
+    def _apply_mappings(self, event_data: dict, entity_name: str) -> dict:
         """Apply field mappings to event data"""
         mappings_class = MappingRegistry.get_mappings(entity_name)
         if not mappings_class:

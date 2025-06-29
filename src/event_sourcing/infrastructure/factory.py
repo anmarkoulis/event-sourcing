@@ -1,5 +1,5 @@
 import logging
-from typing import Optional
+from typing import Any, Optional
 
 from .database.session import DatabaseManager
 from .event_store import PostgreSQLEventStore
@@ -21,6 +21,7 @@ class InfrastructureFactory:
         self._event_store: Optional[PostgreSQLEventStore] = None
         self._read_model: Optional[PostgreSQLReadModel] = None
         self._event_publisher: Optional[EventBridgePublisher] = None
+        self._projection_manager: Optional[Any] = None
 
     @property
     def database_manager(self) -> DatabaseManager:
@@ -31,20 +32,38 @@ class InfrastructureFactory:
         return self._database_manager
 
     @property
-    def event_store(self) -> PostgreSQLEventStore:
-        """Get or create event store"""
-        if self._event_store is None:
-            logger.info("Creating event store")
-            self._event_store = PostgreSQLEventStore(self.database_manager)
-        return self._event_store
-
-    @property
     def read_model(self) -> PostgreSQLReadModel:
         """Get or create read model"""
         if self._read_model is None:
             logger.info("Creating read model")
             self._read_model = PostgreSQLReadModel(self.database_manager)
         return self._read_model
+
+    @property
+    def projection_manager(self) -> Any:
+        """Get or create projection manager"""
+        if self._projection_manager is None:
+            logger.info("Creating projection manager")
+            from event_sourcing.application.projections.client_projection import (
+                ClientProjection,
+            )
+            from event_sourcing.application.projections.projection_manager import (
+                ProjectionManager,
+            )
+
+            client_projection = ClientProjection(self.read_model)
+            self._projection_manager = ProjectionManager(client_projection)
+        return self._projection_manager
+
+    @property
+    def event_store(self) -> PostgreSQLEventStore:
+        """Get or create event store with projection manager"""
+        if self._event_store is None:
+            logger.info("Creating event store with projection manager")
+            self._event_store = PostgreSQLEventStore(
+                self.database_manager, self.projection_manager
+            )
+        return self._event_store
 
     @property
     def event_publisher(self) -> EventBridgePublisher:
@@ -67,5 +86,6 @@ class InfrastructureFactory:
         self._event_store = None
         self._read_model = None
         self._event_publisher = None
+        self._projection_manager = None
 
         logger.info("Infrastructure components closed")
