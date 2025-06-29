@@ -64,6 +64,8 @@ target/
 
 # celery beat schedule file
 celerybeat-schedule
+celerybeat-schedule-shm
+celerybeat-schedule-wal
 
 # Environments
 .venv

@@ -39,8 +39,6 @@ services:
     container_name: event_sourcing_migrator
     restart: on-failure
     command: /migrate
-    depends_on:
-      - postgres
 
   initializer:
     <<: *fastapi-common
