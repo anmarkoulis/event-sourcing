@@ -7,9 +7,6 @@ from asgiref.sync import async_to_sync
 from event_sourcing.application.projections.client_projection import (
     ClientProjection,
 )
-from event_sourcing.application.services.infrastructure import (
-    get_infrastructure_factory,
-)
 from event_sourcing.config.celery_app import app
 from event_sourcing.utils import sync_error_logger
 
@@ -29,6 +26,10 @@ async def process_projection_async(
     :param projection_type: The type of projection (e.g., "client")
     """
     # Get infrastructure components
+    from event_sourcing.infrastructure.provider import (
+        get_infrastructure_factory,
+    )
+
     infrastructure_factory = get_infrastructure_factory()
     read_model = infrastructure_factory.read_model
     event_publisher = infrastructure_factory.event_publisher

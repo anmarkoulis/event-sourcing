@@ -10,7 +10,7 @@ logger = logging.getLogger(__name__)
 
 
 class InfrastructureFactory:
-    """Factory for creating infrastructure components"""
+    """Factory for creating infrastructure components and command handlers"""
 
     def __init__(
         self, database_url: str, eventbridge_region: str = "us-east-1"
@@ -81,6 +81,31 @@ class InfrastructureFactory:
                 self.eventbridge_region
             )
         return self._event_publisher
+
+    # Command Handler Factory Methods
+    def create_process_salesforce_event_command_handler(self) -> Any:
+        """Create ProcessSalesforceEventCommandHandler with all dependencies"""
+        logger.info("Creating ProcessSalesforceEventCommandHandler")
+        # Dynamic import to avoid circular dependency
+        from event_sourcing.application.commands.handlers.process_salesforce_event import (
+            ProcessSalesforceEventCommandHandler,
+        )
+
+        return ProcessSalesforceEventCommandHandler(
+            event_store=self.event_store,
+            read_model=self.read_model,
+            event_publisher=self.event_publisher,
+        )
+
+    def create_async_process_salesforce_event_command_handler(self) -> Any:
+        """Create AsyncProcessSalesforceEventCommandHandler (no dependencies needed)"""
+        logger.info("Creating AsyncProcessSalesforceEventCommandHandler")
+        # Dynamic import to avoid circular dependency
+        from event_sourcing.application.commands.handlers.async_process_salesforce_event import (
+            AsyncProcessSalesforceEventCommandHandler,
+        )
+
+        return AsyncProcessSalesforceEventCommandHandler()
 
     async def close(self) -> None:
         """Close all infrastructure components"""

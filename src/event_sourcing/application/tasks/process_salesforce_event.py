@@ -4,16 +4,11 @@ from typing import Any, Dict
 
 from asgiref.sync import async_to_sync
 
-from event_sourcing.application.commands.handlers.process_salesforce_event import (
-    ProcessSalesforceEventCommandHandler,
-)
 from event_sourcing.application.commands.salesforce import (
     ProcessSalesforceEventCommand,
 )
-from event_sourcing.application.services.infrastructure import (
-    get_infrastructure_factory,
-)
 from event_sourcing.config.celery_app import app
+from event_sourcing.infrastructure.provider import get_infrastructure_factory
 from event_sourcing.utils import sync_error_logger
 
 logger = logging.getLogger(__name__)
@@ -35,16 +30,9 @@ async def process_salesforce_event_async(
     """
     # Get infrastructure components
     infrastructure_factory = get_infrastructure_factory()
-    event_store = infrastructure_factory.event_store
-    read_model = infrastructure_factory.read_model
-    event_publisher = infrastructure_factory.event_publisher
 
-    # Create handler
-    handler = ProcessSalesforceEventCommandHandler(
-        event_store=event_store,
-        read_model=read_model,
-        event_publisher=event_publisher,
-    )
+    # Create handler using factory method
+    handler = infrastructure_factory.create_process_salesforce_event_command_handler()
 
     # Create command directly
     command = ProcessSalesforceEventCommand(

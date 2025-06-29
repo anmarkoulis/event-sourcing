@@ -1,10 +1,8 @@
-from event_sourcing.application.services.dependency_service import (
-    DependencyService,
-)
-from event_sourcing.application.services.infrastructure import (
+from event_sourcing.config.settings import settings
+from event_sourcing.infrastructure.provider import (
+    InfrastructureFactoryDep,
     get_infrastructure_factory,
 )
-from event_sourcing.config.settings import settings
 
 
 def get_database_url() -> str:
@@ -22,5 +20,5 @@ def get_eventbridge_region() -> str:
     return default_region
 
 
-# Re-export from application layer
-__all__ = ["DependencyService", "get_infrastructure_factory"]
+# Re-export from infrastructure layer
+__all__ = ["InfrastructureFactoryDep", "get_infrastructure_factory"]

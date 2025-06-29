@@ -7,10 +7,8 @@ from asgiref.sync import async_to_sync
 from event_sourcing.application.commands.aggregate import (
     PublishSnapshotCommand,
 )
-from event_sourcing.application.services.infrastructure import (
-    get_infrastructure_factory,
-)
 from event_sourcing.config.celery_app import app
+from event_sourcing.infrastructure.provider import get_infrastructure_factory
 from event_sourcing.utils import sync_error_logger
 
 logger = logging.getLogger(__name__)

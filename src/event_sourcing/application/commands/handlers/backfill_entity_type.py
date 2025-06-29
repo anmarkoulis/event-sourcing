@@ -7,10 +7,8 @@ from event_sourcing.application.commands.backfill import (
 from event_sourcing.application.commands.salesforce import (
     CreateClientCommand,
 )
-from event_sourcing.application.services.infrastructure import (
-    get_infrastructure_factory,
-)
 from event_sourcing.domain.mappings.registry import MappingRegistry
+from event_sourcing.infrastructure.provider import get_infrastructure_factory
 
 logger = logging.getLogger(__name__)
 

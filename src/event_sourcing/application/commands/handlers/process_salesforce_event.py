@@ -16,6 +16,7 @@ from event_sourcing.domain.events.client import (
 )
 from event_sourcing.infrastructure.event_store import EventStore
 from event_sourcing.infrastructure.messaging import EventPublisher
+from event_sourcing.infrastructure.provider import get_infrastructure_factory
 from event_sourcing.infrastructure.read_model import ReadModel
 
 logger = logging.getLogger(__name__)
@@ -70,10 +71,6 @@ class ProcessSalesforceEventCommandHandler:
         )
 
         # Get Salesforce client for API calls if needed
-        from event_sourcing.application.services.infrastructure import (
-            get_infrastructure_factory,
-        )
-
         infrastructure_factory = get_infrastructure_factory()
         salesforce_client = infrastructure_factory.salesforce_client
 

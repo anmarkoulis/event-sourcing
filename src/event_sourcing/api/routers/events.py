@@ -1,12 +1,9 @@
 import logging
 from typing import Any, Dict
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter
 
-from event_sourcing.api.depends import DependencyService
-from event_sourcing.application.commands.handlers.async_process_salesforce_event import (
-    AsyncProcessSalesforceEventCommandHandler,
-)
+from event_sourcing.api.depends import InfrastructureFactoryDep
 from event_sourcing.application.commands.salesforce import (
     AsyncProcessSalesforceEventCommand,
 )
@@ -19,9 +16,7 @@ events_router = APIRouter(prefix="/events", tags=["events"])
 @events_router.post("/salesforce/", description="Process Salesforce CDC event")
 async def process_salesforce_event(
     raw_event: Dict[str, Any],
-    handler: AsyncProcessSalesforceEventCommandHandler = Depends(
-        DependencyService.get_async_process_salesforce_event_command_handler
-    ),
+    infrastructure_factory: InfrastructureFactoryDep,
 ) -> Dict[str, Any]:
     """
     Process a Salesforce CDC event asynchronously via Celery.
@@ -48,6 +43,9 @@ async def process_salesforce_event(
         entity_name=entity_name,
         change_type=change_type,
     )
+
+    # Create handler using factory method
+    handler = infrastructure_factory.create_async_process_salesforce_event_command_handler()
 
     # Process command (triggers Celery task)
     await handler.handle(command)
