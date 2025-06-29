@@ -116,10 +116,8 @@ Salesforce API → Batch Processing → Creation Commands → Command Processing
 - `create_client(command: CreateClientCommand)` - Create new client
 - `update_client(command: UpdateClientCommand)` - Update client
 - `delete_client(command: DeleteClientCommand)` - Mark client as deleted
-- `get_snapshot()` - Return current state snapshot
+- `get_current_state()` - Return current state
 - `apply_mappings(raw_data: dict)` - Apply field mappings to raw data
-- `validate_event_ordering(event: DomainEvent)` - Validate event ordering
-- `handle_backfill_scenario(event: DomainEvent)` - Handle backfill scenarios
 
 **State Management**:
 - Aggregate maintains current state
@@ -318,7 +316,7 @@ class ProcessSalesforceEventCommandHandler:
             await self.projection_service.project_client(client)
 
             # 6. Publish normalized entity
-            await self.event_publisher.publish(client.get_snapshot())
+            await self.event_publisher.publish(client.get_current_state())
 
     async def _validate_event_ordering(self, event: DomainEvent) -> bool:
         """Validate event ordering and consistency"""

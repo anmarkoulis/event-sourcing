@@ -1,6 +1,5 @@
 import logging
-from abc import abstractmethod
-from typing import Any, Dict
+from datetime import datetime
 
 from event_sourcing.domain.aggregates.base import BaseAggregate
 from event_sourcing.domain.events.base import DomainEvent
@@ -10,24 +9,14 @@ logger = logging.getLogger(__name__)
 
 
 class SalesforceAggregate(BaseAggregate):
-    """Base aggregate for Salesforce entities with common Salesforce operations"""
+    """Base aggregate for Salesforce entities"""
 
     def __init__(self, aggregate_id: str, entity_name: str):
         super().__init__(aggregate_id)
         self.entity_name = entity_name
         self.is_deleted = False
-
-    @abstractmethod
-    def create_from_salesforce(self, data: dict) -> None:
-        """Create aggregate from Salesforce data"""
-
-    @abstractmethod
-    def update_from_salesforce(self, data: dict) -> None:
-        """Update aggregate from Salesforce data"""
-
-    @abstractmethod
-    def delete_from_salesforce(self, data: dict) -> None:
-        """Mark aggregate as deleted from Salesforce data"""
+        self.created_at: datetime | None = None
+        self.updated_at: datetime | None = None
 
     def apply_mappings(self, raw_data: dict) -> dict:
         """Apply field mappings to raw Salesforce data"""
@@ -55,45 +44,27 @@ class SalesforceAggregate(BaseAggregate):
 
         return mapped_data
 
-    def validate_event_ordering(self, event: DomainEvent) -> bool:
-        """Validate event ordering and consistency for Salesforce entities"""
+    def apply(self, event: DomainEvent) -> None:
+        """Apply domain event to Salesforce aggregate state"""
         if event.event_type == "Created":
-            # Creation event should be first
-            if self.version > 0:
-                logger.warning(
-                    f"Creation event received for existing {self.entity_name} {self.aggregate_id}"
-                )
-                return False
-            return True
+            self._apply_created_event(event)
+        elif event.event_type == "Updated":
+            self._apply_updated_event(event)
+        elif event.event_type == "Deleted":
+            self._apply_deleted_event(event)
         else:
-            # Non-creation events require existing entity
-            if self.version == 0:
-                logger.warning(
-                    f"Non-creation event received for non-existent {self.entity_name} {self.aggregate_id}"
-                )
-                return False
-            return True
+            logger.warning(f"Unknown event type: {event.event_type}")
 
-    def handle_backfill_scenario(self, event: DomainEvent) -> None:
-        """Handle backfill scenarios by triggering backfill"""
-        if not self.validate_event_ordering(event):
-            logger.info(
-                f"Triggering backfill for {self.entity_name} {self.aggregate_id}"
-            )
-            # This will be handled by the command handler
-            # We just log the scenario here
-            logger.info(
-                f"Backfill needed for {self.entity_name} {self.aggregate_id}"
-            )
+    def _apply_created_event(self, event: DomainEvent) -> None:
+        """Apply created event - to be implemented by subclasses"""
+        self.created_at = event.timestamp
+        self.updated_at = event.timestamp
 
-    def get_snapshot(self) -> Dict[str, Any]:
-        """Return current state snapshot with common Salesforce fields"""
-        snapshot = {
-            "aggregate_id": self.aggregate_id,
-            "entity_name": self.entity_name,
-            "version": self.version,
-            "created_at": self.created_at,
-            "updated_at": self.updated_at,
-            "is_deleted": self.is_deleted,
-        }
-        return snapshot
+    def _apply_updated_event(self, event: DomainEvent) -> None:
+        """Apply updated event - to be implemented by subclasses"""
+        self.updated_at = event.timestamp
+
+    def _apply_deleted_event(self, event: DomainEvent) -> None:
+        """Apply deleted event - to be implemented by subclasses"""
+        self.is_deleted = True
+        self.updated_at = event.timestamp

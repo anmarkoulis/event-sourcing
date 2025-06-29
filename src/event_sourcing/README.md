@@ -43,7 +43,7 @@ src/event_sourcing/
 ## 🎯 Key Design Decisions
 
 ### 1. **Base Aggregate Hierarchy**
-- `BaseAggregate`: Abstract base with `apply()`, `get_snapshot()`, `validate_event_ordering()`
+- `BaseAggregate`: Abstract base with `apply()` method
 - `SalesforceAggregate`: Salesforce-specific base with `create_from_salesforce()`, `update_from_salesforce()`, `delete_from_salesforce()`
 - `ClientAggregate`: Concrete implementation for Client entity
 

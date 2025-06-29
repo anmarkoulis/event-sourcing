@@ -50,7 +50,7 @@ class ReconstructAggregateCommandHandler:
             )
             return {}
 
-        # Create aggregate instance
+        # Create aggregate instance and apply events
         aggregate = aggregate_class(aggregate_id)
         logger.info(f"Aggregate created: {aggregate}")
 
@@ -61,17 +61,46 @@ class ReconstructAggregateCommandHandler:
             event.data = mapped_data
             aggregate.apply(event)
 
-        # Get snapshot
-        snapshot = aggregate.get_snapshot()
+        # Build read model from events (not from aggregate state)
+        read_model = self._build_read_model_from_events(events, entity_name)
 
         logger.info(
-            f"Generated snapshot for {aggregate_type} {aggregate_id}: {snapshot}"
+            f"Generated read model for {aggregate_type} {aggregate_id}: {read_model}"
         )
 
         logger.info(
             f"Successfully reconstructed aggregate: {aggregate_type} {aggregate_id}"
         )
-        return snapshot  # type: ignore[no-any-return]
+        return read_model
+
+    def _build_read_model_from_events(
+        self, events: list, entity_name: str
+    ) -> Dict[str, Any]:
+        """Build read model from events instead of aggregate state"""
+        read_model = {
+            "aggregate_id": events[0].aggregate_id if events else None,
+            "entity_name": entity_name,
+        }
+
+        # Apply each event to build the current state
+        for event in events:
+            mapped_data = self._apply_mappings(event.data, entity_name)
+
+            if event.event_type == "Created":
+                read_model.update(mapped_data)
+                read_model["created_at"] = event.timestamp
+                read_model["updated_at"] = event.timestamp
+            elif event.event_type == "Updated":
+                # Only update fields that are present in the event
+                for key, value in mapped_data.items():
+                    if value is not None:
+                        read_model[key] = value
+                read_model["updated_at"] = event.timestamp
+            elif event.event_type == "Deleted":
+                read_model["is_deleted"] = True
+                read_model["updated_at"] = event.timestamp
+
+        return read_model
 
     def _apply_mappings(
         self, event_data: Dict[str, Any], entity_name: str
