@@ -6,7 +6,6 @@ from asgiref.sync import async_to_sync
 
 from event_sourcing.application.commands.aggregate import (
     PublishSnapshotCommand,
-    PublishSnapshotCommandData,
 )
 from event_sourcing.application.commands.handlers.publish_snapshot import (
     PublishSnapshotCommandHandler,
@@ -15,6 +14,7 @@ from event_sourcing.application.services.infrastructure import (
     get_infrastructure_factory,
 )
 from event_sourcing.config.celery_app import app
+from event_sourcing.utils import sync_error_logger
 
 logger = logging.getLogger(__name__)
 
@@ -42,16 +42,13 @@ async def publish_snapshot_async(
     # Create handler
     handler = PublishSnapshotCommandHandler(event_publisher)
 
-    # Create command data
-    data = PublishSnapshotCommandData(
+    # Create command directly
+    command = PublishSnapshotCommand(
         aggregate_id=aggregate_id,
         aggregate_type=aggregate_type,
         snapshot=snapshot,
         event_type=event_type,
     )
-
-    # Create command
-    command = PublishSnapshotCommand.create(data=data.dict())
 
     # Process command
     await handler.handle(command)
@@ -64,6 +61,7 @@ async def publish_snapshot_async(
 @app.task(
     name="publish_snapshot",
 )
+@sync_error_logger
 def publish_snapshot_task(
     command_id: str,
     aggregate_id: str,

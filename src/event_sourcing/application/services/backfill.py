@@ -4,7 +4,6 @@ from typing import Any, Dict, Optional
 
 from event_sourcing.application.commands.salesforce import (
     CreateClientCommand,
-    CreateClientCommandData,
 )
 from event_sourcing.domain.mappings.registry import MappingRegistry
 from event_sourcing.infrastructure.event_store import EventStore
@@ -94,14 +93,10 @@ class BackfillService:
         )
 
         if normalized_entity_name == "client":
-            data = CreateClientCommandData(
+            return CreateClientCommand(
                 client_id=entity["Id"],
                 data=entity,
                 source="backfill",
-            )
-            return CreateClientCommand.create(
-                data=data.dict(),
-                metadata={"entity_name": entity_name},
             )
         # Add other entity types as needed
         raise NotImplementedError(

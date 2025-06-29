@@ -9,13 +9,13 @@ from event_sourcing.application.commands.handlers.process_salesforce_event impor
 )
 from event_sourcing.application.commands.salesforce import (
     ProcessSalesforceEventCommand,
-    ProcessSalesforceEventCommandData,
 )
 from event_sourcing.application.services.backfill import BackfillService
 from event_sourcing.application.services.infrastructure import (
     get_infrastructure_factory,
 )
 from event_sourcing.config.celery_app import app
+from event_sourcing.utils import sync_error_logger
 
 logger = logging.getLogger(__name__)
 
@@ -51,15 +51,12 @@ async def process_salesforce_event_async(
         backfill_service=backfill_service,
     )
 
-    # Create command data
-    data = ProcessSalesforceEventCommandData(
+    # Create command directly
+    command = ProcessSalesforceEventCommand(
         raw_event=raw_event,
         entity_name=entity_name,
         change_type=change_type,
     )
-
-    # Create command
-    command = ProcessSalesforceEventCommand.create(data=data.dict())
 
     # Process command
     await handler.handle(command)
@@ -72,6 +69,7 @@ async def process_salesforce_event_async(
 @app.task(
     name="process_salesforce_event",
 )
+@sync_error_logger
 def process_salesforce_event_task(
     command_id: str,
     raw_event: Dict[str, Any],

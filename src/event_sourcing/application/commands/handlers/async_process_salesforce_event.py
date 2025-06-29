@@ -20,26 +20,22 @@ class AsyncProcessSalesforceEventCommandHandler:
         self, command: AsyncProcessSalesforceEventCommand
     ) -> None:
         """Handle the async command by triggering a Celery task"""
-        logger.info(
-            f"Triggering Celery task for command: {command.command_id}"
-        )
+        logger.info(f"Triggering Celery task for command")
 
         # Extract data from command
-        raw_event = command.data["raw_event"]
-        entity_name = command.data["entity_name"]
-        change_type = command.data["change_type"]
+        raw_event = command.raw_event
+        entity_name = command.entity_name
+        change_type = command.change_type
 
         # Trigger Celery task
         try:
             task = process_salesforce_event_task.delay(
-                command_id=command.command_id,
+                command_id="",  # We'll need to handle this differently
                 raw_event=raw_event,
                 entity_name=entity_name,
                 change_type=change_type,
             )
-            logger.info(
-                f"Celery task triggered with task_id: {task.id} for command: {command.command_id}"
-            )
+            logger.info(f"Celery task triggered with task_id: {task.id}")
         except Exception as e:
             logger.error(f"Error triggering Celery task: {e}")
             raise e

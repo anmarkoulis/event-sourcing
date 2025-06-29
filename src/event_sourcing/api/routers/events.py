@@ -9,7 +9,6 @@ from event_sourcing.application.commands.handlers.async_process_salesforce_event
 )
 from event_sourcing.application.commands.salesforce import (
     AsyncProcessSalesforceEventCommand,
-    AsyncProcessSalesforceEventCommandData,
 )
 
 logger = logging.getLogger(__name__)
@@ -43,26 +42,23 @@ async def process_salesforce_event(
     entity_name = change_event_header.get("entityName")
     change_type = change_event_header.get("changeType")
 
-    # Create command data
-    data = AsyncProcessSalesforceEventCommandData(
+    # Create async command directly
+    command = AsyncProcessSalesforceEventCommand(
         raw_event=raw_event,
         entity_name=entity_name,
         change_type=change_type,
     )
 
-    # Create async command
-    command = AsyncProcessSalesforceEventCommand.create(data=data.dict())
-
     # Process command (triggers Celery task)
     await handler.handle(command)
 
     logger.info(
-        f"Successfully triggered async processing for Salesforce event: {command.command_id}"
+        f"Successfully triggered async processing for Salesforce event"
     )
 
     return {
         "status": "success",
-        "command_id": command.command_id,
+        "command_id": "",  # We'll need to handle this differently
         "message": "Event processing started asynchronously",
         "entity_name": entity_name,
         "change_type": change_type,

@@ -16,10 +16,10 @@ class PublishSnapshotCommandHandler:
 
     async def handle(self, command: PublishSnapshotCommand) -> None:
         """Handle publish snapshot command"""
-        aggregate_id = command.data["aggregate_id"]
-        aggregate_type = command.data["aggregate_type"]
-        snapshot = command.data["snapshot"]
-        event_type = command.data["event_type"]
+        aggregate_id = command.aggregate_id
+        aggregate_type = command.aggregate_type
+        snapshot = command.snapshot
+        event_type = command.event_type
 
         logger.info(
             f"Publishing snapshot for: {aggregate_type} {aggregate_id} ({event_type})"
@@ -29,8 +29,8 @@ class PublishSnapshotCommandHandler:
         enriched_snapshot = {
             **snapshot,
             "event_type": event_type,
-            "published_at": command.timestamp.isoformat(),
-            "command_id": command.command_id,
+            "published_at": "",  # We'll need to handle this differently
+            "command_id": "",  # We'll need to handle this differently
         }
 
         # Publish to external systems

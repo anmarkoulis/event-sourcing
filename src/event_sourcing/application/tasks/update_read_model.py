@@ -6,7 +6,6 @@ from asgiref.sync import async_to_sync
 
 from event_sourcing.application.commands.aggregate import (
     UpdateReadModelCommand,
-    UpdateReadModelCommandData,
 )
 from event_sourcing.application.commands.handlers.update_read_model import (
     UpdateReadModelCommandHandler,
@@ -15,6 +14,7 @@ from event_sourcing.application.services.infrastructure import (
     get_infrastructure_factory,
 )
 from event_sourcing.config.celery_app import app
+from event_sourcing.utils import sync_error_logger
 
 logger = logging.getLogger(__name__)
 
@@ -40,15 +40,12 @@ async def update_read_model_async(
     # Create handler
     handler = UpdateReadModelCommandHandler(read_model)
 
-    # Create command data
-    data = UpdateReadModelCommandData(
+    # Create command directly
+    command = UpdateReadModelCommand(
         aggregate_id=aggregate_id,
         aggregate_type=aggregate_type,
         snapshot=snapshot,
     )
-
-    # Create command
-    command = UpdateReadModelCommand.create(data=data.dict())
 
     # Process command
     await handler.handle(command)
@@ -61,6 +58,7 @@ async def update_read_model_async(
 @app.task(
     name="update_read_model",
 )
+@sync_error_logger
 def update_read_model_task(
     command_id: str,
     aggregate_id: str,

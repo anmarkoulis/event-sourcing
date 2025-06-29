@@ -6,11 +6,8 @@ from asgiref.sync import async_to_sync
 
 from event_sourcing.application.commands.aggregate import (
     AsyncPublishSnapshotCommand,
-    AsyncPublishSnapshotCommandData,
     AsyncUpdateReadModelCommand,
-    AsyncUpdateReadModelCommandData,
     ReconstructAggregateCommand,
-    ReconstructAggregateCommandData,
 )
 from event_sourcing.application.commands.handlers.async_publish_snapshot import (
     AsyncPublishSnapshotCommandHandler,
@@ -25,6 +22,7 @@ from event_sourcing.application.services.infrastructure import (
     get_infrastructure_factory,
 )
 from event_sourcing.config.celery_app import app
+from event_sourcing.utils import sync_error_logger
 
 logger = logging.getLogger(__name__)
 
@@ -50,15 +48,12 @@ async def reconstruct_aggregate_async(
     # Create handler
     handler = ReconstructAggregateCommandHandler(event_store)
 
-    # Create command data
-    data = ReconstructAggregateCommandData(
+    # Create command directly
+    command = ReconstructAggregateCommand(
         aggregate_id=aggregate_id,
         aggregate_type=aggregate_type,
         entity_name=entity_name,
     )
-
-    # Create command
-    command = ReconstructAggregateCommand.create(data=data.dict())
 
     # Process command
     snapshot: Dict[str, Any] = await handler.handle(command)
@@ -76,27 +71,21 @@ async def trigger_next_steps(
     logger.info(f"Triggering next steps for aggregate: {aggregate_id}")
 
     # Create and trigger update read model command
-    update_data = AsyncUpdateReadModelCommandData(
+    update_command = AsyncUpdateReadModelCommand(
         aggregate_id=aggregate_id,
         aggregate_type=aggregate_type,
         snapshot=snapshot,
-    )
-    update_command = AsyncUpdateReadModelCommand.create(
-        data=update_data.dict()
     )
 
     update_handler = AsyncUpdateReadModelCommandHandler()
     await update_handler.handle(update_command)
 
     # Create and trigger publish snapshot command
-    publish_data = AsyncPublishSnapshotCommandData(
+    publish_command = AsyncPublishSnapshotCommand(
         aggregate_id=aggregate_id,
         aggregate_type=aggregate_type,
         snapshot=snapshot,
         event_type="Updated",  # This should come from the original event
-    )
-    publish_command = AsyncPublishSnapshotCommand.create(
-        data=publish_data.dict()
     )
 
     publish_handler = AsyncPublishSnapshotCommandHandler()
@@ -108,6 +97,7 @@ async def trigger_next_steps(
 @app.task(
     name="reconstruct_aggregate",
 )
+@sync_error_logger
 def reconstruct_aggregate_task(
     command_id: str,
     aggregate_id: str,

@@ -21,9 +21,9 @@ class ReconstructAggregateCommandHandler:
         self, command: ReconstructAggregateCommand
     ) -> Dict[str, Any]:
         """Handle reconstruct aggregate command"""
-        aggregate_id = command.data["aggregate_id"]
-        aggregate_type = command.data["aggregate_type"]
-        entity_name = command.data["entity_name"]
+        aggregate_id = command.aggregate_id
+        aggregate_type = command.aggregate_type
+        entity_name = command.entity_name
 
         logger.info(
             f"Reconstructing aggregate: {aggregate_type} {aggregate_id}"
@@ -40,6 +40,8 @@ class ReconstructAggregateCommandHandler:
             )
             return {}
 
+        logger.info(f"Events found for aggregate: {events}")
+
         # Get aggregate class from registry
         aggregate_class = AggregateRegistry.get_aggregate(aggregate_type)
         if not aggregate_class:
@@ -50,6 +52,7 @@ class ReconstructAggregateCommandHandler:
 
         # Create aggregate instance
         aggregate = aggregate_class(aggregate_id)
+        logger.info(f"Aggregate created: {aggregate}")
 
         # Apply events with mappings
         for event in events:
@@ -71,28 +74,29 @@ class ReconstructAggregateCommandHandler:
         return snapshot  # type: ignore[no-any-return]
 
     def _apply_mappings(
-        self, raw_data: dict, entity_name: str
+        self, event_data: Dict[str, Any], entity_name: str
     ) -> Dict[str, Any]:
-        """Apply field mappings to raw data"""
+        """Apply field mappings to event data"""
         mappings_class = MappingRegistry.get_mappings(entity_name)
         if not mappings_class:
-            # Convert raw_data to Dict[str, Any] explicitly
-            result: Dict[str, Any] = {}
-            for key, value in raw_data.items():
-                result[str(key)] = value
-            return result
+            logger.warning(f"No mappings found for entity: {entity_name}")
+            return event_data
 
         mappings = mappings_class.get_mappings()
-        mapped_data: Dict[str, Any] = {}
+        mapped_data = {}
 
         for key, mapping in mappings.items():
             try:
                 mapped_data[key] = (
-                    mapping.operation(raw_data, mapping.value)
+                    mapping.operation(event_data, mapping.value)
                     if callable(mapping.operation)
                     else mapping.value
                 )
             except KeyError:
+                logger.debug(f"Field {key} not found in event data")
+                continue
+            except Exception as e:
+                logger.error(f"Error applying mapping for field {key}: {e}")
                 continue
 
         return mapped_data

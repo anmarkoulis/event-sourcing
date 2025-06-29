@@ -3,7 +3,6 @@ from typing import List
 
 from event_sourcing.application.commands.aggregate import (
     AsyncReconstructAggregateCommand,
-    AsyncReconstructAggregateCommandData,
 )
 from event_sourcing.application.commands.salesforce import (
     ProcessSalesforceEventCommand,
@@ -39,12 +38,10 @@ class ProcessSalesforceEventCommandHandler:
 
     async def handle(self, command: ProcessSalesforceEventCommand) -> None:
         """Handle process Salesforce event command"""
-        logger.info(
-            f"Processing Salesforce event: {command.data['raw_event']}"
-        )
+        logger.info(f"Processing Salesforce event: {command.raw_event}")
 
         # 1. Parse and validate raw event
-        parsed_events = self._parse_salesforce_event(command.data["raw_event"])
+        parsed_events = self._parse_salesforce_event(command.raw_event)
         logger.info(f"Parsed events: {parsed_events}")
 
         for parsed_event in parsed_events:
@@ -62,7 +59,7 @@ class ProcessSalesforceEventCommandHandler:
 
             # 4. Create async commands for the next steps
             await self._create_async_follow_up_commands(
-                parsed_event, command.data["entity_name"]
+                parsed_event, command.entity_name
             )
 
     async def _create_async_follow_up_commands(
@@ -70,16 +67,11 @@ class ProcessSalesforceEventCommandHandler:
     ) -> None:
         """Create async follow-up commands that will trigger Celery tasks"""
 
-        # Only trigger the reconstruct aggregate command first
-        # The subsequent steps will be triggered by the completion of this step
-        data = AsyncReconstructAggregateCommandData(
+        # Create reconstruct aggregate command directly
+        reconstruct_command = AsyncReconstructAggregateCommand(
             aggregate_id=event.aggregate_id,
             aggregate_type=event.aggregate_type,
             entity_name=entity_name,
-        )
-
-        reconstruct_command = AsyncReconstructAggregateCommand.create(
-            data=data.dict()
         )
 
         # Process only the reconstruct command (this will trigger the chain)
@@ -99,7 +91,7 @@ class ProcessSalesforceEventCommandHandler:
         await reconstruct_handler.handle(reconstruct_command)
 
         logger.info(
-            f"Triggered reconstruct aggregate command for: {reconstruct_command.data['aggregate_id']}"
+            f"Triggered reconstruct aggregate command for: {reconstruct_command.aggregate_id}"
         )
 
     def _parse_salesforce_event(self, raw_event: dict) -> List[DomainEvent]:

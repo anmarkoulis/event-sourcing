@@ -16,9 +16,9 @@ class UpdateReadModelCommandHandler:
 
     async def handle(self, command: UpdateReadModelCommand) -> None:
         """Handle update read model command"""
-        aggregate_id = command.data["aggregate_id"]
-        aggregate_type = command.data["aggregate_type"]
-        snapshot = command.data["snapshot"]
+        aggregate_id = command.aggregate_id
+        aggregate_type = command.aggregate_type
+        snapshot = command.snapshot
 
         logger.info(
             f"Updating read model for: {aggregate_type} {aggregate_id}"

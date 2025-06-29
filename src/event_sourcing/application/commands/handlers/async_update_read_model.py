@@ -18,23 +18,19 @@ class AsyncUpdateReadModelCommandHandler:
 
     async def handle(self, command: AsyncUpdateReadModelCommand) -> None:
         """Handle the async command by triggering a Celery task"""
-        logger.info(
-            f"Triggering Celery task for update read model command: {command.command_id}"
-        )
+        logger.info(f"Triggering Celery task for update read model command")
 
         # Extract data from command
-        aggregate_id = command.data["aggregate_id"]
-        aggregate_type = command.data["aggregate_type"]
-        snapshot = command.data["snapshot"]
+        aggregate_id = command.aggregate_id
+        aggregate_type = command.aggregate_type
+        snapshot = command.snapshot
 
         # Trigger Celery task
         task = update_read_model_task.delay(
-            command_id=command.command_id,
+            command_id="",  # We'll need to handle this differently
             aggregate_id=aggregate_id,
             aggregate_type=aggregate_type,
             snapshot=snapshot,
         )
 
-        logger.info(
-            f"Celery task triggered with task_id: {task.id} for command: {command.command_id}"
-        )
+        logger.info(f"Celery task triggered with task_id: {task.id}")
