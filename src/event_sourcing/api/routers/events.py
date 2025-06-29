@@ -9,6 +9,7 @@ from event_sourcing.application.commands.handlers.async_process_salesforce_event
 )
 from event_sourcing.application.commands.salesforce import (
     AsyncProcessSalesforceEventCommand,
+    AsyncProcessSalesforceEventCommandData,
 )
 
 logger = logging.getLogger(__name__)
@@ -42,10 +43,15 @@ async def process_salesforce_event(
     entity_name = change_event_header.get("entityName")
     change_type = change_event_header.get("changeType")
 
-    # Create async command
-    command = AsyncProcessSalesforceEventCommand.create(
-        raw_event=raw_event, entity_name=entity_name, change_type=change_type
+    # Create command data
+    data = AsyncProcessSalesforceEventCommandData(
+        raw_event=raw_event,
+        entity_name=entity_name,
+        change_type=change_type,
     )
+
+    # Create async command
+    command = AsyncProcessSalesforceEventCommand.create(data=data.dict())
 
     # Process command (triggers Celery task)
     await handler.handle(command)

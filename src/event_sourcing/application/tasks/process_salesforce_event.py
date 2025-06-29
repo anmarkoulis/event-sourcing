@@ -9,6 +9,7 @@ from event_sourcing.application.commands.handlers.process_salesforce_event impor
 )
 from event_sourcing.application.commands.salesforce import (
     ProcessSalesforceEventCommand,
+    ProcessSalesforceEventCommandData,
 )
 from event_sourcing.application.services.backfill import BackfillService
 from event_sourcing.application.services.infrastructure import (
@@ -50,10 +51,15 @@ async def process_salesforce_event_async(
         backfill_service=backfill_service,
     )
 
-    # Create command
-    command = ProcessSalesforceEventCommand.create(
-        raw_event=raw_event, entity_name=entity_name, change_type=change_type
+    # Create command data
+    data = ProcessSalesforceEventCommandData(
+        raw_event=raw_event,
+        entity_name=entity_name,
+        change_type=change_type,
     )
+
+    # Create command
+    command = ProcessSalesforceEventCommand.create(data=data.dict())
 
     # Process command
     await handler.handle(command)

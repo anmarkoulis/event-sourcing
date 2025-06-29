@@ -6,6 +6,7 @@ from asgiref.sync import async_to_sync
 
 from event_sourcing.application.commands.aggregate import (
     PublishSnapshotCommand,
+    PublishSnapshotCommandData,
 )
 from event_sourcing.application.commands.handlers.publish_snapshot import (
     PublishSnapshotCommandHandler,
@@ -41,13 +42,16 @@ async def publish_snapshot_async(
     # Create handler
     handler = PublishSnapshotCommandHandler(event_publisher)
 
-    # Create command
-    command = PublishSnapshotCommand.create(
+    # Create command data
+    data = PublishSnapshotCommandData(
         aggregate_id=aggregate_id,
         aggregate_type=aggregate_type,
         snapshot=snapshot,
         event_type=event_type,
     )
+
+    # Create command
+    command = PublishSnapshotCommand.create(data=data.dict())
 
     # Process command
     await handler.handle(command)

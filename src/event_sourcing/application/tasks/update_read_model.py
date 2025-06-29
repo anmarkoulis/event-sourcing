@@ -6,6 +6,7 @@ from asgiref.sync import async_to_sync
 
 from event_sourcing.application.commands.aggregate import (
     UpdateReadModelCommand,
+    UpdateReadModelCommandData,
 )
 from event_sourcing.application.commands.handlers.update_read_model import (
     UpdateReadModelCommandHandler,
@@ -39,12 +40,15 @@ async def update_read_model_async(
     # Create handler
     handler = UpdateReadModelCommandHandler(read_model)
 
-    # Create command
-    command = UpdateReadModelCommand.create(
+    # Create command data
+    data = UpdateReadModelCommandData(
         aggregate_id=aggregate_id,
         aggregate_type=aggregate_type,
         snapshot=snapshot,
     )
+
+    # Create command
+    command = UpdateReadModelCommand.create(data=data.dict())
 
     # Process command
     await handler.handle(command)

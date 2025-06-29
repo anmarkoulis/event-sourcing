@@ -1,6 +1,4 @@
-import uuid
-from datetime import datetime
-from typing import Any, Dict, Optional
+from typing import Any, ClassVar, Dict, Optional, cast
 
 from pydantic import BaseModel
 
@@ -18,26 +16,18 @@ class ReconstructAggregateCommandData(BaseModel):
 class ReconstructAggregateCommand(Command):
     """Command to reconstruct an aggregate from events"""
 
+    COMMAND_TYPE: ClassVar[str] = "ReconstructAggregate"
+
     @classmethod
     def create(
         cls,
-        aggregate_id: str,
-        aggregate_type: str,
-        entity_name: str,
+        data: Dict[str, Any],
         metadata: Optional[Dict[str, Any]] = None,
     ) -> "ReconstructAggregateCommand":
         """Create a reconstruct aggregate command"""
-        data = ReconstructAggregateCommandData(
-            aggregate_id=aggregate_id,
-            aggregate_type=aggregate_type,
-            entity_name=entity_name,
-        )
-        return cls(
-            command_id=str(uuid.uuid4()),
-            command_type="ReconstructAggregate",
-            timestamp=datetime.utcnow(),
-            data=data.dict(),
-            metadata=metadata or {},
+        return cast(
+            "ReconstructAggregateCommand",
+            super().create(data=data, metadata=metadata),
         )
 
 
@@ -52,26 +42,18 @@ class AsyncReconstructAggregateCommandData(BaseModel):
 class AsyncReconstructAggregateCommand(Command):
     """Command to asynchronously reconstruct an aggregate from events via Celery"""
 
+    COMMAND_TYPE: ClassVar[str] = "AsyncReconstructAggregate"
+
     @classmethod
     def create(
         cls,
-        aggregate_id: str,
-        aggregate_type: str,
-        entity_name: str,
+        data: Dict[str, Any],
         metadata: Optional[Dict[str, Any]] = None,
     ) -> "AsyncReconstructAggregateCommand":
         """Create an async reconstruct aggregate command"""
-        data = AsyncReconstructAggregateCommandData(
-            aggregate_id=aggregate_id,
-            aggregate_type=aggregate_type,
-            entity_name=entity_name,
-        )
-        return cls(
-            command_id=str(uuid.uuid4()),
-            command_type="AsyncReconstructAggregate",
-            timestamp=datetime.utcnow(),
-            data=data.dict(),
-            metadata=metadata or {},
+        return cast(
+            "AsyncReconstructAggregateCommand",
+            super().create(data=data, metadata=metadata),
         )
 
 
@@ -86,26 +68,18 @@ class UpdateReadModelCommandData(BaseModel):
 class UpdateReadModelCommand(Command):
     """Command to update read model with aggregate snapshot"""
 
+    COMMAND_TYPE: ClassVar[str] = "UpdateReadModel"
+
     @classmethod
     def create(
         cls,
-        aggregate_id: str,
-        aggregate_type: str,
-        snapshot: Dict[str, Any],
+        data: Dict[str, Any],
         metadata: Optional[Dict[str, Any]] = None,
     ) -> "UpdateReadModelCommand":
         """Create an update read model command"""
-        data = UpdateReadModelCommandData(
-            aggregate_id=aggregate_id,
-            aggregate_type=aggregate_type,
-            snapshot=snapshot,
-        )
-        return cls(
-            command_id=str(uuid.uuid4()),
-            command_type="UpdateReadModel",
-            timestamp=datetime.utcnow(),
-            data=data.dict(),
-            metadata=metadata or {},
+        return cast(
+            "UpdateReadModelCommand",
+            super().create(data=data, metadata=metadata),
         )
 
 
@@ -120,26 +94,18 @@ class AsyncUpdateReadModelCommandData(BaseModel):
 class AsyncUpdateReadModelCommand(Command):
     """Command to asynchronously update read model with aggregate snapshot via Celery"""
 
+    COMMAND_TYPE: ClassVar[str] = "AsyncUpdateReadModel"
+
     @classmethod
     def create(
         cls,
-        aggregate_id: str,
-        aggregate_type: str,
-        snapshot: Dict[str, Any],
+        data: Dict[str, Any],
         metadata: Optional[Dict[str, Any]] = None,
     ) -> "AsyncUpdateReadModelCommand":
         """Create an async update read model command"""
-        data = AsyncUpdateReadModelCommandData(
-            aggregate_id=aggregate_id,
-            aggregate_type=aggregate_type,
-            snapshot=snapshot,
-        )
-        return cls(
-            command_id=str(uuid.uuid4()),
-            command_type="AsyncUpdateReadModel",
-            timestamp=datetime.utcnow(),
-            data=data.dict(),
-            metadata=metadata or {},
+        return cast(
+            "AsyncUpdateReadModelCommand",
+            super().create(data=data, metadata=metadata),
         )
 
 
@@ -155,28 +121,18 @@ class PublishSnapshotCommandData(BaseModel):
 class PublishSnapshotCommand(Command):
     """Command to publish aggregate snapshot to external systems"""
 
+    COMMAND_TYPE: ClassVar[str] = "PublishSnapshot"
+
     @classmethod
     def create(
         cls,
-        aggregate_id: str,
-        aggregate_type: str,
-        snapshot: Dict[str, Any],
-        event_type: str,
+        data: Dict[str, Any],
         metadata: Optional[Dict[str, Any]] = None,
     ) -> "PublishSnapshotCommand":
         """Create a publish snapshot command"""
-        data = PublishSnapshotCommandData(
-            aggregate_id=aggregate_id,
-            aggregate_type=aggregate_type,
-            snapshot=snapshot,
-            event_type=event_type,
-        )
-        return cls(
-            command_id=str(uuid.uuid4()),
-            command_type="PublishSnapshot",
-            timestamp=datetime.utcnow(),
-            data=data.dict(),
-            metadata=metadata or {},
+        return cast(
+            "PublishSnapshotCommand",
+            super().create(data=data, metadata=metadata),
         )
 
 
@@ -192,26 +148,16 @@ class AsyncPublishSnapshotCommandData(BaseModel):
 class AsyncPublishSnapshotCommand(Command):
     """Command to asynchronously publish aggregate snapshot to external systems via Celery"""
 
+    COMMAND_TYPE: ClassVar[str] = "AsyncPublishSnapshot"
+
     @classmethod
     def create(
         cls,
-        aggregate_id: str,
-        aggregate_type: str,
-        snapshot: Dict[str, Any],
-        event_type: str,
+        data: Dict[str, Any],
         metadata: Optional[Dict[str, Any]] = None,
     ) -> "AsyncPublishSnapshotCommand":
         """Create an async publish snapshot command"""
-        data = AsyncPublishSnapshotCommandData(
-            aggregate_id=aggregate_id,
-            aggregate_type=aggregate_type,
-            snapshot=snapshot,
-            event_type=event_type,
-        )
-        return cls(
-            command_id=str(uuid.uuid4()),
-            command_type="AsyncPublishSnapshot",
-            timestamp=datetime.utcnow(),
-            data=data.dict(),
-            metadata=metadata or {},
+        return cast(
+            "AsyncPublishSnapshotCommand",
+            super().create(data=data, metadata=metadata),
         )

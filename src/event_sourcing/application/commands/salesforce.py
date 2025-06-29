@@ -1,6 +1,4 @@
-import uuid
-from datetime import datetime
-from typing import Any, Dict, Optional
+from typing import Any, ClassVar, Dict, Optional, cast
 
 from pydantic import BaseModel
 
@@ -18,26 +16,18 @@ class ProcessSalesforceEventCommandData(BaseModel):
 class ProcessSalesforceEventCommand(Command):
     """Command to process Salesforce CDC events"""
 
+    COMMAND_TYPE: ClassVar[str] = "ProcessSalesforceEvent"
+
     @classmethod
     def create(
         cls,
-        raw_event: dict,
-        entity_name: str,
-        change_type: str,
+        data: Dict[str, Any],
         metadata: Optional[Dict[str, Any]] = None,
     ) -> "ProcessSalesforceEventCommand":
         """Create a process Salesforce event command"""
-        data = ProcessSalesforceEventCommandData(
-            raw_event=raw_event,
-            entity_name=entity_name,
-            change_type=change_type,
-        )
-        return cls(
-            command_id=str(uuid.uuid4()),
-            command_type="ProcessSalesforceEvent",
-            timestamp=datetime.utcnow(),
-            data=data.dict(),
-            metadata=metadata or {},
+        return cast(
+            "ProcessSalesforceEventCommand",
+            super().create(data=data, metadata=metadata),
         )
 
 
@@ -52,26 +42,18 @@ class AsyncProcessSalesforceEventCommandData(BaseModel):
 class AsyncProcessSalesforceEventCommand(Command):
     """Command to asynchronously process Salesforce CDC events via Celery"""
 
+    COMMAND_TYPE: ClassVar[str] = "AsyncProcessSalesforceEvent"
+
     @classmethod
     def create(
         cls,
-        raw_event: dict,
-        entity_name: str,
-        change_type: str,
+        data: Dict[str, Any],
         metadata: Optional[Dict[str, Any]] = None,
     ) -> "AsyncProcessSalesforceEventCommand":
         """Create an async process Salesforce event command"""
-        data = AsyncProcessSalesforceEventCommandData(
-            raw_event=raw_event,
-            entity_name=entity_name,
-            change_type=change_type,
-        )
-        return cls(
-            command_id=str(uuid.uuid4()),
-            command_type="AsyncProcessSalesforceEvent",
-            timestamp=datetime.utcnow(),
-            data=data.dict(),
-            metadata=metadata or {},
+        return cast(
+            "AsyncProcessSalesforceEventCommand",
+            super().create(data=data, metadata=metadata),
         )
 
 
@@ -86,24 +68,18 @@ class BackfillEntityTypeCommandData(BaseModel):
 class BackfillEntityTypeCommand(Command):
     """Command to backfill an entity type"""
 
+    COMMAND_TYPE: ClassVar[str] = "BackfillEntityType"
+
     @classmethod
     def create(
         cls,
-        entity_name: str,
-        page: int = 1,
-        page_size: int = 50,
+        data: Dict[str, Any],
         metadata: Optional[Dict[str, Any]] = None,
     ) -> "BackfillEntityTypeCommand":
         """Create a backfill entity type command"""
-        data = BackfillEntityTypeCommandData(
-            entity_name=entity_name, page=page, page_size=page_size
-        )
-        return cls(
-            command_id=str(uuid.uuid4()),
-            command_type="BackfillEntityType",
-            timestamp=datetime.utcnow(),
-            data=data.dict(),
-            metadata=metadata or {},
+        return cast(
+            "BackfillEntityTypeCommand",
+            super().create(data=data, metadata=metadata),
         )
 
 
@@ -118,22 +94,15 @@ class CreateClientCommandData(BaseModel):
 class CreateClientCommand(Command):
     """Command to create a client"""
 
+    COMMAND_TYPE: ClassVar[str] = "CreateClient"
+
     @classmethod
     def create(
         cls,
-        client_id: str,
-        data: dict,
-        source: str = "salesforce",
+        data: Dict[str, Any],
         metadata: Optional[Dict[str, Any]] = None,
     ) -> "CreateClientCommand":
         """Create a create client command"""
-        command_data = CreateClientCommandData(
-            client_id=client_id, data=data, source=source
-        )
-        return cls(
-            command_id=str(uuid.uuid4()),
-            command_type="CreateClient",
-            timestamp=datetime.utcnow(),
-            data=command_data.dict(),
-            metadata=metadata or {},
+        return cast(
+            "CreateClientCommand", super().create(data=data, metadata=metadata)
         )

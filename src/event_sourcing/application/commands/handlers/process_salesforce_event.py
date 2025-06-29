@@ -3,6 +3,7 @@ from typing import List
 
 from event_sourcing.application.commands.aggregate import (
     AsyncReconstructAggregateCommand,
+    AsyncReconstructAggregateCommandData,
 )
 from event_sourcing.application.commands.salesforce import (
     ProcessSalesforceEventCommand,
@@ -71,10 +72,14 @@ class ProcessSalesforceEventCommandHandler:
 
         # Only trigger the reconstruct aggregate command first
         # The subsequent steps will be triggered by the completion of this step
-        reconstruct_command = AsyncReconstructAggregateCommand.create(
+        data = AsyncReconstructAggregateCommandData(
             aggregate_id=event.aggregate_id,
             aggregate_type=event.aggregate_type,
             entity_name=entity_name,
+        )
+
+        reconstruct_command = AsyncReconstructAggregateCommand.create(
+            data=data.dict()
         )
 
         # Process only the reconstruct command (this will trigger the chain)
@@ -130,17 +135,17 @@ class ProcessSalesforceEventCommandHandler:
                 # Create appropriate domain event based on change type
                 if change_type == "CREATE":
                     event = ClientCreatedEvent.create(
-                        client_id=record_id, data=payload, metadata=metadata
+                        aggregate_id=record_id, data=payload, metadata=metadata
                     )
                     events.append(event)
                 elif change_type == "UPDATE":
                     event = ClientUpdatedEvent.create(
-                        client_id=record_id, data=payload, metadata=metadata
+                        aggregate_id=record_id, data=payload, metadata=metadata
                     )
                     events.append(event)
                 elif change_type == "DELETE":
                     event = ClientDeletedEvent.create(
-                        client_id=record_id, data=payload, metadata=metadata
+                        aggregate_id=record_id, data=payload, metadata=metadata
                     )
                     events.append(event)
                 else:

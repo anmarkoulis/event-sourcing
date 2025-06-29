@@ -1,6 +1,4 @@
-import uuid
-from datetime import datetime
-from typing import Any, Dict, Optional
+from typing import Any, ClassVar, Dict, Optional, cast
 
 from .base import DomainEvent
 
@@ -8,70 +6,64 @@ from .base import DomainEvent
 class ClientCreatedEvent(DomainEvent):
     """Client created event"""
 
+    AGGREGATE_TYPE: ClassVar[str] = "client"
+    EVENT_TYPE: ClassVar[str] = "Created"
+
     @classmethod
     def create(
         cls,
-        client_id: str,
+        aggregate_id: str,
         data: Dict[str, Any],
         metadata: Optional[Dict[str, Any]] = None,
     ) -> "ClientCreatedEvent":
         """Create a client created event"""
-        return cls(
-            event_id=str(uuid.uuid4()),
-            aggregate_id=client_id,
-            aggregate_type="client",
-            event_type="Created",
-            timestamp=datetime.utcnow(),
-            version="1.0.0",
-            data=data,
-            metadata=metadata or {},
-            validation_info={},
+        return cast(
+            "ClientCreatedEvent",
+            super().create(
+                aggregate_id=aggregate_id, data=data, metadata=metadata
+            ),
         )
 
 
 class ClientUpdatedEvent(DomainEvent):
     """Client updated event"""
 
+    AGGREGATE_TYPE: ClassVar[str] = "client"
+    EVENT_TYPE: ClassVar[str] = "Updated"
+
     @classmethod
     def create(
         cls,
-        client_id: str,
+        aggregate_id: str,
         data: Dict[str, Any],
         metadata: Optional[Dict[str, Any]] = None,
     ) -> "ClientUpdatedEvent":
         """Create a client updated event"""
-        return cls(
-            event_id=str(uuid.uuid4()),
-            aggregate_id=client_id,
-            aggregate_type="client",
-            event_type="Updated",
-            timestamp=datetime.utcnow(),
-            version="1.0.0",
-            data=data,
-            metadata=metadata or {},
-            validation_info={},
+        return cast(
+            "ClientUpdatedEvent",
+            super().create(
+                aggregate_id=aggregate_id, data=data, metadata=metadata
+            ),
         )
 
 
 class ClientDeletedEvent(DomainEvent):
     """Client deleted event"""
 
+    AGGREGATE_TYPE: ClassVar[str] = "client"
+    EVENT_TYPE: ClassVar[str] = "Deleted"
+
     @classmethod
     def create(
         cls,
-        client_id: str,
+        aggregate_id: str,
         data: Dict[str, Any],
         metadata: Optional[Dict[str, Any]] = None,
     ) -> "ClientDeletedEvent":
         """Create a client deleted event"""
-        return cls(
-            event_id=str(uuid.uuid4()),
-            aggregate_id=client_id,
-            aggregate_type="client",
-            event_type="Deleted",
-            timestamp=datetime.utcnow(),
-            version="1.0.0",
-            data=data,
-            metadata=metadata or {},
-            validation_info={},
+        return cast(
+            "ClientDeletedEvent",
+            super().create(
+                aggregate_id=aggregate_id, data=data, metadata=metadata
+            ),
         )
