@@ -87,7 +87,7 @@ def process_salesforce_event_task(
     )
 
     # Set the event loop for the sync function
-    process_salesforce_event_async_sync.main_event_loop = (
+    process_salesforce_event_async_sync.main_event_loop = (  # type: ignore
         asyncio.get_event_loop()
     )
 

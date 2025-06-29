@@ -1,4 +1,4 @@
-from typing import Annotated
+from typing import Annotated, Any
 
 from fastapi import Depends
 
@@ -51,6 +51,6 @@ class DependencyService:
         infrastructure_factory: Annotated[
             InfrastructureFactory, Depends(get_infrastructure_factory)
         ],
-    ):
+    ) -> Any:
         """Get read model from infrastructure factory"""
         return infrastructure_factory.read_model

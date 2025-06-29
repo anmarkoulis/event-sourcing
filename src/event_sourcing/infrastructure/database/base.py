@@ -1,10 +1,16 @@
 from datetime import datetime
+from typing import TYPE_CHECKING
 
 from sqlalchemy import Column, DateTime, Integer
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import declared_attr
 
-Base = declarative_base()
+if TYPE_CHECKING:
+    from sqlalchemy.orm import DeclarativeBase
+
+    Base = DeclarativeBase
+else:
+    Base = declarative_base()
 
 
 class BaseModel(Base):

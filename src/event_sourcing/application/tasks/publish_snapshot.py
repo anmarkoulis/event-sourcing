@@ -80,7 +80,7 @@ def publish_snapshot_task(
     publish_snapshot_async_sync = async_to_sync(publish_snapshot_async)
 
     # Set the event loop for the sync function
-    publish_snapshot_async_sync.main_event_loop = asyncio.get_event_loop()
+    publish_snapshot_async_sync.main_event_loop = asyncio.get_event_loop()  # type: ignore
 
     # Execute the async function
     publish_snapshot_async_sync(

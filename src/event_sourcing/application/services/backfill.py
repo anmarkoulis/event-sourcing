@@ -1,12 +1,13 @@
 import logging
 from datetime import datetime
-from typing import Any, Dict
+from typing import Any, Dict, Optional
 
 from event_sourcing.application.commands.salesforce import (
     CreateClientCommand,
     CreateClientCommandData,
 )
 from event_sourcing.domain.mappings.registry import MappingRegistry
+from event_sourcing.infrastructure.event_store import EventStore
 
 logger = logging.getLogger(__name__)
 
@@ -14,7 +15,9 @@ logger = logging.getLogger(__name__)
 class BackfillService:
     """Service for handling historical data ingestion and processing"""
 
-    def __init__(self, salesforce_client, event_store):
+    def __init__(
+        self, salesforce_client: Optional[Any], event_store: EventStore
+    ) -> None:
         self.salesforce_client = salesforce_client
         self.event_store = event_store
 
@@ -39,6 +42,10 @@ class BackfillService:
         """Process a single page of entities for backfill"""
         logger.debug(f"Fetching {entity_name} from Salesforce, page {page}")
 
+        if self.salesforce_client is None:
+            logger.warning("Salesforce client is not available")
+            return False
+
         entities_page = await self.salesforce_client.get_entities(
             entity=entity_name, page=page, page_size=page_size
         )
@@ -62,6 +69,10 @@ class BackfillService:
     ) -> None:
         """Trigger backfill for a specific aggregate"""
         logger.info(f"Triggering backfill for {aggregate_type} {aggregate_id}")
+
+        if self.salesforce_client is None:
+            logger.warning("Salesforce client is not available")
+            return
 
         # Get entity from Salesforce
         entity = await self.salesforce_client.get_entity(

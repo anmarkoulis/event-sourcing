@@ -27,5 +27,5 @@ class Client(BaseModel):
         Index("idx_client_name", "name"),
     )
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return f"<Client(aggregate_id={self.aggregate_id}, name={self.name}, status={self.status})>"

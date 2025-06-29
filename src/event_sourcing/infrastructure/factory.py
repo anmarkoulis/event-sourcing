@@ -56,7 +56,7 @@ class InfrastructureFactory:
             )
         return self._event_publisher
 
-    async def close(self):
+    async def close(self) -> None:
         """Close all infrastructure components"""
         logger.info("Closing infrastructure components")
 

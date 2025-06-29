@@ -13,7 +13,7 @@ logger = logging.getLogger(__name__)
 class AsyncReconstructAggregateCommandHandler:
     """Handler for asynchronously reconstructing aggregates via Celery"""
 
-    def __init__(self):
+    def __init__(self) -> None:
         """Initialize the async handler (no dependencies needed as it just triggers Celery)"""
 
     async def handle(self, command: AsyncReconstructAggregateCommand) -> None:

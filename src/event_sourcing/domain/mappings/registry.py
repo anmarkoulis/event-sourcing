@@ -1,4 +1,4 @@
-from typing import Dict, Type
+from typing import Dict, Optional, Type
 
 from .base import BaseMappings
 from .client import ClientMappings
@@ -18,7 +18,7 @@ class MappingRegistry:
     }
 
     @classmethod
-    def get_mappings(cls, entity_name: str) -> Type[BaseMappings]:
+    def get_mappings(cls, entity_name: str) -> Optional[Type[BaseMappings]]:
         """Get mappings class for entity name"""
         return cls._mappings.get(entity_name)
 

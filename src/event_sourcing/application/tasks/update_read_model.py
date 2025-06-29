@@ -76,7 +76,7 @@ def update_read_model_task(
     update_read_model_async_sync = async_to_sync(update_read_model_async)
 
     # Set the event loop for the sync function
-    update_read_model_async_sync.main_event_loop = asyncio.get_event_loop()
+    update_read_model_async_sync.main_event_loop = asyncio.get_event_loop()  # type: ignore
 
     # Execute the async function
     update_read_model_async_sync(

@@ -68,16 +68,22 @@ class ReconstructAggregateCommandHandler:
         logger.info(
             f"Successfully reconstructed aggregate: {aggregate_type} {aggregate_id}"
         )
-        return snapshot
+        return snapshot  # type: ignore[no-any-return]
 
-    def _apply_mappings(self, raw_data: dict, entity_name: str) -> dict:
+    def _apply_mappings(
+        self, raw_data: dict, entity_name: str
+    ) -> Dict[str, Any]:
         """Apply field mappings to raw data"""
         mappings_class = MappingRegistry.get_mappings(entity_name)
         if not mappings_class:
-            return raw_data
+            # Convert raw_data to Dict[str, Any] explicitly
+            result: Dict[str, Any] = {}
+            for key, value in raw_data.items():
+                result[str(key)] = value
+            return result
 
         mappings = mappings_class.get_mappings()
-        mapped_data = {}
+        mapped_data: Dict[str, Any] = {}
 
         for key, mapping in mappings.items():
             try:

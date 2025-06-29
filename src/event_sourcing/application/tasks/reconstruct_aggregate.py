@@ -61,7 +61,7 @@ async def reconstruct_aggregate_async(
     command = ReconstructAggregateCommand.create(data=data.dict())
 
     # Process command
-    snapshot = await handler.handle(command)
+    snapshot: Dict[str, Any] = await handler.handle(command)
 
     logger.info(
         f"Successfully reconstructed aggregate asynchronously: {command_id}"
@@ -126,8 +126,8 @@ def reconstruct_aggregate_task(
     trigger_next_steps_sync = async_to_sync(trigger_next_steps)
 
     # Set the event loop for the sync function
-    reconstruct_aggregate_async_sync.main_event_loop = asyncio.get_event_loop()
-    trigger_next_steps_sync.main_event_loop = asyncio.get_event_loop()
+    reconstruct_aggregate_async_sync.main_event_loop = asyncio.get_event_loop()  # type: ignore
+    trigger_next_steps_sync.main_event_loop = asyncio.get_event_loop()  # type: ignore
 
     # Execute the async function
     snapshot = reconstruct_aggregate_async_sync(

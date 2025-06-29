@@ -45,5 +45,5 @@ class Event(BaseModel):
         Index("idx_event_source", "source"),
     )
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return f"<Event(id={self.event_id}, aggregate_id={self.aggregate_id}, event_type={self.event_type})>"
