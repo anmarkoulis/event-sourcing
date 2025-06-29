@@ -22,6 +22,7 @@ class InfrastructureFactory:
         self._read_model: Optional[PostgreSQLReadModel] = None
         self._event_publisher: Optional[EventBridgePublisher] = None
         self._projection_manager: Optional[Any] = None
+        self._salesforce_client: Optional[Any] = None
 
     @property
     def database_manager(self) -> DatabaseManager:
@@ -40,19 +41,25 @@ class InfrastructureFactory:
         return self._read_model
 
     @property
+    def salesforce_client(self) -> Optional[Any]:
+        """Get Salesforce client (returns None if not configured)"""
+        # In a real implementation, this would create and configure a Salesforce client
+        # For now, return None to indicate it's not available
+        return self._salesforce_client
+
+    @property
     def projection_manager(self) -> Any:
         """Get or create projection manager"""
         if self._projection_manager is None:
             logger.info("Creating projection manager")
-            from event_sourcing.application.projections.client_projection import (
-                ClientProjection,
-            )
             from event_sourcing.application.projections.projection_manager import (
                 ProjectionManager,
             )
 
-            client_projection = ClientProjection(self.read_model)
-            self._projection_manager = ProjectionManager(client_projection)
+            self._projection_manager = ProjectionManager(
+                read_model=self.read_model,
+                event_publisher=self.event_publisher,
+            )
         return self._projection_manager
 
     @property

@@ -3,9 +3,6 @@ import logging
 from event_sourcing.application.commands.aggregate import (
     AsyncPublishSnapshotCommand,
 )
-from event_sourcing.application.tasks.publish_snapshot import (
-    publish_snapshot_task,
-)
 
 logger = logging.getLogger(__name__)
 
@@ -26,7 +23,11 @@ class AsyncPublishSnapshotCommandHandler:
         snapshot = command.snapshot
         event_type = command.event_type
 
-        # Trigger Celery task
+        # Trigger Celery task using dynamic import
+        from event_sourcing.application.tasks.publish_snapshot import (
+            publish_snapshot_task,
+        )
+
         task = publish_snapshot_task.delay(
             command_id="",  # We'll need to handle this differently
             aggregate_id=aggregate_id,

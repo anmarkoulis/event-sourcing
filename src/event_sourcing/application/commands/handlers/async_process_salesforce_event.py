@@ -3,9 +3,6 @@ import logging
 from event_sourcing.application.commands.salesforce import (
     AsyncProcessSalesforceEventCommand,
 )
-from event_sourcing.application.tasks.process_salesforce_event import (
-    process_salesforce_event_task,
-)
 
 logger = logging.getLogger(__name__)
 
@@ -27,8 +24,12 @@ class AsyncProcessSalesforceEventCommandHandler:
         entity_name = command.entity_name
         change_type = command.change_type
 
-        # Trigger Celery task
+        # Trigger Celery task using dynamic import
         try:
+            from event_sourcing.application.tasks.process_salesforce_event import (
+                process_salesforce_event_task,
+            )
+
             task = process_salesforce_event_task.delay(
                 command_id="",  # We'll need to handle this differently
                 raw_event=raw_event,

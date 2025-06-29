@@ -1,10 +1,12 @@
 import logging
-from typing import Dict
+from typing import Dict, Optional
 
 from event_sourcing.application.projections.client_projection import (
     ClientProjection,
 )
 from event_sourcing.domain.events.base import DomainEvent
+from event_sourcing.infrastructure.messaging import EventPublisher
+from event_sourcing.infrastructure.read_model import ReadModel
 
 logger = logging.getLogger(__name__)
 
@@ -12,8 +14,14 @@ logger = logging.getLogger(__name__)
 class ProjectionManager:
     """Manages projections and routes events to appropriate Celery tasks"""
 
-    def __init__(self, client_projection: ClientProjection):
-        self.client_projection = client_projection
+    def __init__(
+        self,
+        read_model: ReadModel,
+        event_publisher: Optional[EventPublisher] = None,
+    ) -> None:
+        self.read_model = read_model
+        self.event_publisher = event_publisher
+        self.client_projection = ClientProjection(read_model, event_publisher)
 
         # Event routing map - maps to Celery task names
         self._event_handlers: Dict[str, str] = {

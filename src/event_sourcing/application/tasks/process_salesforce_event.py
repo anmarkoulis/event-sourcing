@@ -10,7 +10,6 @@ from event_sourcing.application.commands.handlers.process_salesforce_event impor
 from event_sourcing.application.commands.salesforce import (
     ProcessSalesforceEventCommand,
 )
-from event_sourcing.application.services.backfill import BackfillService
 from event_sourcing.application.services.infrastructure import (
     get_infrastructure_factory,
 )
@@ -40,15 +39,11 @@ async def process_salesforce_event_async(
     read_model = infrastructure_factory.read_model
     event_publisher = infrastructure_factory.event_publisher
 
-    # Create backfill service
-    backfill_service = BackfillService(None, event_store)
-
     # Create handler
     handler = ProcessSalesforceEventCommandHandler(
         event_store=event_store,
         read_model=read_model,
         event_publisher=event_publisher,
-        backfill_service=backfill_service,
     )
 
     # Create command directly
@@ -77,7 +72,9 @@ def process_salesforce_event_task(
     change_type: str,
 ) -> None:
     """Process Salesforce event via Celery task."""
-    logger.info(f"Starting Celery task for command: {command_id}")
+    logger.info(
+        f"Starting Celery task for process Salesforce event command: {command_id}"
+    )
 
     # Convert async function to sync for Celery
     process_salesforce_event_async_sync = async_to_sync(
@@ -85,7 +82,7 @@ def process_salesforce_event_task(
     )
 
     # Set the event loop for the sync function
-    process_salesforce_event_async_sync.main_event_loop = (  # type: ignore
+    process_salesforce_event_async_sync.main_event_loop = (  # type: ignore[attr-defined]
         asyncio.get_event_loop()
     )
 
@@ -97,4 +94,6 @@ def process_salesforce_event_task(
         change_type=change_type,
     )
 
-    logger.info(f"Completed Celery task for command: {command_id}")
+    logger.info(
+        f"Completed Celery task for process Salesforce event command: {command_id}"
+    )

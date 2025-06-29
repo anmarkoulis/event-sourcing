@@ -31,10 +31,11 @@ async def process_projection_async(
     # Get infrastructure components
     infrastructure_factory = get_infrastructure_factory()
     read_model = infrastructure_factory.read_model
+    event_publisher = infrastructure_factory.event_publisher
 
     # Create projection instance
     if projection_type == "client":
-        projection = ClientProjection(read_model)
+        projection = ClientProjection(read_model, event_publisher)
     else:
         logger.error(f"Unknown projection type: {projection_type}")
         return

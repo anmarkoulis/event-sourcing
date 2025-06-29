@@ -7,9 +7,6 @@ from asgiref.sync import async_to_sync
 from event_sourcing.application.commands.aggregate import (
     PublishSnapshotCommand,
 )
-from event_sourcing.application.commands.handlers.publish_snapshot import (
-    PublishSnapshotCommandHandler,
-)
 from event_sourcing.application.services.infrastructure import (
     get_infrastructure_factory,
 )
@@ -39,7 +36,11 @@ async def publish_snapshot_async(
     infrastructure_factory = get_infrastructure_factory()
     event_publisher = infrastructure_factory.event_publisher
 
-    # Create handler
+    # Create handler using dynamic import
+    from event_sourcing.application.commands.handlers.publish_snapshot import (
+        PublishSnapshotCommandHandler,
+    )
+
     handler = PublishSnapshotCommandHandler(event_publisher)
 
     # Create command directly

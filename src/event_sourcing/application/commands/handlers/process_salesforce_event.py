@@ -1,13 +1,12 @@
 import logging
 from typing import List
 
-from event_sourcing.application.commands.aggregate import (
-    AsyncReconstructAggregateCommand,
+from event_sourcing.application.commands.backfill import (
+    BackfillSpecificEntityCommand,
 )
 from event_sourcing.application.commands.salesforce import (
     ProcessSalesforceEventCommand,
 )
-from event_sourcing.application.services.backfill import BackfillService
 from event_sourcing.domain.events.base import DomainEvent
 from event_sourcing.domain.events.client import (
     ClientCreatedEvent,
@@ -29,12 +28,10 @@ class ProcessSalesforceEventCommandHandler:
         event_store: EventStore,
         read_model: ReadModel,
         event_publisher: EventPublisher,
-        backfill_service: BackfillService,
     ):
         self.event_store = event_store
         self.read_model = read_model
         self.event_publisher = event_publisher
-        self.backfill_service = backfill_service
 
     async def handle(self, command: ProcessSalesforceEventCommand) -> None:
         """Handle process Salesforce event command"""
@@ -53,46 +50,11 @@ class ProcessSalesforceEventCommandHandler:
                 logger.warning(f"Event validation failed: {parsed_event}")
                 continue
 
-            # 3. Store raw event
+            # 3. Store raw event (this automatically triggers projections)
             await self.event_store.save_event(parsed_event)
-            logger.info(f"Saved event: {parsed_event}")
-
-            # 4. Create async commands for the next steps
-            await self._create_async_follow_up_commands(
-                parsed_event, command.entity_name
+            logger.info(
+                f"Saved event and triggered projections: {parsed_event}"
             )
-
-    async def _create_async_follow_up_commands(
-        self, event: DomainEvent, entity_name: str
-    ) -> None:
-        """Create async follow-up commands that will trigger Celery tasks"""
-
-        # Create reconstruct aggregate command directly
-        reconstruct_command = AsyncReconstructAggregateCommand(
-            aggregate_id=event.aggregate_id,
-            aggregate_type=event.aggregate_type,
-            entity_name=entity_name,
-        )
-
-        # Process only the reconstruct command (this will trigger the chain)
-        await self._process_reconstruct_command(reconstruct_command)
-
-    async def _process_reconstruct_command(
-        self, reconstruct_command: AsyncReconstructAggregateCommand
-    ) -> None:
-        """Process the reconstruct command by triggering Celery task"""
-
-        # Trigger reconstruct aggregate task
-        from .async_reconstruct_aggregate import (
-            AsyncReconstructAggregateCommandHandler,
-        )
-
-        reconstruct_handler = AsyncReconstructAggregateCommandHandler()
-        await reconstruct_handler.handle(reconstruct_command)
-
-        logger.info(
-            f"Triggered reconstruct aggregate command for: {reconstruct_command.aggregate_id}"
-        )
 
     def _parse_salesforce_event(self, raw_event: dict) -> List[DomainEvent]:
         """Parse Salesforce CDC event into domain events"""
@@ -171,10 +133,31 @@ class ProcessSalesforceEventCommandHandler:
                 logger.warning(
                     f"Non-creation event received for non-existent aggregate {event.aggregate_id}"
                 )
-                # Trigger backfill
-                await self.backfill_service.trigger_backfill(
+                # Trigger backfill using command instead of service
+                await self._trigger_backfill(
                     event.aggregate_id, event.aggregate_type
                 )
                 return False
 
         return True
+
+    async def _trigger_backfill(
+        self, aggregate_id: str, aggregate_type: str
+    ) -> None:
+        """Trigger backfill using command instead of service"""
+        logger.info(f"Triggering backfill for {aggregate_type} {aggregate_id}")
+
+        # Create backfill command
+        backfill_command = BackfillSpecificEntityCommand(
+            aggregate_id=aggregate_id,
+            aggregate_type=aggregate_type,
+            source="salesforce_event",
+        )
+
+        # Process backfill command
+        from .backfill_specific_entity import (
+            BackfillSpecificEntityCommandHandler,
+        )
+
+        backfill_handler = BackfillSpecificEntityCommandHandler()
+        await backfill_handler.handle(backfill_command)

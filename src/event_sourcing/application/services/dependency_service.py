@@ -8,7 +8,6 @@ from event_sourcing.application.commands.handlers.async_process_salesforce_event
 from event_sourcing.application.commands.handlers.process_salesforce_event import (
     ProcessSalesforceEventCommandHandler,
 )
-from event_sourcing.application.services.backfill import BackfillService
 from event_sourcing.application.services.infrastructure import (
     get_infrastructure_factory,
 )
@@ -29,14 +28,10 @@ class DependencyService:
         read_model = infrastructure_factory.read_model
         event_publisher = infrastructure_factory.event_publisher
 
-        # Create backfill service (Salesforce client would be injected in real app)
-        backfill_service = BackfillService(None, event_store)
-
         return ProcessSalesforceEventCommandHandler(
             event_store=event_store,
             read_model=read_model,
             event_publisher=event_publisher,
-            backfill_service=backfill_service,
         )
 
     @staticmethod
