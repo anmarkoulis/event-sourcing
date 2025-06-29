@@ -1,5 +1,5 @@
 import logging
-from typing import List
+from typing import Any, List
 
 from event_sourcing.application.commands.backfill import (
     BackfillSpecificEntityCommand,
@@ -7,6 +7,7 @@ from event_sourcing.application.commands.backfill import (
 from event_sourcing.application.commands.salesforce import (
     ProcessSalesforceEventCommand,
 )
+from event_sourcing.domain.aggregates.registry import AggregateRegistry
 from event_sourcing.domain.events.base import DomainEvent
 from event_sourcing.domain.events.client import (
     ClientCreatedEvent,
@@ -44,17 +45,77 @@ class ProcessSalesforceEventCommandHandler:
         for parsed_event in parsed_events:
             logger.info(f"Processing parsed event: {parsed_event}")
 
-            # 2. Validate event ordering and consistency
-            is_valid = await self._validate_event_ordering(parsed_event)
-            if not is_valid:
-                logger.warning(f"Event validation failed: {parsed_event}")
-                continue
-
-            # 3. Store raw event (this automatically triggers projections)
-            await self.event_store.save_event(parsed_event)
-            logger.info(
-                f"Saved event and triggered projections: {parsed_event}"
+            # 2. Process event through aggregate (business logic)
+            domain_events = await self._process_event_through_aggregate(
+                parsed_event
             )
+
+            # 3. Store domain events (this automatically triggers projections)
+            for domain_event in domain_events:
+                await self.event_store.save_event(domain_event)
+                logger.info(
+                    f"Saved domain event and triggered projections: {domain_event}"
+                )
+
+    async def _process_event_through_aggregate(
+        self, salesforce_event: DomainEvent
+    ) -> List[DomainEvent]:
+        """Process Salesforce event through aggregate for business logic"""
+        aggregate_id = salesforce_event.aggregate_id
+        aggregate_type = salesforce_event.aggregate_type
+
+        # Get or create aggregate
+        aggregate = await self._get_or_create_aggregate(
+            aggregate_id, aggregate_type
+        )
+
+        # Get Salesforce client for API calls if needed
+        from event_sourcing.application.services.infrastructure import (
+            get_infrastructure_factory,
+        )
+
+        infrastructure_factory = get_infrastructure_factory()
+        salesforce_client = infrastructure_factory.salesforce_client
+
+        # Process event through aggregate (business logic)
+        # Cast to ClientAggregate since we know it has the process_salesforce_event method
+        from event_sourcing.domain.aggregates.client import ClientAggregate
+
+        if isinstance(aggregate, ClientAggregate):
+            domain_events = aggregate.process_salesforce_event(
+                salesforce_event, salesforce_client
+            )
+        else:
+            # Fallback: create domain event directly
+            domain_events = [salesforce_event]
+
+        logger.info(
+            f"Aggregate processed event into {len(domain_events)} domain events"
+        )
+        return domain_events  # type: ignore[no-any-return]
+
+    async def _get_or_create_aggregate(
+        self, aggregate_id: str, aggregate_type: str
+    ) -> Any:
+        """Get or create aggregate instance"""
+        # Get existing events for this aggregate
+        existing_events = await self.event_store.get_events(
+            aggregate_id, aggregate_type
+        )
+
+        # Get aggregate class from registry
+        aggregate_class = AggregateRegistry.get_aggregate(aggregate_type)
+        if not aggregate_class:
+            raise ValueError(f"No aggregate found for type: {aggregate_type}")
+
+        # Create aggregate instance
+        aggregate = aggregate_class(aggregate_id)
+
+        # Apply existing events to reconstruct state
+        for event in existing_events:
+            aggregate.apply(event)
+
+        return aggregate
 
     def _parse_salesforce_event(self, raw_event: dict) -> List[DomainEvent]:
         """Parse Salesforce CDC event into domain events"""

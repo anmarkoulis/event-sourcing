@@ -114,6 +114,14 @@ class ClientProjection:
         domain_event: DomainEvent,
     ) -> None:
         """Publish client event to EventBridge"""
+        # Check if event should be broadcasted (business rule from aggregate)
+        should_broadcast = domain_event.metadata.get("broadcast", True)
+        if not should_broadcast:
+            logger.info(
+                f"Event {domain_event.event_id} marked as non-broadcastable, skipping EventBridge publishing"
+            )
+            return
+
         if not self.event_publisher:
             logger.debug(
                 "No event publisher configured, skipping EventBridge publishing"
