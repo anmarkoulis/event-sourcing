@@ -10,7 +10,7 @@ logger = logging.getLogger(__name__)
 
 
 class InfrastructureFactory:
-    """Factory for creating infrastructure components and command handlers"""
+    """Factory for creating infrastructure components, command handlers, and query handlers"""
 
     def __init__(
         self, database_url: str, eventbridge_region: str = "us-east-1"
@@ -106,6 +106,67 @@ class InfrastructureFactory:
         )
 
         return AsyncProcessSalesforceEventCommandHandler()
+
+    def create_backfill_entity_type_command_handler(self) -> Any:
+        """Create BackfillEntityTypeCommandHandler (no dependencies needed)"""
+        logger.info("Creating BackfillEntityTypeCommandHandler")
+        # Dynamic import to avoid circular dependency
+        from event_sourcing.application.commands.handlers.backfill_entity_type import (
+            BackfillEntityTypeCommandHandler,
+        )
+
+        return BackfillEntityTypeCommandHandler()
+
+    def create_backfill_specific_entity_command_handler(self) -> Any:
+        """Create BackfillSpecificEntityCommandHandler (no dependencies needed)"""
+        logger.info("Creating BackfillSpecificEntityCommandHandler")
+        # Dynamic import to avoid circular dependency
+        from event_sourcing.application.commands.handlers.backfill_specific_entity import (
+            BackfillSpecificEntityCommandHandler,
+        )
+
+        return BackfillSpecificEntityCommandHandler()
+
+    # Query Handler Factory Methods
+    def create_get_client_query_handler(self) -> Any:
+        """Create GetClientQueryHandler with read model dependency"""
+        logger.info("Creating GetClientQueryHandler")
+        # Dynamic import to avoid circular dependency
+        from event_sourcing.application.queries.handlers.get_client import (
+            GetClientQueryHandler,
+        )
+
+        return GetClientQueryHandler(read_model=self.read_model)
+
+    def create_search_clients_query_handler(self) -> Any:
+        """Create SearchClientsQueryHandler with read model dependency"""
+        logger.info("Creating SearchClientsQueryHandler")
+        # Dynamic import to avoid circular dependency
+        from event_sourcing.application.queries.handlers.search_clients import (
+            SearchClientsQueryHandler,
+        )
+
+        return SearchClientsQueryHandler(read_model=self.read_model)
+
+    def create_get_client_history_query_handler(self) -> Any:
+        """Create GetClientHistoryQueryHandler with event store dependency"""
+        logger.info("Creating GetClientHistoryQueryHandler")
+        # Dynamic import to avoid circular dependency
+        from event_sourcing.application.queries.handlers.get_client_history import (
+            GetClientHistoryQueryHandler,
+        )
+
+        return GetClientHistoryQueryHandler(event_store=self.event_store)
+
+    def create_get_backfill_status_query_handler(self) -> Any:
+        """Create GetBackfillStatusQueryHandler with read model dependency"""
+        logger.info("Creating GetBackfillStatusQueryHandler")
+        # Dynamic import to avoid circular dependency
+        from event_sourcing.application.queries.handlers.get_backfill_status import (
+            GetBackfillStatusQueryHandler,
+        )
+
+        return GetBackfillStatusQueryHandler(read_model=self.read_model)
 
     async def close(self) -> None:
         """Close all infrastructure components"""
