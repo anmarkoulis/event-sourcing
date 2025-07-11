@@ -10,19 +10,19 @@ from .backfill import (
     BackfillEntityTypeCommand,
     BackfillSpecificEntityCommand,
 )
+from .crm import AsyncProcessCRMEventCommand, ProcessCRMEventCommand
 from .salesforce import (
-    AsyncProcessSalesforceEventCommand,
     CreateClientCommand,
-    ProcessSalesforceEventCommand,
 )
 
 __all__ = [
     # Aggregate commands
     "PublishSnapshotCommand",
     "AsyncPublishSnapshotCommand",
+    # CRM commands
+    "ProcessCRMEventCommand",
+    "AsyncProcessCRMEventCommand",
     # Salesforce commands
-    "ProcessSalesforceEventCommand",
-    "AsyncProcessSalesforceEventCommand",
     "CreateClientCommand",
     # Backfill commands
     "BackfillEntityTypeCommand",

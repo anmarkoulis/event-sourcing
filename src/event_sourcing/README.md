@@ -23,7 +23,7 @@ src/event_sourcing/
 │   │   ├── base.py          # Base command structure
 │   │   ├── salesforce.py    # Salesforce-specific commands
 │   │   └── handlers/        # Command handlers
-│   │       └── process_salesforce_event.py
+│   │       └── process_crm_event.py
 │   ├── queries/             # Queries (read operations)
 │   │   └── base.py          # Query definitions
 │   └── services/            # Application services
@@ -36,7 +36,7 @@ src/event_sourcing/
 │   ├── base.py              # Base DTO
 │   └── client.py            # Client DTO
 ├── tasks/                   # Celery tasks
-│   └── process_salesforce_event.py
+│   └── process_crm_event.py
 └── README.md               # This file
 ```
 
@@ -44,7 +44,7 @@ src/event_sourcing/
 
 ### 1. **Base Aggregate Hierarchy**
 - `BaseAggregate`: Abstract base with `apply()` method
-- `SalesforceAggregate`: Salesforce-specific base with `create_from_salesforce()`, `update_from_salesforce()`, `delete_from_salesforce()`
+- `SalesforceAggregate`: Salesforce-specific base with field mapping capabilities
 - `ClientAggregate`: Concrete implementation for Client entity
 
 ### 2. **Command Input Design**
