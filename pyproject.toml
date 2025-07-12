@@ -12,10 +12,10 @@ keywords = ["event_sourcing"]
 dependencies = [
     "environs==14.2.0",
     "requests==2.32.4",
-    "fastapi==0.115.14",
+    "fastapi==0.116.1",
     "uvicorn==0.35.0",
-    "asgiref==3.9.0",
-    "alembic==1.16.2",
+    "asgiref==3.9.1",
+    "alembic==1.16.4",
     "sqlalchemy==2.0.41",
     "asyncpg==0.30.0",
     "celery[sqs]==5.5.3",
@@ -26,7 +26,6 @@ dependencies = [
     "pydantic-settings==2.10.1",
     "gunicorn==23.0.0",
     "JSON-log-formatter==1.1.1",
-    "ddtrace==3.10.0",
     "fastapi-cache2==0.2.2",
 ]
 
