@@ -47,14 +47,14 @@ repos:
         stages:
           - manual
     repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: v0.11.10
+    rev: v0.12.3
 
   - hooks:
       - id: commitizen
         stages:
           - commit-msg
     repo: https://github.com/commitizen-tools/commitizen
-    rev: v4.7.2
+    rev: v4.8.3
 
   - hooks:
       - entry: mypy
@@ -73,21 +73,6 @@ repos:
         language: system
         types: ["dockerfile"]
     repo: local
-
-  - hooks:
-      - entry: cfn-lint
-        id: cfn-lint
-        files: infra/.*\.(json|yml|yaml)$
-        exclude: infra/environments/.*_cf_parameters.json$
-        name: Lint Cloudformation files
-    repo: https://github.com/aws-cloudformation/cfn-lint
-    rev: v1.35.3
-
-  - hooks:
-      - id: rain-format
-        files: infra/.*\.(yml|yaml)$
-    repo: https://github.com/aws-cloudformation/rain
-    rev: v1.23.0
 
   - repo: https://github.com/phildp/alembic-check
     rev: v1.1.0
