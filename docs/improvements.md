@@ -2,7 +2,188 @@
 
 This document outlines the improvements needed to achieve a proper Domain-Driven Design (DDD) and Command Query Responsibility Segregation (CQRS) architecture.
 
-## 1. Domain Services (High Priority)
+
+
+## 2. Event Schema and DTOs (Critical Priority)
+
+### Current Issues
+- Events received as plain dictionaries without schema validation
+- No type safety for event structures
+- Inconsistent event format between providers
+- No clear separation between write and read DTOs
+
+### Specific Problems
+1. **Raw Salesforce events** received as dict without validation
+2. **No event schema** - events can have any structure
+3. **No DTOs** - events passed around as plain dicts
+4. **Database model exists** but no corresponding DTOs
+5. **No validation** of event structure before processing
+
+### Improvements Needed
+- **Create EventWriteDTO and EventReadDTO** with proper schemas
+- **Implement event validation** using Pydantic schemas
+- **Standardize event format** across all providers
+- **Add type safety** for all event handling
+- **Separate write/read concerns** in DTOs
+
+### Example Event DTOs
+```python
+class EventWriteDTO(BaseModel):
+    event_id: Optional[str] = None  # Optional for write
+    aggregate_id: str
+    aggregate_type: str
+    event_type: str
+    timestamp: datetime
+    version: str
+    data: Dict[str, Any]
+    event_metadata: Optional[Dict[str, Any]] = None
+    validation_info: Optional[Dict[str, Any]] = None
+    source: Optional[str] = None
+
+class EventReadDTO(BaseModel):
+    event_id: str  # Required for read
+    aggregate_id: str
+    aggregate_type: str
+    event_type: str
+    timestamp: datetime
+    version: str
+    data: Dict[str, Any]
+    event_metadata: Optional[Dict[str, Any]] = None
+    validation_info: Optional[Dict[str, Any]] = None
+    source: Optional[str] = None
+    processed_at: datetime
+```
+
+### Implementation Strategy
+```python
+# Update commands to use DTOs
+class ProcessCRMEventCommand:
+    raw_event: EventWriteDTO
+    provider: str
+    entity_type: str
+
+# Update event store to use DTOs
+class EventStore:
+    async def save_event(self, event: EventWriteDTO) -> None
+    async def get_events(self, aggregate_id: str, aggregate_type: str) -> List[EventReadDTO]
+```
+
+## 3. Event Handler Abstraction (High Priority)
+
+### Current Issues
+- Direct Celery calls in command handlers
+- Infrastructure concerns mixed with business logic
+- No abstraction for event dispatching
+- Celery implementation details exposed
+
+### Specific Problems
+1. **Direct Celery calls** in `AsyncProcessCRMEventCommandHandler`
+2. **No abstraction** for event dispatching
+3. **Celery as implementation detail** not abstracted
+4. **Hard to test** - Celery dependencies everywhere
+5. **No flexibility** to change event processing mechanism
+
+### Improvements Needed
+- **Create EventHandlerInterface** for event dispatching
+- **Implement CeleryEventHandler** as concrete implementation
+- **Abstract event dispatching** from business logic
+- **Make Celery a detail** not a core concern
+- **Add proper dependency injection** for event handlers
+
+### Example Event Handler Structure
+```python
+class EventHandlerInterface(ABC):
+    @abstractmethod
+    async def dispatch(self, event: EventDTO, delay: int | None = None, queue: str | None = None) -> None:
+        pass
+
+class CeleryEventHandler(EventHandlerInterface):
+    def __init__(self, task_registry: Dict[str, Any]):
+        self.task_registry = task_registry
+
+    async def dispatch(self, event: EventDTO, delay: int | None = None, queue: str | None = None) -> None:
+        # Celery-specific implementation
+        handler = self._get_handler(event.event_type)
+        handler.apply_async(countdown=delay, queue=queue, kwargs=event.payload)
+```
+
+## 4. Aggregate Design Issues (Critical Priority)
+
+### Current Issues
+- Aggregates have provider-specific methods
+- Business logic mixed with event processing
+- Inconsistent aggregate behavior
+- Fallback logic that doesn't make sense
+
+### Specific Problems
+1. **`process_crm_event()` method** in aggregates is provider-specific
+2. **Aggregates should only consume events** not process them
+3. **Fallback logic** `events = [domain_event]` is meaningless
+4. **Aggregates should be pure** - no external dependencies
+5. **Event processing logic** should be in application layer
+
+### Improvements Needed
+- **Remove `process_crm_event()`** from aggregates
+- **Aggregates should only apply events** to state
+- **Move event processing logic** to application services
+- **Make aggregates pure** domain objects
+- **Use event replay** for aggregate reconstruction
+
+### Example Refactored Aggregate
+```python
+class ClientAggregate:
+    def apply(self, event: DomainEvent) -> None:
+        """Only method needed - apply events to state"""
+        if event.event_type == "Created":
+            self._apply_created_event(event)
+        elif event.event_type == "Updated":
+            self._apply_updated_event(event)
+        elif event.event_type == "Deleted":
+            self._apply_deleted_event(event)
+
+    # Remove process_crm_event() - this should be in application service
+```
+
+## 5. Projection Management Issues (High Priority)
+
+### Current Issues
+- Projection manager tied to specific read models
+- Optional typing with Any
+- No generic projection support
+- Celery dependencies in projection logic
+
+### Specific Problems
+1. **`projection_manager: Optional[Any] = None`** - poor typing
+2. **ProjectionManager tied to Client** read model only
+3. **No generic projection support** for multiple aggregates
+4. **Celery dependencies** in projection logic
+5. **Projections only triggered by PostgreSQL** event store
+
+### Improvements Needed
+- **Create generic ProjectionManagerInterface**
+- **Implement proper typing** for projection managers
+- **Support multiple aggregate types** in projections
+- **Abstract Celery from projection logic**
+- **Make projections work with any event store**
+
+### Example Projection Manager Structure
+```python
+class ProjectionManagerInterface(ABC):
+    @abstractmethod
+    async def handle_event(self, event: DomainEvent) -> None:
+        pass
+
+class GenericProjectionManager(ProjectionManagerInterface):
+    def __init__(self, event_handler: EventHandlerInterface):
+        self.event_handler = event_handler
+
+    async def handle_event(self, event: DomainEvent) -> None:
+        # Generic projection logic that works with any aggregate
+        projection_event = self._create_projection_event(event)
+        await self.event_handler.dispatch(projection_event)
+```
+
+## 6. Domain Services (High Priority)
 
 ### Current Issues
 - Complex business logic scattered across aggregates
@@ -66,7 +247,7 @@ class ClientDomainService:
         return True
 ```
 
-## 2. Command Validation (High Priority)
+## 7. Command Validation (High Priority)
 
 ### Current Issues
 - Validation logic mixed with command handling
@@ -154,7 +335,7 @@ class ValidationMiddleware:
         return await handler.handle(command)
 ```
 
-## 3. Event Store Improvements (Medium Priority)
+## 8. Event Store Improvements (Medium Priority)
 
 ### Current Issues
 - Basic event store implementation
@@ -231,7 +412,7 @@ class PostgreSQLEventStore(EventStore):
         event.metadata["correlation_id"] = correlation_id
 ```
 
-## 4. Aggregate Purity Issues (High Priority)
+## 9. Aggregate Purity Issues (High Priority)
 
 ### Current Issues
 - Aggregates contain infrastructure concerns
@@ -292,7 +473,7 @@ class ClientAggregate:
         return True
 ```
 
-## 5. Command Handler Improvements (Medium Priority)
+## 10. Command Handler Improvements (Medium Priority)
 
 ### Current Issues
 - Command handlers contain too much business logic
@@ -373,7 +554,7 @@ class ProcessCRMEventCommandHandler:
             await self.event_store.save_event_with_retry(event)
 ```
 
-## 6. Event Processing Pipeline Issues (Medium Priority)
+## 11. Event Processing Pipeline Issues (Medium Priority)
 
 ### Current Issues
 - No clear validation pipeline
@@ -416,27 +597,36 @@ class EventProcessingPipeline:
 ## Implementation Priority
 
 ### Phase 1 (Critical - Do First)
-1. **Domain Services** - Extract complex business logic from aggregates
-2. **Command Validation** - Implement comprehensive validation pipeline
-3. **Aggregate Purity** - Remove infrastructure concerns from aggregates
+1. **Event Schema and DTOs** - Create proper event schemas and DTOs
+2. **Event Handler Abstraction** - Abstract Celery from event dispatching
+3. **Aggregate Design Issues** - Remove process_crm_event from aggregates
 
-### Phase 2 (Important - Do Soon)
-4. **Event Store Improvements** - Add versioning and concurrency control
-5. **Command Handler Refactoring** - Simplify orchestration logic
-6. **Event Processing Pipeline** - Implement clear processing pipeline
+### Phase 2 (High Priority - Do Soon)
+5. **Projection Management Issues** - Create generic projection manager
+6. **Domain Services** - Extract complex business logic from aggregates
+7. **Command Validation** - Implement comprehensive validation pipeline
+8. **Aggregate Purity** - Remove infrastructure concerns from aggregates
 
-### Phase 3 (Nice to Have)
-7. **Error Handling Strategy** - Comprehensive error handling
-8. **Testing Strategy** - Comprehensive test coverage
+### Phase 3 (Medium Priority - Do Later)
+9. **Event Store Improvements** - Add versioning and concurrency control
+10. **Command Handler Refactoring** - Simplify orchestration logic
+11. **Event Processing Pipeline** - Implement clear processing pipeline
+
+### Phase 4 (Nice to Have)
+12. **Error Handling Strategy** - Comprehensive error handling
+13. **Testing Strategy** - Comprehensive test coverage
 
 ## Success Criteria
 
 After implementing these improvements, the system should have:
 
-- ✅ **Pure domain aggregates** with no infrastructure concerns
+- ✅ **Proper event schemas** with validation and type safety
+- ✅ **Single async API endpoint** for all event processing
+- ✅ **Abstracted event dispatching** with Celery as implementation detail
+- ✅ **Pure domain aggregates** that only apply events to state
+- ✅ **Generic projection management** supporting multiple aggregate types
 - ✅ **Domain services** for complex business logic
 - ✅ **Comprehensive validation** pipeline
-- ✅ **Optimistic concurrency control** in event store
 - ✅ **Clean command handlers** with proper separation of concerns
 - ✅ **Testable business logic** in isolation
 - ✅ **Proper error handling** and retry mechanisms
@@ -459,7 +649,7 @@ After implementing these improvements, the system should have:
 - ✅ **Salesforce provider implemented** with proper event parsing and translation
 - ✅ **Generic CRM commands created** (`ProcessCRMEventCommand`, `AsyncProcessCRMEventCommand`)
 - ✅ **Generic command handlers implemented** with provider-agnostic logic
-- ✅ **API endpoints updated** to support multiple CRM providers (`/events/crm/{provider}/`)
+- ✅ **API endpoints updated** to support multiple CRM providers (`/events/crm/{provider}/` - async only)
 - ✅ **Celery tasks created** for async processing of CRM events
 - ✅ **Infrastructure factory updated** to support new provider system
 - ✅ **Event mapping fixed** - Salesforce provider now correctly extracts record data from CDC events
