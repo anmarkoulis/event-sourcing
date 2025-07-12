@@ -1,41 +1,40 @@
 import logging
-from typing import Any, Dict
 
 from event_sourcing.application.commands.crm import AsyncProcessCRMEventCommand
+from event_sourcing.application.events.event_handler import (
+    EventHandlerInterface,
+)
 
 logger = logging.getLogger(__name__)
 
 
 class AsyncProcessCRMEventCommandHandler:
-    """Handler for asynchronously processing CRM events via Celery"""
+    """Handler for asynchronously processing CRM events via event handler"""
 
-    def __init__(self) -> None:
-        """Initialize the async handler (no dependencies needed as it just triggers Celery)"""
+    def __init__(self, event_handler: EventHandlerInterface):
+        """
+        Initialize the async handler with event handler dependency
+
+        :param event_handler: The event handler to use for dispatching events
+        """
+        self.event_handler = event_handler
 
     async def handle(self, command: AsyncProcessCRMEventCommand) -> None:
-        """Handle the async command by triggering a Celery task"""
-        logger.info(f"Triggering Celery task for {command.provider} CRM event")
+        """Handle the async command by dispatching event via event handler"""
+        logger.info(
+            f"Dispatching {command.provider} CRM event via event handler"
+        )
 
-        # Extract data from command
-        raw_event: Dict[str, Any] = (
-            command.raw_event.model_dump()
-        )  # Convert EventWriteDTO to dict
-        provider = command.provider
-        entity_type = command.entity_type
-
-        # Trigger Celery task using dynamic import
+        # Use the event handler to dispatch the event
         try:
-            from event_sourcing.application.tasks.process_crm_event import (
-                process_crm_event_task,
+            await self.event_handler.dispatch(
+                event=command.raw_event,
+                delay=None,  # No delay for now
+                queue=None,  # Use default queue
             )
-
-            task = process_crm_event_task.delay(
-                command_id="",  # We'll need to handle this differently
-                raw_event=raw_event,
-                provider=provider,
-                entity_type=entity_type,
+            logger.info(
+                f"Successfully dispatched {command.provider} CRM event"
             )
-            logger.info(f"Celery task triggered with task_id: {task.id}")
         except Exception as e:
-            logger.error(f"Error triggering Celery task: {e}")
+            logger.error(f"Error dispatching event: {e}")
             raise e
