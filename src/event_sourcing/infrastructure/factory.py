@@ -4,6 +4,8 @@ from typing import Any, Optional
 from .database.session import DatabaseManager
 from .event_store import PostgreSQLEventStore
 from .messaging import EventBridgePublisher
+from .providers.base import CRMProviderFactory
+from .providers.salesforce import SalesforceProvider
 from .read_model import PostgreSQLReadModel
 
 logger = logging.getLogger(__name__)
@@ -23,6 +25,7 @@ class InfrastructureFactory:
         self._event_publisher: Optional[EventBridgePublisher] = None
         self._projection_manager: Optional[Any] = None
         self._salesforce_client: Optional[Any] = None
+        self._provider_factory: Optional[CRMProviderFactory] = None
 
     @property
     def database_manager(self) -> DatabaseManager:
@@ -46,6 +49,27 @@ class InfrastructureFactory:
         # In a real implementation, this would create and configure a Salesforce client
         # For now, return None to indicate it's not available
         return self._salesforce_client
+
+    @property
+    def provider_factory(self) -> CRMProviderFactory:
+        """Get or create provider factory"""
+        if self._provider_factory is None:
+            logger.info("Creating provider factory")
+            self._provider_factory = CRMProviderFactory()
+
+            # Register available providers
+            self._provider_factory.register_provider(
+                "salesforce", SalesforceProvider
+            )
+
+            # Set up Salesforce provider with client
+            if self.salesforce_client:
+                salesforce_provider = self._provider_factory.create_provider(
+                    "salesforce", {}
+                )
+                salesforce_provider.set_client(self.salesforce_client)
+
+        return self._provider_factory
 
     @property
     def projection_manager(self) -> Any:
@@ -83,29 +107,29 @@ class InfrastructureFactory:
         return self._event_publisher
 
     # Command Handler Factory Methods
-    def create_process_salesforce_event_command_handler(self) -> Any:
-        """Create ProcessSalesforceEventCommandHandler with all dependencies"""
-        logger.info("Creating ProcessSalesforceEventCommandHandler")
+    def create_process_crm_event_command_handler(self) -> Any:
+        """Create ProcessCRMEventCommandHandler with all dependencies"""
+        logger.info("Creating ProcessCRMEventCommandHandler")
         # Dynamic import to avoid circular dependency
-        from event_sourcing.application.commands.handlers.process_salesforce_event import (
-            ProcessSalesforceEventCommandHandler,
+        from event_sourcing.application.commands.handlers.process_crm_event import (
+            ProcessCRMEventCommandHandler,
         )
 
-        return ProcessSalesforceEventCommandHandler(
+        return ProcessCRMEventCommandHandler(
             event_store=self.event_store,
-            read_model=self.read_model,
-            event_publisher=self.event_publisher,
+            provider_factory=self.provider_factory,
+            provider_config={},  # Empty config for now
         )
 
-    def create_async_process_salesforce_event_command_handler(self) -> Any:
-        """Create AsyncProcessSalesforceEventCommandHandler (no dependencies needed)"""
-        logger.info("Creating AsyncProcessSalesforceEventCommandHandler")
+    def create_async_process_crm_event_command_handler(self) -> Any:
+        """Create AsyncProcessCRMEventCommandHandler (no dependencies needed)"""
+        logger.info("Creating AsyncProcessCRMEventCommandHandler")
         # Dynamic import to avoid circular dependency
-        from event_sourcing.application.commands.handlers.async_process_salesforce_event import (
-            AsyncProcessSalesforceEventCommandHandler,
+        from event_sourcing.application.commands.handlers.async_process_crm_event import (
+            AsyncProcessCRMEventCommandHandler,
         )
 
-        return AsyncProcessSalesforceEventCommandHandler()
+        return AsyncProcessCRMEventCommandHandler()
 
     def create_backfill_entity_type_command_handler(self) -> Any:
         """Create BackfillEntityTypeCommandHandler (no dependencies needed)"""

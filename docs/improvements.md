@@ -2,125 +2,91 @@
 
 This document outlines the improvements needed to achieve a proper Domain-Driven Design (DDD) and Command Query Responsibility Segregation (CQRS) architecture.
 
-## 1. Aggregate Purity (High Priority)
-
-### Current Issues
-- Aggregates contain infrastructure concerns (event publishing, external API calls)
-- Business logic mixed with technical concerns
-
-### Improvements Needed
-- **Purify aggregates** to contain only domain logic
-- Move event publishing to application layer
-- Extract external API calls to domain services or adapters
-- Ensure aggregates are pure domain objects
-
-### Example Refactoring
-```python
-# Current: Aggregate handles event publishing
-class ClientAggregate:
-    def handle_salesforce_event(self, event_data):
-        # Business logic
-        # Event publishing (should be moved out)
-
-# Target: Pure domain logic only
-class ClientAggregate:
-    def handle_salesforce_event(self, event_data):
-        # Only business logic and state changes
-        # Return domain events for application layer to handle
-```
-
-## 2. External Event Parsing (High Priority)
-
-### Current Issues
-- Event parsing logic mixed with domain logic
-- Salesforce-specific concerns in aggregates
-
-### Improvements Needed
-- **Create adapters** for external event parsing
-- Separate Salesforce event format from domain events
-- Implement event translators/converters
-- Keep aggregates focused on business rules
-
-### Example Structure
-```
-src/
-├── adapters/
-│   ├── salesforce/
-│   │   ├── event_parser.py
-│   │   └── event_translator.py
-│   └── external_events/
-├── domain/
-│   └── aggregates/
-└── application/
-```
-
-## 3. Domain Services (Medium Priority)
+## 1. Domain Services (High Priority)
 
 ### Current Issues
 - Complex business logic scattered across aggregates
 - External API calls in aggregates
+- Missing domain services for complex business rules
+- Business logic scattered across aggregates and command handlers
+
+### Specific Problems
+1. **Missing CREATE event handling** is duplicated in both aggregate and command handler
+2. **Broadcasting logic** is embedded in aggregate but should be domain service
+3. **Event sequence validation** is mixed with business rules
+4. **External API calls** (Salesforce client) are in aggregate
+5. **Provider-specific logic** mixed with pure domain logic
 
 ### Improvements Needed
 - **Create domain services** for complex business logic
-- Extract Salesforce API interactions to domain services
-- Implement business rule engines
-- Separate cross-aggregate logic
+- **Extract CRM API interactions** to domain services
+- **Implement business rule engines**
+- **Separate cross-aggregate logic**
+- **Remove infrastructure concerns from aggregates**
 
 ### Example Domain Services
 ```python
 class ClientDomainService:
-    def fetch_client_from_salesforce(self, client_id: str) -> ClientData
-    def validate_client_status(self, client_data: ClientData) -> bool
+    def handle_missing_create_event(self, aggregate_id: str, complete_state: dict) -> List[DomainEvent]
+    def validate_client_status(self, client_data: dict) -> bool
     def determine_event_type(self, existing_client, new_data) -> EventType
+    def should_broadcast_event(self, event: DomainEvent, client_state: dict) -> bool
+    def validate_event_sequence(self, event: DomainEvent, existing_events: List[DomainEvent]) -> bool
+    def process_crm_event(self, event: DomainEvent, aggregate: ClientAggregate) -> List[DomainEvent]
 ```
 
-## 4. Query Handlers (Medium Priority)
-
-### Current Issues
-- Direct read model access in application layer
-- No clear query handling pattern
-
-### Improvements Needed
-- **Implement query handlers** for read model access
-- Create query objects/commands
-- Separate read and write concerns clearly
-- Implement query optimization strategies
-
-### Example Query Structure
+### Implementation Strategy
 ```python
-class GetClientQuery:
-    def __init__(self, client_id: str):
-        self.client_id = client_id
+# Move complex logic to domain service
+class ClientDomainService:
+    def __init__(self, provider_factory: CRMProviderFactory):
+        self.provider_factory = provider_factory
 
-class GetClientQueryHandler:
-    def handle(self, query: GetClientQuery) -> ClientReadModel:
-        # Handle read model access
-        pass
+    async def handle_missing_create_event(self, aggregate_id: str, provider: str, config: dict) -> List[DomainEvent]:
+        """Handle missing CREATE event by fetching complete state"""
+        provider_instance = self.provider_factory.create_provider(provider, config)
+        complete_state = await provider_instance.get_entity(aggregate_id, "client")
+
+        if not complete_state:
+            raise ValueError(f"Entity not found: {aggregate_id}")
+
+        return [self._create_missing_create_event(complete_state, aggregate_id)]
+
+    def should_broadcast_event(self, event: DomainEvent, client_state: dict) -> bool:
+        """Business logic: Determine if event should be broadcasted"""
+        status = event.data.get("status")
+        if status and status.lower() in ["inactive", "pending", "draft"]:
+            return False
+        return True
+
+    def validate_event_sequence(self, event: DomainEvent, existing_events: List[DomainEvent]) -> bool:
+        """Business logic: Validate event ordering"""
+        if event.event_type == "Created" and existing_events:
+            return False
+        return True
 ```
 
-## 5. Event Store Improvements (Low Priority)
-
-### Current Issues
-- Basic event store implementation
-- Limited event versioning and concurrency control
-
-### Improvements Needed
-- **Implement optimistic concurrency control**
-- Add event versioning and conflict resolution
-- Implement event replay capabilities
-- Add event metadata and correlation IDs
-
-## 6. Command Validation (Medium Priority)
+## 2. Command Validation (High Priority)
 
 ### Current Issues
 - Validation logic mixed with command handling
 - No clear validation pipeline
+- Missing business rule validation
+- No cross-command validation
+
+### Specific Problems
+1. **No command validation** - commands are processed without validation
+2. **Business rules validation** happens in aggregate instead of before processing
+3. **No schema validation** for incoming events
+4. **No cross-command validation** (e.g., check if client exists before update)
+5. **Validation errors** are not properly handled
 
 ### Improvements Needed
 - **Implement command validation pipeline**
 - Create validation decorators or middleware
 - Separate business validation from technical validation
 - Implement cross-command validation
+- Add comprehensive error handling for validation failures
 
 ### Example Validation Structure
 ```python
@@ -133,101 +99,348 @@ class ValidationMiddleware:
     def process(self, command: Command, handler: CommandHandler):
         # Apply validation before command execution
         pass
+
+class BusinessRuleValidator:
+    def validate_client_exists(self, client_id: str) -> bool
+    def validate_event_ordering(self, event: DomainEvent) -> bool
+    def validate_data_consistency(self, event: DomainEvent) -> bool
+    def validate_provider_support(self, provider: str) -> bool
 ```
 
-## 7. Error Handling and Resilience (Medium Priority)
+### Implementation Strategy
+```python
+class ProcessCRMEventValidator:
+    def validate(self, command: ProcessCRMEventCommand) -> ValidationResult:
+        result = ValidationResult()
+
+        # Technical validation
+        if not command.raw_event:
+            result.add_error("Raw event is required")
+
+        if not command.provider:
+            result.add_error("Provider is required")
+
+        # Business validation
+        if not self._validate_provider_support(command.provider):
+            result.add_error(f"Provider {command.provider} not supported")
+
+        # Schema validation
+        if not self._validate_event_schema(command.raw_event):
+            result.add_error("Invalid event schema")
+
+        return result
+
+    def _validate_provider_support(self, provider: str) -> bool:
+        return provider in ["salesforce", "hubspot", "pipedrive"]
+
+    def _validate_event_schema(self, raw_event: dict) -> bool:
+        # Validate event structure
+        required_fields = ["id", "event_type", "data"]
+        return all(field in raw_event for field in required_fields)
+
+class ValidationMiddleware:
+    def __init__(self, validators: Dict[str, CommandValidator]):
+        self.validators = validators
+
+    async def process(self, command: Command, handler: CommandHandler):
+        # Get appropriate validator
+        validator = self.validators.get(command.__class__.__name__)
+        if validator:
+            result = validator.validate(command)
+            if not result.is_valid:
+                raise ValidationError(result.errors)
+
+        # Proceed with command execution
+        return await handler.handle(command)
+```
+
+## 3. Event Store Improvements (Medium Priority)
 
 ### Current Issues
-- Basic error handling
-- No retry mechanisms for external calls
+- Basic event store implementation
+- Limited event versioning and concurrency control
+- No optimistic concurrency control
+- Missing event metadata and correlation IDs
+
+### Specific Problems
+1. **No version tracking** - events don't have proper versioning
+2. **No concurrency control** - multiple updates can conflict
+3. **Missing correlation IDs** - can't trace event chains
+4. **No event replay capabilities** - limited aggregate reconstruction
+5. **Basic error handling** - no retry mechanisms
 
 ### Improvements Needed
+- **Implement optimistic concurrency control**
+- Add event versioning and conflict resolution
+- Implement event replay capabilities
+- Add event metadata and correlation IDs
+- Add comprehensive error handling and retry mechanisms
+
+### Example Event Store Improvements
+```python
+class EventStore:
+    async def save_event_with_version(self, event: DomainEvent, expected_version: int) -> None:
+        # Implement optimistic concurrency control
+        pass
+
+    async def get_events_with_version(self, aggregate_id: str, from_version: int = 0) -> List[DomainEvent]:
+        # Get events with version tracking
+        pass
+
+    async def add_correlation_id(self, event: DomainEvent, correlation_id: str) -> None:
+        # Add correlation tracking
+        pass
+
+    async def save_events_with_retry(self, events: List[DomainEvent], max_retries: int = 3) -> None:
+        # Implement retry mechanism
+        pass
+```
+
+### Implementation Strategy
+```python
+class PostgreSQLEventStore(EventStore):
+    async def save_event_with_version(self, event: DomainEvent, expected_version: int) -> None:
+        """Save event with optimistic concurrency control"""
+        async with AsyncDBContextManager(self.database_manager) as session:
+            # Check current version
+            current_version = await self._get_current_version(event.aggregate_id, session)
+
+            if current_version != expected_version:
+                raise ConcurrencyError(f"Version mismatch: expected {expected_version}, got {current_version}")
+
+            # Save event with new version
+            event.version = current_version + 1
+            event_model = self._create_event_model(event)
+            session.add(event_model)
+            await session.commit()
+
+    async def get_events_with_version(self, aggregate_id: str, from_version: int = 0) -> List[DomainEvent]:
+        """Get events with version tracking"""
+        query = """
+            SELECT * FROM events
+            WHERE aggregate_id = $1 AND version > $2
+            ORDER BY version
+        """
+        rows = await self.database_manager.fetch(query, aggregate_id, from_version)
+        return [self._deserialize_event(row) for row in rows]
+
+    async def add_correlation_id(self, event: DomainEvent, correlation_id: str) -> None:
+        """Add correlation ID to event metadata"""
+        if not event.metadata:
+            event.metadata = {}
+        event.metadata["correlation_id"] = correlation_id
+```
+
+## 4. Aggregate Purity Issues (High Priority)
+
+### Current Issues
+- Aggregates contain infrastructure concerns
+- External API calls in aggregates
+- Business logic mixed with technical concerns
+- Provider-specific logic in domain aggregates
+
+### Specific Problems in `ClientAggregate`:
+1. **External API calls** in aggregates (should be in domain services)
+2. **Provider-specific logic** mixed with pure domain logic
+3. **Broadcasting decisions** are in aggregate but should be domain service
+4. **Event transformation** logic is in aggregate
+5. **External dependencies** in domain layer
+
+### Improvements Needed
+- **Remove infrastructure concerns from aggregates**
+- **Move external API calls to domain services**
+- **Extract provider-specific logic**
+- **Keep aggregates pure and focused on business logic**
+- **Separate technical concerns from domain logic**
+
+### Example Refactoring
+```python
+# Before: Infrastructure concerns in aggregate
+class ClientAggregate:
+    def process_salesforce_event(self, salesforce_event: DomainEvent, salesforce_client: Any) -> List[DomainEvent]:
+        # This calls external API - infrastructure concern!
+        complete_state = salesforce_client.get_entity(self.aggregate_id, self.entity_name)
+        # ... rest of logic
+
+# After: Pure domain aggregate
+class ClientAggregate:
+    def process_crm_event(self, crm_event: DomainEvent) -> List[DomainEvent]:
+        """Pure business logic only"""
+        # Validate event sequence
+        if not self._is_valid_event_sequence(crm_event):
+            raise ValueError(f"Invalid event sequence: {crm_event.event_type}")
+
+        # Apply business rules
+        if not self._should_broadcast_event(crm_event):
+            crm_event.metadata["broadcast"] = False
+        else:
+            crm_event.metadata["broadcast"] = True
+
+        return [crm_event]
+
+    def _is_valid_event_sequence(self, event: DomainEvent) -> bool:
+        """Pure business logic: Validate event ordering"""
+        if event.event_type == "Created" and self.events:
+            return False
+        return True
+
+    def _should_broadcast_event(self, event: DomainEvent) -> bool:
+        """Pure business logic: Determine if event should be broadcasted"""
+        status = event.data.get("status")
+        if status and status.lower() in ["inactive", "pending", "draft"]:
+            return False
+        return True
+```
+
+## 5. Command Handler Improvements (Medium Priority)
+
+### Current Issues
+- Command handlers contain too much business logic
+- Missing validation pipeline
+- No error handling strategy
+- Complex orchestration logic
+
+### Specific Problems in `ProcessCRMEventCommandHandler`:
+1. **Missing CREATE event logic** is duplicated from aggregate
+2. **No validation** before processing
+3. **Complex orchestration** with multiple responsibilities
+4. **No error handling** for provider failures
+5. **Business logic** mixed with orchestration
+
+### Improvements Needed
+- **Simplify command handlers** to focus on orchestration
+- **Add validation pipeline**
 - **Implement comprehensive error handling**
-- Add retry policies for external API calls
-- Implement circuit breakers for external services
-- Add dead letter queues for failed events
+- **Move business logic to domain services**
+- **Add retry mechanisms for external calls**
 
-## 8. Testing Strategy (High Priority)
+### Example Refactored Command Handler
+```python
+class ProcessCRMEventCommandHandler:
+    def __init__(
+        self,
+        event_store: EventStore,
+        provider_factory: CRMProviderFactory,
+        validator: ProcessCRMEventValidator,
+        domain_service: ClientDomainService,
+        error_handler: ErrorHandler
+    ):
+        self.event_store = event_store
+        self.provider_factory = provider_factory
+        self.validator = validator
+        self.domain_service = domain_service
+        self.error_handler = error_handler
 
-### Current Issues
-- Limited test coverage
-- No clear testing patterns for DDD/CQRS
+    async def handle(self, command: ProcessCRMEventCommand) -> None:
+        """Handle process CRM event command with proper validation and error handling"""
+        try:
+            # 1. Validate command
+            validation_result = await self.validator.validate(command)
+            if not validation_result.is_valid:
+                raise ValidationError(validation_result.errors)
 
-### Improvements Needed
-- **Implement comprehensive testing strategy**
-- Unit tests for aggregates (pure domain logic)
-- Integration tests for command handlers
-- Event sourcing tests (event replay, snapshots)
-- End-to-end tests for complete workflows
+            # 2. Get provider and parse event
+            provider = self.provider_factory.create_provider(command.provider, self.provider_config)
+            parsed_event = await self._parse_event_with_retry(provider, command.raw_event)
 
-### Testing Structure
+            # 3. Transform to domain event
+            domain_event = provider.translate_to_domain_event(parsed_event)
+
+            # 4. Process through domain service (pure business logic)
+            aggregate = await self._get_or_create_aggregate(domain_event.aggregate_id, domain_event.aggregate_type)
+            events = await self.domain_service.process_crm_event(domain_event, aggregate, provider)
+
+            # 5. Store events with retry
+            await self._store_events_with_retry(events)
+
+        except Exception as e:
+            await self.error_handler.handle_error(e, command)
+            raise
+
+    async def _parse_event_with_retry(self, provider: Any, raw_event: dict) -> dict:
+        """Parse event with retry mechanism"""
+        for attempt in range(3):
+            try:
+                return provider.parse_event(raw_event)
+            except Exception as e:
+                if attempt == 2:
+                    raise
+                await asyncio.sleep(2 ** attempt)  # Exponential backoff
+
+    async def _store_events_with_retry(self, events: List[DomainEvent]) -> None:
+        """Store events with retry mechanism"""
+        for event in events:
+            await self.event_store.save_event_with_retry(event)
 ```
-tests/
-├── unit/
-│   ├── domain/
-│   │   └── aggregates/
-│   └── application/
-│       └── commands/
-├── integration/
-│   ├── event_store/
-│   └── projections/
-└── e2e/
-    └── workflows/
+
+## 6. Event Processing Pipeline Issues (Medium Priority)
+
+### Current Issues
+- No clear validation pipeline
+- Missing error handling
+- Complex orchestration logic
+- No retry mechanisms
+
+### Improvements Needed
+- **Implement clear event processing pipeline**
+- **Add comprehensive error handling**
+- **Implement retry mechanisms**
+- **Simplify orchestration logic**
+- **Add monitoring and observability**
+
+### Example Event Processing Pipeline
+```python
+class EventProcessingPipeline:
+    def __init__(self, validator, domain_service, event_store, error_handler):
+        self.validator = validator
+        self.domain_service = domain_service
+        self.event_store = event_store
+        self.error_handler = error_handler
+
+    async def process_event(self, command: Command) -> None:
+        try:
+            # 1. Validate command
+            await self.validator.validate(command)
+
+            # 2. Process through domain service
+            events = await self.domain_service.process_event(command)
+
+            # 3. Store events with retry
+            await self.event_store.save_events_with_retry(events)
+
+        except Exception as e:
+            await self.error_handler.handle_error(e, command)
+            raise
 ```
-
-## 9. Configuration and Environment (Low Priority)
-
-### Current Issues
-- Hard-coded configuration
-- Limited environment-specific settings
-
-### Improvements Needed
-- **Implement configuration management**
-- Environment-specific settings
-- Feature flags for different behaviors
-- Configuration validation
-
-## 10. Monitoring and Observability (Low Priority)
-
-### Current Issues
-- Limited monitoring capabilities
-- No clear metrics for CQRS operations
-
-### Improvements Needed
-- **Add comprehensive monitoring**
-- Command/query performance metrics
-- Event processing metrics
-- Aggregate reconstruction metrics
-- External API call monitoring
 
 ## Implementation Priority
 
 ### Phase 1 (Critical - Do First)
-1. Aggregate Purity
-2. External Event Parsing
-3. Testing Strategy
+1. **Domain Services** - Extract complex business logic from aggregates
+2. **Command Validation** - Implement comprehensive validation pipeline
+3. **Aggregate Purity** - Remove infrastructure concerns from aggregates
 
 ### Phase 2 (Important - Do Soon)
-4. Domain Services
-5. Query Handlers
-6. Command Validation
+4. **Event Store Improvements** - Add versioning and concurrency control
+5. **Command Handler Refactoring** - Simplify orchestration logic
+6. **Event Processing Pipeline** - Implement clear processing pipeline
 
-### Phase 3 (Nice to Have - Do Later)
-7. Error Handling and Resilience
-8. Event Store Improvements
-9. Configuration and Environment
-10. Monitoring and Observability
+### Phase 3 (Nice to Have)
+7. **Error Handling Strategy** - Comprehensive error handling
+8. **Testing Strategy** - Comprehensive test coverage
 
 ## Success Criteria
 
 After implementing these improvements, the system should have:
 
-- ✅ Pure domain aggregates with no infrastructure concerns
-- ✅ Clear separation between external events and domain events
-- ✅ Comprehensive test coverage for all layers
-- ✅ Proper CQRS implementation with clear read/write separation
-- ✅ Resilient error handling and retry mechanisms
-- ✅ Observable and monitorable system behavior
+- ✅ **Pure domain aggregates** with no infrastructure concerns
+- ✅ **Domain services** for complex business logic
+- ✅ **Comprehensive validation** pipeline
+- ✅ **Optimistic concurrency control** in event store
+- ✅ **Clean command handlers** with proper separation of concerns
+- ✅ **Testable business logic** in isolation
+- ✅ **Proper error handling** and retry mechanisms
+- ✅ **Clear event processing pipeline** with monitoring
 
 ## Notes
 
@@ -236,3 +449,40 @@ After implementing these improvements, the system should have:
 - Maintain backward compatibility during transitions
 - Document architectural decisions and patterns
 - Consider performance implications of each change
+- Test thoroughly after each improvement
+
+## ✅ Completed Improvements
+
+### Provider Abstraction (COMPLETED)
+- ✅ **Provider interface created** with `CRMProviderInterface` abstract base class
+- ✅ **Provider factory implemented** with `CRMProviderFactory` for dynamic provider creation
+- ✅ **Salesforce provider implemented** with proper event parsing and translation
+- ✅ **Generic CRM commands created** (`ProcessCRMEventCommand`, `AsyncProcessCRMEventCommand`)
+- ✅ **Generic command handlers implemented** with provider-agnostic logic
+- ✅ **API endpoints updated** to support multiple CRM providers (`/events/crm/{provider}/`)
+- ✅ **Celery tasks created** for async processing of CRM events
+- ✅ **Infrastructure factory updated** to support new provider system
+- ✅ **Event mapping fixed** - Salesforce provider now correctly extracts record data from CDC events
+
+**Implementation Details:**
+- `CRMProviderInterface` - Abstract interface for all CRM providers
+- `SalesforceProvider` - Salesforce-specific implementation with CDC event parsing
+- `ProcessCRMEventCommandHandler` - Generic handler for any CRM provider
+- `AsyncProcessCRMEventCommandHandler` - Async handler with Celery integration
+- Provider-agnostic aggregates with `process_crm_event()` method
+- Proper separation of infrastructure concerns from domain logic
+
+### Query Handlers (COMPLETED)
+- ✅ **Query handlers implemented** with proper infrastructure injection
+- ✅ **Factory methods added** to infrastructure factory for all query handlers
+- ✅ **API endpoints updated** to use query handlers instead of direct read model access
+- ✅ **CQRS pattern properly implemented** with clear separation between commands and queries
+- ✅ **Type safety ensured** with proper mypy annotations
+
+**Implementation Details:**
+- `GetClientQueryHandler` - Get specific client by ID
+- `SearchClientsQueryHandler` - Search clients with filtering and pagination
+- `GetClientHistoryQueryHandler` - Get client event history from event store
+- `GetBackfillStatusQueryHandler` - Get backfill status
+- All handlers receive dependencies through infrastructure factory
+- API endpoints now delegate to appropriate handlers
