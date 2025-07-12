@@ -38,16 +38,6 @@ repos:
     rev: v5.0.0
 
   - hooks:
-      - entry: pylint
-        files: \.py$
-        exclude: ^\venv/.*$
-        id: PyLint
-        language: system
-        name: PyLint
-        args: ["--disable=W0718"]
-    repo: local
-
-  - hooks:
       - id: ruff-check
         args: ["--fix"]
       - id: ruff-format
