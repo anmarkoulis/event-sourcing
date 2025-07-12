@@ -62,6 +62,61 @@ class CeleryEventHandler(EventHandlerInterface):
         ):
             event_dict["event_id"] = str(event_dict["event_id"])
 
+        # Check if this is a projection job
+        if event.event_metadata and event.event_metadata.get("projection_job"):
+            # Handle projection job
+            await self._dispatch_projection_job(event, delay, queue)
+        else:
+            # Handle regular CRM event
+            await self._dispatch_crm_event(event, delay, queue)
+
+    async def _dispatch_projection_job(
+        self,
+        event: EventWriteDTO,
+        delay: Optional[int] = None,
+        queue: Optional[str] = None,
+    ) -> None:
+        """Dispatch projection job to Celery"""
+        task_name = event.event_metadata.get("task_name")
+        if not task_name:
+            raise ValueError("Projection job missing task_name in metadata")
+
+        # Get the projection task
+        task = self.task_registry.get("process_projection")
+        if not task:
+            raise ValueError("No process_projection task registered")
+
+        # Prepare task arguments for projection
+        task_kwargs = {
+            "task_name": task_name,
+            "event_data": event.data.get("event_data", {}),
+            "projection_type": event.data.get("projection_type", "unknown"),
+        }
+
+        # Execute projection task
+        try:
+            if delay:
+                task_result = task.apply_async(
+                    kwargs=task_kwargs, countdown=delay, queue=queue
+                )
+            else:
+                task_result = task.apply_async(kwargs=task_kwargs, queue=queue)
+
+            logger.info(
+                f"Projection task {task_name} dispatched with task_id: {task_result.id}"
+            )
+
+        except Exception as e:
+            logger.error(f"Error dispatching projection task {task_name}: {e}")
+            raise
+
+    async def _dispatch_crm_event(
+        self,
+        event: EventWriteDTO,
+        delay: Optional[int] = None,
+        queue: Optional[str] = None,
+    ) -> None:
+        """Dispatch CRM event to Celery"""
         # Get the appropriate task based on event type
         task_name = self._get_task_name(event.event_type)
         task = self.task_registry.get(task_name)
@@ -71,10 +126,10 @@ class CeleryEventHandler(EventHandlerInterface):
                 f"No task registered for event type: {event.event_type}"
             )
 
-        # Prepare task arguments
+        # Prepare task arguments for CRM event
         task_kwargs = {
             "command_id": str(event.event_id) if event.event_id else "",
-            "raw_event": event_dict,
+            "raw_event": event.model_dump(),
             "provider": event.source.value.lower(),
             "entity_type": event.aggregate_type,
         }

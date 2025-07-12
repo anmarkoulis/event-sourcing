@@ -97,9 +97,13 @@ class InfrastructureFactory:
             from event_sourcing.application.tasks.process_crm_event import (
                 process_crm_event_task,
             )
+            from event_sourcing.application.tasks.process_projection import (
+                process_projection_task,
+            )
 
             return {
                 "process_crm_event": process_crm_event_task,
+                "process_projection": process_projection_task,
             }
         except ImportError as e:
             logger.warning(f"Could not import Celery tasks: {e}")
@@ -110,14 +114,26 @@ class InfrastructureFactory:
         """Get or create projection manager"""
         if self._projection_manager is None:
             logger.info("Creating projection manager")
-            from event_sourcing.application.projections.projection_manager import (
-                ProjectionManager,
+            # Dynamic import to avoid circular dependency
+            from event_sourcing.application.projections.projection_manager_interface import (
+                GenericProjectionManager,
             )
 
-            self._projection_manager = ProjectionManager(
-                read_model=self.read_model,
-                event_publisher=self.event_publisher,
+            # Create generic projection manager with event handler
+            projection_manager = GenericProjectionManager(self.event_handler)
+
+            # Register projection handlers for different event types
+            projection_manager.register_projection_handler(
+                "client.Created", "process_client_created_projection"
             )
+            projection_manager.register_projection_handler(
+                "client.Updated", "process_client_updated_projection"
+            )
+            projection_manager.register_projection_handler(
+                "client.Deleted", "process_client_deleted_projection"
+            )
+
+            self._projection_manager = projection_manager
         return self._projection_manager
 
     @property
