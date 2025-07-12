@@ -1,4 +1,5 @@
 import logging
+from typing import Any, Dict
 
 from event_sourcing.application.commands.crm import AsyncProcessCRMEventCommand
 
@@ -16,7 +17,9 @@ class AsyncProcessCRMEventCommandHandler:
         logger.info(f"Triggering Celery task for {command.provider} CRM event")
 
         # Extract data from command
-        raw_event = command.raw_event
+        raw_event: Dict[str, Any] = (
+            command.raw_event.model_dump()
+        )  # Convert EventWriteDTO to dict
         provider = command.provider
         entity_type = command.entity_type
 

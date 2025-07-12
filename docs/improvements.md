@@ -2,73 +2,31 @@
 
 This document outlines the improvements needed to achieve a proper Domain-Driven Design (DDD) and Command Query Responsibility Segregation (CQRS) architecture.
 
+## Current Architecture
 
+### API Endpoints
+- `POST /events/salesforce/` - Process Salesforce events from AWS EventBridge
+  - Accepts `SalesforceEventDTO` (AWS EventBridge format)
+  - Maps to `EventWriteDTO` internally
+  - Returns `EventReadDTO` with processing information
+  - Triggers async Celery processing
 
-## 2. Event Schema and DTOs (Critical Priority)
+### DTOs
+- `EventWriteDTO` - Generic event write DTO with validation
+- `EventReadDTO` - Extends EventWriteDTO with processed_at field
+- `SalesforceEventDTO` - AWS EventBridge Salesforce event format
+- `SalesforcePayload` - Salesforce-specific payload structure
+- `SalesforceChangeEventHeader` - Salesforce change event metadata
 
-### Current Issues
-- Events received as plain dictionaries without schema validation
-- No type safety for event structures
-- Inconsistent event format between providers
-- No clear separation between write and read DTOs
+### Event Processing Flow
+1. AWS EventBridge sends Salesforce event to `/events/salesforce`
+2. `SalesforceEventDTO` validates the AWS EventBridge format
+3. DTO maps to `EventWriteDTO` with Salesforce-specific logic
+4. `AsyncProcessCRMEventCommand` triggers Celery task
+5. Event is processed asynchronously and stored in event store
+6. `EventReadDTO` is returned with processing information
 
-### Specific Problems
-1. **Raw Salesforce events** received as dict without validation
-2. **No event schema** - events can have any structure
-3. **No DTOs** - events passed around as plain dicts
-4. **Database model exists** but no corresponding DTOs
-5. **No validation** of event structure before processing
-
-### Improvements Needed
-- **Create EventWriteDTO and EventReadDTO** with proper schemas
-- **Implement event validation** using Pydantic schemas
-- **Standardize event format** across all providers
-- **Add type safety** for all event handling
-- **Separate write/read concerns** in DTOs
-
-### Example Event DTOs
-```python
-class EventWriteDTO(BaseModel):
-    event_id: Optional[str] = None  # Optional for write
-    aggregate_id: str
-    aggregate_type: str
-    event_type: str
-    timestamp: datetime
-    version: str
-    data: Dict[str, Any]
-    event_metadata: Optional[Dict[str, Any]] = None
-    validation_info: Optional[Dict[str, Any]] = None
-    source: Optional[str] = None
-
-class EventReadDTO(BaseModel):
-    event_id: str  # Required for read
-    aggregate_id: str
-    aggregate_type: str
-    event_type: str
-    timestamp: datetime
-    version: str
-    data: Dict[str, Any]
-    event_metadata: Optional[Dict[str, Any]] = None
-    validation_info: Optional[Dict[str, Any]] = None
-    source: Optional[str] = None
-    processed_at: datetime
-```
-
-### Implementation Strategy
-```python
-# Update commands to use DTOs
-class ProcessCRMEventCommand:
-    raw_event: EventWriteDTO
-    provider: str
-    entity_type: str
-
-# Update event store to use DTOs
-class EventStore:
-    async def save_event(self, event: EventWriteDTO) -> None
-    async def get_events(self, aggregate_id: str, aggregate_type: str) -> List[EventReadDTO]
-```
-
-## 3. Event Handler Abstraction (High Priority)
+## 1. Event Handler Abstraction (High Priority)
 
 ### Current Issues
 - Direct Celery calls in command handlers
@@ -107,7 +65,7 @@ class CeleryEventHandler(EventHandlerInterface):
         handler.apply_async(countdown=delay, queue=queue, kwargs=event.payload)
 ```
 
-## 4. Aggregate Design Issues (Critical Priority)
+## 2. Aggregate Design Issues (Critical Priority)
 
 ### Current Issues
 - Aggregates have provider-specific methods
@@ -144,7 +102,7 @@ class ClientAggregate:
     # Remove process_crm_event() - this should be in application service
 ```
 
-## 5. Projection Management Issues (High Priority)
+## 3. Projection Management Issues (High Priority)
 
 ### Current Issues
 - Projection manager tied to specific read models
@@ -183,7 +141,7 @@ class GenericProjectionManager(ProjectionManagerInterface):
         await self.event_handler.dispatch(projection_event)
 ```
 
-## 6. Domain Services (High Priority)
+## 4. Domain Services (High Priority)
 
 ### Current Issues
 - Complex business logic scattered across aggregates
@@ -247,7 +205,7 @@ class ClientDomainService:
         return True
 ```
 
-## 7. Command Validation (High Priority)
+## 5. Command Validation (High Priority)
 
 ### Current Issues
 - Validation logic mixed with command handling
@@ -335,7 +293,7 @@ class ValidationMiddleware:
         return await handler.handle(command)
 ```
 
-## 8. Event Store Improvements (Medium Priority)
+## 6. Event Store Improvements (Medium Priority)
 
 ### Current Issues
 - Basic event store implementation
@@ -412,7 +370,7 @@ class PostgreSQLEventStore(EventStore):
         event.metadata["correlation_id"] = correlation_id
 ```
 
-## 9. Aggregate Purity Issues (High Priority)
+## 7. Aggregate Purity Issues (High Priority)
 
 ### Current Issues
 - Aggregates contain infrastructure concerns
@@ -473,7 +431,7 @@ class ClientAggregate:
         return True
 ```
 
-## 10. Command Handler Improvements (Medium Priority)
+## 8. Command Handler Improvements (Medium Priority)
 
 ### Current Issues
 - Command handlers contain too much business logic
@@ -554,7 +512,7 @@ class ProcessCRMEventCommandHandler:
             await self.event_store.save_event_with_retry(event)
 ```
 
-## 11. Event Processing Pipeline Issues (Medium Priority)
+## 9. Event Processing Pipeline Issues (Medium Priority)
 
 ### Current Issues
 - No clear validation pipeline
@@ -597,31 +555,28 @@ class EventProcessingPipeline:
 ## Implementation Priority
 
 ### Phase 1 (Critical - Do First)
-1. **Event Schema and DTOs** - Create proper event schemas and DTOs
-2. **Event Handler Abstraction** - Abstract Celery from event dispatching
-3. **Aggregate Design Issues** - Remove process_crm_event from aggregates
+1. **Event Handler Abstraction** - Abstract Celery from event dispatching
+2. **Aggregate Design Issues** - Remove process_crm_event from aggregates
 
 ### Phase 2 (High Priority - Do Soon)
-5. **Projection Management Issues** - Create generic projection manager
-6. **Domain Services** - Extract complex business logic from aggregates
-7. **Command Validation** - Implement comprehensive validation pipeline
-8. **Aggregate Purity** - Remove infrastructure concerns from aggregates
+3. **Projection Management Issues** - Create generic projection manager
+4. **Domain Services** - Extract complex business logic from aggregates
+5. **Command Validation** - Implement comprehensive validation pipeline
+6. **Aggregate Purity** - Remove infrastructure concerns from aggregates
 
 ### Phase 3 (Medium Priority - Do Later)
-9. **Event Store Improvements** - Add versioning and concurrency control
-10. **Command Handler Refactoring** - Simplify orchestration logic
-11. **Event Processing Pipeline** - Implement clear processing pipeline
+7. **Event Store Improvements** - Add versioning and concurrency control
+8. **Command Handler Refactoring** - Simplify orchestration logic
+9. **Event Processing Pipeline** - Implement clear processing pipeline
 
 ### Phase 4 (Nice to Have)
-12. **Error Handling Strategy** - Comprehensive error handling
-13. **Testing Strategy** - Comprehensive test coverage
+10. **Error Handling Strategy** - Comprehensive error handling
+11. **Testing Strategy** - Comprehensive test coverage
 
 ## Success Criteria
 
 After implementing these improvements, the system should have:
 
-- ✅ **Proper event schemas** with validation and type safety
-- ✅ **Single async API endpoint** for all event processing
 - ✅ **Abstracted event dispatching** with Celery as implementation detail
 - ✅ **Pure domain aggregates** that only apply events to state
 - ✅ **Generic projection management** supporting multiple aggregate types
@@ -640,39 +595,3 @@ After implementing these improvements, the system should have:
 - Document architectural decisions and patterns
 - Consider performance implications of each change
 - Test thoroughly after each improvement
-
-## ✅ Completed Improvements
-
-### Provider Abstraction (COMPLETED)
-- ✅ **Provider interface created** with `CRMProviderInterface` abstract base class
-- ✅ **Provider factory implemented** with `CRMProviderFactory` for dynamic provider creation
-- ✅ **Salesforce provider implemented** with proper event parsing and translation
-- ✅ **Generic CRM commands created** (`ProcessCRMEventCommand`, `AsyncProcessCRMEventCommand`)
-- ✅ **Generic command handlers implemented** with provider-agnostic logic
-- ✅ **API endpoints updated** to support multiple CRM providers (`/events/crm/{provider}/` - async only)
-- ✅ **Celery tasks created** for async processing of CRM events
-- ✅ **Infrastructure factory updated** to support new provider system
-- ✅ **Event mapping fixed** - Salesforce provider now correctly extracts record data from CDC events
-
-**Implementation Details:**
-- `CRMProviderInterface` - Abstract interface for all CRM providers
-- `SalesforceProvider` - Salesforce-specific implementation with CDC event parsing
-- `ProcessCRMEventCommandHandler` - Generic handler for any CRM provider
-- `AsyncProcessCRMEventCommandHandler` - Async handler with Celery integration
-- Provider-agnostic aggregates with `process_crm_event()` method
-- Proper separation of infrastructure concerns from domain logic
-
-### Query Handlers (COMPLETED)
-- ✅ **Query handlers implemented** with proper infrastructure injection
-- ✅ **Factory methods added** to infrastructure factory for all query handlers
-- ✅ **API endpoints updated** to use query handlers instead of direct read model access
-- ✅ **CQRS pattern properly implemented** with clear separation between commands and queries
-- ✅ **Type safety ensured** with proper mypy annotations
-
-**Implementation Details:**
-- `GetClientQueryHandler` - Get specific client by ID
-- `SearchClientsQueryHandler` - Search clients with filtering and pagination
-- `GetClientHistoryQueryHandler` - Get client event history from event store
-- `GetBackfillStatusQueryHandler` - Get backfill status
-- All handlers receive dependencies through infrastructure factory
-- API endpoints now delegate to appropriate handlers

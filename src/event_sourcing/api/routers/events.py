@@ -1,10 +1,11 @@
 import logging
 from typing import Any, Dict
 
-from fastapi import APIRouter
+from fastapi import APIRouter, HTTPException
 
 from event_sourcing.api.depends import InfrastructureFactoryDep
 from event_sourcing.application.commands.crm import AsyncProcessCRMEventCommand
+from event_sourcing.dto.event import EventReadDTO, EventWriteDTO
 
 logger = logging.getLogger(__name__)
 
@@ -12,51 +13,58 @@ events_router = APIRouter(prefix="/events", tags=["events"])
 
 
 @events_router.post(
-    "/crm/{provider}/",
-    description="Process CRM event from any provider asynchronously via Celery",
+    "/salesforce/",
+    description="Process Salesforce events from AWS EventBridge asynchronously via Celery",
+    response_model=EventReadDTO,
 )
-async def process_crm_event(
-    provider: str,  # "salesforce", "hubspot", etc.
-    raw_event: Dict[str, Any],
+async def process_salesforce_event(
+    salesforce_event: Dict[str, Any],  # Accept raw dict, no DTO
     infrastructure_factory: InfrastructureFactoryDep,
-) -> Dict[str, Any]:
+) -> EventReadDTO:
     """
-    Process CRM event from any provider asynchronously via Celery.
+    Process Salesforce events from AWS EventBridge asynchronously via Celery.
+    Accepts the full AWS EventBridge payload as-is, with no DTO or field aliasing.
+    """
+    # Use the factory method to create EventWriteDTO from Salesforce event
+    raw_event = EventWriteDTO.from_salesforce_event(salesforce_event)
 
-    This endpoint will:
-    1. Create an async command
-    2. Trigger a Celery task
-    3. Return immediately with task information
-    """
+    provider = raw_event.source.value
     logger.info(f"Processing {provider} event asynchronously: {raw_event}")
-
-    # Extract entity type from the event (this could be made more sophisticated)
     entity_type = "client"  # Default to client for now
 
-    # Create async command directly
     command = AsyncProcessCRMEventCommand(
         raw_event=raw_event,
         provider=provider,
         entity_type=entity_type,
     )
 
-    # Create handler using factory method
     handler = (
         infrastructure_factory.create_async_process_crm_event_command_handler()
     )
 
-    # Process command (triggers Celery task)
     await handler.handle(command)
 
     logger.info(
         f"Successfully triggered async processing for {provider} event"
     )
 
-    return {
-        "status": "success",
-        "command_id": "",  # We'll need to handle this differently
-        "message": "Event processing started asynchronously",
-        "provider": provider,
-        "entity_type": entity_type,
-        "processing": "async",
-    }
+    # Ensure event_id is not None since we generate it in the factory method
+    event_id = raw_event.event_id
+    if event_id is None:
+        raise HTTPException(
+            status_code=500, detail="Event ID was not generated properly"
+        )
+
+    return EventReadDTO(
+        event_id=event_id,
+        aggregate_id=raw_event.aggregate_id,
+        aggregate_type=raw_event.aggregate_type,
+        event_type=raw_event.event_type,
+        timestamp=raw_event.timestamp,
+        version=raw_event.version,
+        data=raw_event.data,
+        event_metadata=raw_event.event_metadata,
+        validation_info=raw_event.validation_info,
+        source=raw_event.source,
+        processed_at=raw_event.timestamp,
+    )

@@ -8,7 +8,7 @@ from pydantic import BaseModel
 class DomainEvent(BaseModel):
     """Base domain event for all business events"""
 
-    event_id: str
+    event_id: uuid.UUID
     aggregate_id: str
     aggregate_type: str  # "client", "project", etc.
     event_type: str  # "Created", "Updated", "Deleted"
@@ -39,7 +39,7 @@ class DomainEvent(BaseModel):
             )
 
         return cls(
-            event_id=str(uuid.uuid4()),
+            event_id=uuid.uuid4(),
             aggregate_id=aggregate_id,
             aggregate_type=cls.AGGREGATE_TYPE,
             event_type=cls.EVENT_TYPE,
