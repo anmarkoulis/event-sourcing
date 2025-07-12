@@ -1,12 +1,14 @@
 import logging
-from typing import Any, Optional
+from typing import Any, Dict, Optional
 
-from .database.session import DatabaseManager
-from .event_store import PostgreSQLEventStore
-from .messaging import EventBridgePublisher
-from .providers.base import CRMProviderFactory
-from .providers.salesforce import SalesforceProvider
-from .read_model import PostgreSQLReadModel
+from event_sourcing.infrastructure.database.session import DatabaseManager
+from event_sourcing.infrastructure.event_store import PostgreSQLEventStore
+from event_sourcing.infrastructure.messaging import EventBridgePublisher
+from event_sourcing.infrastructure.providers.base import CRMProviderFactory
+from event_sourcing.infrastructure.providers.salesforce import (
+    SalesforceProvider,
+)
+from event_sourcing.infrastructure.read_model import PostgreSQLReadModel
 
 logger = logging.getLogger(__name__)
 
@@ -26,6 +28,7 @@ class InfrastructureFactory:
         self._projection_manager: Optional[Any] = None
         self._salesforce_client: Optional[Any] = None
         self._provider_factory: Optional[CRMProviderFactory] = None
+        self._event_handler: Optional[Any] = None
 
     @property
     def database_manager(self) -> DatabaseManager:
@@ -70,6 +73,37 @@ class InfrastructureFactory:
                 salesforce_provider.set_client(self.salesforce_client)
 
         return self._provider_factory
+
+    @property
+    def event_handler(self) -> Any:
+        """Get or create event handler"""
+        if self._event_handler is None:
+            logger.info("Creating event handler")
+            # Dynamic import to avoid circular dependency
+            from event_sourcing.application.events.event_handler import (
+                CeleryEventHandler,
+            )
+
+            # Create task registry with available Celery tasks
+            task_registry = self._create_task_registry()
+
+            self._event_handler = CeleryEventHandler(task_registry)
+        return self._event_handler
+
+    def _create_task_registry(self) -> Dict[str, Any]:
+        """Create registry of available Celery tasks"""
+        try:
+            # Dynamic import to avoid circular dependency
+            from event_sourcing.application.tasks.process_crm_event import (
+                process_crm_event_task,
+            )
+
+            return {
+                "process_crm_event": process_crm_event_task,
+            }
+        except ImportError as e:
+            logger.warning(f"Could not import Celery tasks: {e}")
+            return {}
 
     @property
     def projection_manager(self) -> Any:
@@ -122,14 +156,16 @@ class InfrastructureFactory:
         )
 
     def create_async_process_crm_event_command_handler(self) -> Any:
-        """Create AsyncProcessCRMEventCommandHandler (no dependencies needed)"""
+        """Create AsyncProcessCRMEventCommandHandler with event handler dependency"""
         logger.info("Creating AsyncProcessCRMEventCommandHandler")
         # Dynamic import to avoid circular dependency
         from event_sourcing.application.commands.handlers.async_process_crm_event import (
             AsyncProcessCRMEventCommandHandler,
         )
 
-        return AsyncProcessCRMEventCommandHandler()
+        return AsyncProcessCRMEventCommandHandler(
+            event_handler=self.event_handler
+        )
 
     def create_backfill_entity_type_command_handler(self) -> Any:
         """Create BackfillEntityTypeCommandHandler (no dependencies needed)"""
@@ -204,5 +240,6 @@ class InfrastructureFactory:
         self._read_model = None
         self._event_publisher = None
         self._projection_manager = None
+        self._event_handler = None
 
         logger.info("Infrastructure components closed")

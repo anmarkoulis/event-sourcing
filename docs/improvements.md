@@ -26,45 +26,6 @@ This document outlines the improvements needed to achieve a proper Domain-Driven
 5. Event is processed asynchronously and stored in event store
 6. `EventReadDTO` is returned with processing information
 
-## 1. Event Handler Abstraction (High Priority)
-
-### Current Issues
-- Direct Celery calls in command handlers
-- Infrastructure concerns mixed with business logic
-- No abstraction for event dispatching
-- Celery implementation details exposed
-
-### Specific Problems
-1. **Direct Celery calls** in `AsyncProcessCRMEventCommandHandler`
-2. **No abstraction** for event dispatching
-3. **Celery as implementation detail** not abstracted
-4. **Hard to test** - Celery dependencies everywhere
-5. **No flexibility** to change event processing mechanism
-
-### Improvements Needed
-- **Create EventHandlerInterface** for event dispatching
-- **Implement CeleryEventHandler** as concrete implementation
-- **Abstract event dispatching** from business logic
-- **Make Celery a detail** not a core concern
-- **Add proper dependency injection** for event handlers
-
-### Example Event Handler Structure
-```python
-class EventHandlerInterface(ABC):
-    @abstractmethod
-    async def dispatch(self, event: EventDTO, delay: int | None = None, queue: str | None = None) -> None:
-        pass
-
-class CeleryEventHandler(EventHandlerInterface):
-    def __init__(self, task_registry: Dict[str, Any]):
-        self.task_registry = task_registry
-
-    async def dispatch(self, event: EventDTO, delay: int | None = None, queue: str | None = None) -> None:
-        # Celery-specific implementation
-        handler = self._get_handler(event.event_type)
-        handler.apply_async(countdown=delay, queue=queue, kwargs=event.payload)
-```
-
 ## 2. Aggregate Design Issues (Critical Priority)
 
 ### Current Issues
@@ -552,26 +513,68 @@ class EventProcessingPipeline:
             raise
 ```
 
+## 10. Aggregate Identity Management
+
+### Current Issues
+- Aggregate IDs are set to the external Salesforce record ID
+- No internal, stable aggregate identity
+- Hard to support cross-provider or multi-source scenarios
+- Risk of ID collisions or changes if external system changes
+
+### Specific Problems
+1. **Aggregate ID = Salesforce ID** — breaks aggregate isolation and internal consistency
+2. **No UUIDs for aggregates** — not using best practice for unique, internal IDs
+3. **No mapping layer** — can't relate external IDs to internal aggregates robustly
+4. **Hard to migrate or merge** — if Salesforce changes, aggregates break
+5. **No lookup logic** — can't find existing aggregate by external ID+source
+
+### Improvements Needed
+- **Generate internal UUIDs** for all aggregates
+- **Maintain mapping** from (external_id, source) → aggregate_id
+- **On event receipt:**
+  - If (external_id, source) mapping exists, use mapped aggregate_id
+  - Else, generate new UUID and create mapping
+- **Never expose internal aggregate_id as external_id**
+- **Support multiple sources/providers** for the same aggregate type
+
+### Example Implementation
+```python
+class AggregateIdMapping(BaseModel):
+    aggregate_id: UUID
+    external_id: str
+    source: str  # e.g. 'salesforce', 'hubspot'
+
+# On event receipt:
+def get_or_create_aggregate_id(external_id: str, source: str) -> UUID:
+    mapping = mapping_store.get((external_id, source))
+    if mapping:
+        return mapping.aggregate_id
+    new_id = uuid.uuid4()
+    mapping_store[(external_id, source)] = AggregateIdMapping(
+        aggregate_id=new_id, external_id=external_id, source=source
+    )
+    return new_id
+```
+
 ## Implementation Priority
 
 ### Phase 1 (Critical - Do First)
-1. **Event Handler Abstraction** - Abstract Celery from event dispatching
-2. **Aggregate Design Issues** - Remove process_crm_event from aggregates
+- **Aggregate Design Issues** - Remove process_crm_event from aggregates
 
 ### Phase 2 (High Priority - Do Soon)
-3. **Projection Management Issues** - Create generic projection manager
-4. **Domain Services** - Extract complex business logic from aggregates
-5. **Command Validation** - Implement comprehensive validation pipeline
-6. **Aggregate Purity** - Remove infrastructure concerns from aggregates
+- **Projection Management Issues** - Create generic projection manager
+- **Domain Services** - Extract complex business logic from aggregates
+- **Command Validation** - Implement comprehensive validation pipeline
+- **Aggregate Purity** - Remove infrastructure concerns from aggregates
 
 ### Phase 3 (Medium Priority - Do Later)
-7. **Event Store Improvements** - Add versioning and concurrency control
-8. **Command Handler Refactoring** - Simplify orchestration logic
-9. **Event Processing Pipeline** - Implement clear processing pipeline
+- **Event Store Improvements** - Add versioning and concurrency control
+- **Command Handler Refactoring** - Simplify orchestration logic
+- **Event Processing Pipeline** - Implement clear processing pipeline
 
 ### Phase 4 (Nice to Have)
-10. **Error Handling Strategy** - Comprehensive error handling
-11. **Testing Strategy** - Comprehensive test coverage
+- **Error Handling Strategy** - Comprehensive error handling
+- **Testing Strategy** - Comprehensive test coverage
 
 ## Success Criteria
 
