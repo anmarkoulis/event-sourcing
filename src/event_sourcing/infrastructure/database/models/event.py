@@ -1,8 +1,10 @@
 from datetime import datetime
 
 from sqlalchemy import Column, DateTime, Index, String
-from sqlalchemy.dialects.postgresql import JSONB
+from sqlalchemy import Enum as SQLEnum
+from sqlalchemy.dialects.postgresql import JSONB, UUID
 
+from event_sourcing.enums import EventSourceEnum
 from event_sourcing.infrastructure.database.base import BaseModel
 
 
@@ -10,7 +12,9 @@ class Event(BaseModel):
     """Database model for storing domain events"""
 
     # Event identification
-    event_id = Column(String(255), unique=True, nullable=False, index=True)
+    event_id = Column(
+        UUID(as_uuid=True), unique=True, nullable=False, index=True
+    )
     aggregate_id = Column(String(255), nullable=False, index=True)
     aggregate_type = Column(String(100), nullable=False, index=True)
     event_type = Column(String(100), nullable=False, index=True)
@@ -23,8 +27,8 @@ class Event(BaseModel):
     validation_info = Column(JSONB, nullable=True)  # Validation metadata
 
     # Additional fields for tracking
-    source = Column(
-        String(100), nullable=True, index=True
+    source: EventSourceEnum = Column(
+        SQLEnum(EventSourceEnum), nullable=False, index=True
     )  # "salesforce", "backfill", etc.
     processed_at = Column(DateTime, default=datetime.utcnow, nullable=False)
 

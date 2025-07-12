@@ -44,9 +44,10 @@ def upgrade() -> None:
     op.create_index(
         op.f("ix_client_status"), "client", ["status"], unique=False
     )
+
     op.create_table(
         "event",
-        sa.Column("event_id", sa.String(length=255), nullable=False),
+        sa.Column("event_id", postgresql.UUID(as_uuid=True), nullable=False),
         sa.Column("aggregate_id", sa.String(length=255), nullable=False),
         sa.Column("aggregate_type", sa.String(length=100), nullable=False),
         sa.Column("event_type", sa.String(length=100), nullable=False),
@@ -65,7 +66,11 @@ def upgrade() -> None:
             postgresql.JSONB(astext_type=sa.Text()),
             nullable=True,
         ),
-        sa.Column("source", sa.String(length=100), nullable=True),
+        sa.Column(
+            "source",
+            sa.Enum("SALESFORCE", name="eventsourceenum"),
+            nullable=False,
+        ),
         sa.Column("processed_at", sa.DateTime(), nullable=False),
         sa.Column("id", sa.Integer(), nullable=False),
         sa.Column("created_at", sa.DateTime(), nullable=False),

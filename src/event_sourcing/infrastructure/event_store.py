@@ -6,6 +6,7 @@ from typing import Any, List, Optional
 from sqlalchemy import select
 
 from event_sourcing.domain.events.base import DomainEvent
+from event_sourcing.enums import EventSourceEnum
 from event_sourcing.infrastructure.database.models.event import (
     Event as EventModel,
 )
@@ -61,7 +62,7 @@ class PostgreSQLEventStore(EventStore):
             data=event.data,
             event_metadata=event.metadata,
             validation_info=event.validation_info,
-            source=event.metadata.get("source") if event.metadata else None,
+            source=EventSourceEnum.SALESFORCE,
             processed_at=datetime.utcnow(),
         )
 

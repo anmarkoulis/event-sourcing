@@ -34,11 +34,14 @@ class ProcessCRMEventCommandHandler:
             command.provider, self.provider_config
         )
 
-        # 2. Parse event using provider
-        parsed_event = provider.parse_event(command.raw_event)
+        # 2. Pass the raw AWS EventBridge data to provider parsing
+        raw_event_dict = (
+            command.raw_event.data
+        )  # Use the raw AWS EventBridge data
+        parsed_event = provider.parse_event(raw_event_dict)
         if not parsed_event:
             logger.warning(f"Failed to parse {command.provider} event")
-            return
+            raise ValueError(f"Failed to parse {command.provider} event")
 
         logger.info(f"Parsed {command.provider} event: {parsed_event}")
 
