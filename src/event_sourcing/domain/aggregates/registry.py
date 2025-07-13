@@ -1,7 +1,7 @@
 import logging
 from typing import Dict, Optional, Type
 
-from .base import BaseAggregate
+from .base import Aggregate
 from .client import ClientAggregate
 
 logger = logging.getLogger(__name__)
@@ -10,7 +10,7 @@ logger = logging.getLogger(__name__)
 class AggregateRegistry:
     """Registry for aggregate classes"""
 
-    _aggregates: Dict[str, Type[BaseAggregate]] = {
+    _aggregates: Dict[str, Type[Aggregate]] = {
         "client": ClientAggregate,
         # Add more aggregates here as they are created
         # "order": OrderAggregate,
@@ -18,9 +18,7 @@ class AggregateRegistry:
     }
 
     @classmethod
-    def get_aggregate(
-        cls, aggregate_type: str
-    ) -> Optional[Type[BaseAggregate]]:
+    def get_aggregate(cls, aggregate_type: str) -> Optional[Type[Aggregate]]:
         """Get aggregate class by type"""
         aggregate_class = cls._aggregates.get(aggregate_type)
         if not aggregate_class:
@@ -32,7 +30,7 @@ class AggregateRegistry:
 
     @classmethod
     def register(
-        cls, aggregate_type: str, aggregate_class: Type[BaseAggregate]
+        cls, aggregate_type: str, aggregate_class: Type[Aggregate]
     ) -> None:
         """Register an aggregate class"""
         cls._aggregates[aggregate_type] = aggregate_class
@@ -41,6 +39,6 @@ class AggregateRegistry:
         )
 
     @classmethod
-    def list_aggregates(cls) -> Dict[str, Type[BaseAggregate]]:
+    def list_aggregates(cls) -> Dict[str, Type[Aggregate]]:
         """List all registered aggregates"""
         return cls._aggregates.copy()

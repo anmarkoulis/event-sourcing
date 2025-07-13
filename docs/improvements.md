@@ -26,6 +26,8 @@ This document outlines the improvements needed to achieve a proper Domain-Driven
 5. Event is processed asynchronously and stored in event store
 6. `EventReadDTO` is returned with processing information
 
+
+
 ## 2. Aggregate Design Issues (Critical Priority)
 
 ### Current Issues
@@ -63,44 +65,17 @@ class ClientAggregate:
     # Remove process_crm_event() - this should be in application service
 ```
 
-## 3. Projection Management Issues (High Priority)
+## 3. Projection Management Issues (High Priority) - ✅ COMPLETED
 
-### Current Issues
-- Projection manager tied to specific read models
-- Optional typing with Any
-- No generic projection support
-- Celery dependencies in projection logic
+### Summary
+All projection management issues have been resolved with the implementation of a generic projection manager that:
+- ✅ Uses proper typing with `ProjectionManagerInterface`
+- ✅ Supports multiple aggregate types
+- ✅ Abstracts Celery dependencies via event handler
+- ✅ Works with any event store implementation
+- ✅ Follows standard CQRS patterns
 
-### Specific Problems
-1. **`projection_manager: Optional[Any] = None`** - poor typing
-2. **ProjectionManager tied to Client** read model only
-3. **No generic projection support** for multiple aggregates
-4. **Celery dependencies** in projection logic
-5. **Projections only triggered by PostgreSQL** event store
-
-### Improvements Needed
-- **Create generic ProjectionManagerInterface**
-- **Implement proper typing** for projection managers
-- **Support multiple aggregate types** in projections
-- **Abstract Celery from projection logic**
-- **Make projections work with any event store**
-
-### Example Projection Manager Structure
-```python
-class ProjectionManagerInterface(ABC):
-    @abstractmethod
-    async def handle_event(self, event: DomainEvent) -> None:
-        pass
-
-class GenericProjectionManager(ProjectionManagerInterface):
-    def __init__(self, event_handler: EventHandlerInterface):
-        self.event_handler = event_handler
-
-    async def handle_event(self, event: DomainEvent) -> None:
-        # Generic projection logic that works with any aggregate
-        projection_event = self._create_projection_event(event)
-        await self.event_handler.dispatch(projection_event)
-```
+The `GenericProjectionManager` now properly handles projection jobs as internal messages (not domain events) and dispatches them via the event handler to appropriate Celery tasks.
 
 ## 4. Domain Services (High Priority)
 
@@ -559,10 +534,11 @@ def get_or_create_aggregate_id(external_id: str, source: str) -> UUID:
 ## Implementation Priority
 
 ### Phase 1 (Critical - Do First)
+- **Event Handling Strategy** - Separate domain events from internal messages
 - **Aggregate Design Issues** - Remove process_crm_event from aggregates
 
 ### Phase 2 (High Priority - Do Soon)
-- **Projection Management Issues** - Create generic projection manager
+- ✅ **Projection Management Issues** - Create generic projection manager with internal message handler - **COMPLETED**
 - **Domain Services** - Extract complex business logic from aggregates
 - **Command Validation** - Implement comprehensive validation pipeline
 - **Aggregate Purity** - Remove infrastructure concerns from aggregates
@@ -576,19 +552,171 @@ def get_or_create_aggregate_id(external_id: str, source: str) -> UUID:
 - **Error Handling Strategy** - Comprehensive error handling
 - **Testing Strategy** - Comprehensive test coverage
 
+## Step-by-Step Implementation Plan
+
+### Step 1: Fix Event Handling Strategy (Week 1)
+
+#### 1.1 Create Separate Interfaces
+```python
+# src/event_sourcing/application/events/domain_event_handler.py
+class DomainEventHandlerInterface(ABC):
+    @abstractmethod
+    async def dispatch_domain_event(self, event: DomainEvent) -> None:
+        pass
+
+# src/event_sourcing/application/events/internal_message_handler.py
+class InternalMessageHandlerInterface(ABC):
+    @abstractmethod
+    async def dispatch_projection_job(self, job: ProjectionJob) -> None:
+        pass
+```
+
+#### 1.2 Create ProjectionJob DTO
+```python
+# src/event_sourcing/dto/projection_job.py
+class ProjectionJob(BaseModel):
+    job_id: UUID
+    task_name: str
+    event_data: Dict[str, Any]
+    projection_type: str
+    created_at: datetime
+```
+
+#### 1.3 Update Infrastructure Factory
+```python
+# Update InfrastructureFactory to provide separate handlers
+@property
+def domain_event_handler(self) -> DomainEventHandlerInterface:
+    # Implementation that stores events in event store
+
+@property
+def internal_message_handler(self) -> InternalMessageHandlerInterface:
+    # Implementation that dispatches to Celery
+```
+
+#### 1.4 Update Projection Manager
+```python
+# Update GenericProjectionManager to use internal message handler
+class GenericProjectionManager:
+    def __init__(self, internal_message_handler: InternalMessageHandlerInterface):
+        self.internal_message_handler = internal_message_handler
+```
+
+### Step 2: Remove Aggregate Process Methods (Week 1)
+
+#### 2.1 Remove process_crm_event from aggregates
+```python
+# Remove this method from ClientAggregate
+def process_crm_event(self, crm_event: DomainEvent) -> List[DomainEvent]:
+    # This should be in domain service, not aggregate
+```
+
+#### 2.2 Create Domain Services
+```python
+# src/event_sourcing/domain/services/client_domain_service.py
+class ClientDomainService:
+    def process_crm_event(self, event: DomainEvent, aggregate: ClientAggregate) -> List[DomainEvent]:
+        # Move business logic here from aggregate
+```
+
+### Step 3: Implement Generic Projection Manager (Week 2)
+
+#### 3.1 Create GenericProjectionManager
+```python
+# src/event_sourcing/application/projections/generic_projection_manager.py
+class GenericProjectionManager:
+    def __init__(self, internal_message_handler: InternalMessageHandlerInterface):
+        self.internal_message_handler = internal_message_handler
+        self.projection_handlers: Dict[str, str] = {}
+
+    def register_projection_handler(self, event_key: str, task_name: str) -> None:
+        self.projection_handlers[event_key] = task_name
+
+    async def handle_event(self, event: DomainEvent) -> None:
+        event_key = f"{event.aggregate_type}.{event.event_type}"
+        task_name = self.projection_handlers.get(event_key)
+
+        if task_name:
+            projection_job = ProjectionJob(
+                job_id=uuid.uuid4(),
+                task_name=task_name,
+                event_data=event.dict(),
+                projection_type=event.aggregate_type,
+                created_at=datetime.utcnow()
+            )
+            await self.internal_message_handler.dispatch_projection_job(projection_job)
+```
+
+#### 3.2 Update Event Store
+```python
+# Update PostgreSQLEventStore to use generic projection manager
+class PostgreSQLEventStore(EventStore):
+    def __init__(self, database_manager: DatabaseManager, projection_manager: GenericProjectionManager):
+        self.database_manager = database_manager
+        self.projection_manager = projection_manager
+```
+
+### Step 4: Add Command Validation (Week 2)
+
+#### 4.1 Create Validation Pipeline
+```python
+# src/event_sourcing/application/validation/command_validator.py
+class ProcessCRMEventValidator:
+    def validate(self, command: ProcessCRMEventCommand) -> ValidationResult:
+        # Implement comprehensive validation
+```
+
+#### 4.2 Update Command Handlers
+```python
+# Update command handlers to use validation
+class ProcessCRMEventCommandHandler:
+    def __init__(self, validator: ProcessCRMEventValidator, ...):
+        self.validator = validator
+
+    async def handle(self, command: ProcessCRMEventCommand) -> None:
+        validation_result = await self.validator.validate(command)
+        if not validation_result.is_valid:
+            raise ValidationError(validation_result.errors)
+        # Continue with processing
+```
+
+### Step 5: Create Domain Services (Week 3)
+
+#### 5.1 Extract Business Logic
+```python
+# Move complex business logic from aggregates to domain services
+class ClientDomainService:
+    def handle_missing_create_event(self, aggregate_id: str, provider: str, config: dict) -> List[DomainEvent]:
+        # Handle missing CREATE event logic
+
+    def should_broadcast_event(self, event: DomainEvent, client_state: dict) -> bool:
+        # Business logic for broadcasting decisions
+
+    def validate_event_sequence(self, event: DomainEvent, existing_events: List[DomainEvent]) -> bool:
+        # Business logic for event sequence validation
+```
+
+#### 5.2 Update Command Handlers
+```python
+# Update command handlers to use domain services
+class ProcessCRMEventCommandHandler:
+    def __init__(self, domain_service: ClientDomainService, ...):
+        self.domain_service = domain_service
+```
+
 ## Success Criteria
 
 After implementing these improvements, the system should have:
 
-- ✅ **Abstracted event dispatching** with Celery as implementation detail
-- ✅ **Pure domain aggregates** that only apply events to state
-- ✅ **Generic projection management** supporting multiple aggregate types
-- ✅ **Domain services** for complex business logic
-- ✅ **Comprehensive validation** pipeline
-- ✅ **Clean command handlers** with proper separation of concerns
-- ✅ **Testable business logic** in isolation
-- ✅ **Proper error handling** and retry mechanisms
-- ✅ **Clear event processing pipeline** with monitoring
+- ✅ **Clear Event Handling** - Domain events vs internal messages properly separated
+- ✅ **Pure Domain Aggregates** - Only apply events to state, no business logic
+- ✅ **Generic Projection Management** - Supporting multiple aggregate types
+- ✅ **Domain Services** - Complex business logic properly organized
+- ✅ **Comprehensive Validation** - Command validation pipeline
+- ✅ **Clean Command Handlers** - Proper separation of concerns
+- ✅ **Testable Business Logic** - Isolated and testable
+- ✅ **Proper Error Handling** - Clear error boundaries
+- ✅ **Clear Event Processing Pipeline** - Well-defined processing steps
 
 ## Notes
 

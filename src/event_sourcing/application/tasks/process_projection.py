@@ -8,23 +8,29 @@ from event_sourcing.application.projections.client_projection import (
     ClientProjection,
 )
 from event_sourcing.config.celery_app import app
+from event_sourcing.dto.event import EventDTO
 from event_sourcing.utils import sync_error_logger
 
 logger = logging.getLogger(__name__)
 
 
 async def process_projection_async(
-    task_name: str,
-    event_data: Dict[str, Any],
-    projection_type: str,
+    event: EventDTO,
 ) -> None:
     """
     Process projection asynchronously.
 
-    :param task_name: The name of the projection task to execute
-    :param event_data: The event data to process
-    :param projection_type: The type of projection (e.g., "client")
+    :param event: The projection event to process
     """
+    # Extract projection job data from event
+    task_name = event.data.get("task_name")
+    event_data = event.data.get("event_data")
+    projection_type = event.data.get("projection_type")
+
+    if not all([task_name, event_data, projection_type]):
+        logger.error(f"Missing required projection job data: {event.data}")
+        return
+
     # Get infrastructure components
     from event_sourcing.infrastructure.provider import (
         get_infrastructure_factory,
@@ -42,21 +48,13 @@ async def process_projection_async(
         return
 
     # Route to appropriate projection handler
+    # Pass event_data as dict or EventDTO as needed
     if task_name == "process_client_created_projection":
-        from event_sourcing.domain.events.base import DomainEvent
-
-        event = DomainEvent(**event_data)
-        await projection.handle_client_created(event)
+        await projection.handle_client_created(EventDTO(**event_data))
     elif task_name == "process_client_updated_projection":
-        from event_sourcing.domain.events.base import DomainEvent
-
-        event = DomainEvent(**event_data)
-        await projection.handle_client_updated(event)
+        await projection.handle_client_updated(EventDTO(**event_data))
     elif task_name == "process_client_deleted_projection":
-        from event_sourcing.domain.events.base import DomainEvent
-
-        event = DomainEvent(**event_data)
-        await projection.handle_client_deleted(event)
+        await projection.handle_client_deleted(EventDTO(**event_data))
     else:
         logger.error(f"Unknown task name: {task_name}")
         return
@@ -69,12 +67,14 @@ async def process_projection_async(
 )
 @sync_error_logger
 def process_projection_task(
-    task_name: str,
     event_data: Dict[str, Any],
-    projection_type: str,
 ) -> None:
     """Process projection via Celery task."""
-    logger.info(f"Starting Celery task for projection: {task_name}")
+    logger.info(f"Starting Celery task for projection")
+
+    # Convert raw dict back to EventDTO for validation
+    event = EventDTO(**event_data)
+    logger.debug(f"EventDTO: {event}")
 
     # Convert async function to sync for Celery
     process_projection_async_sync = async_to_sync(process_projection_async)
@@ -83,10 +83,6 @@ def process_projection_task(
     process_projection_async_sync.main_event_loop = asyncio.get_event_loop()  # type: ignore
 
     # Execute the async function
-    process_projection_async_sync(
-        task_name=task_name,
-        event_data=event_data,
-        projection_type=projection_type,
-    )
+    process_projection_async_sync(event=event)
 
-    logger.info(f"Completed Celery task for projection: {task_name}")
+    logger.info(f"Completed Celery task for projection: {event.event_id}")

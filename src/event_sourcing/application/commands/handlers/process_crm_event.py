@@ -3,15 +3,18 @@ from typing import Any, List
 
 from event_sourcing.application.commands.crm import ProcessCRMEventCommand
 from event_sourcing.domain.aggregates.registry import AggregateRegistry
-from event_sourcing.domain.events.base import DomainEvent
+from event_sourcing.dto.event import EventDTO
+from event_sourcing.enums import EventType
 from event_sourcing.infrastructure.event_store import EventStore
-from event_sourcing.infrastructure.providers.base import CRMProviderFactory
+from event_sourcing.infrastructure.providers.base.provider_factory import (
+    CRMProviderFactory,
+)
 
 logger = logging.getLogger(__name__)
 
 
 class ProcessCRMEventCommandHandler:
-    """Handler for processing CRM events from any provider"""
+    """Handler for processing CRM events"""
 
     def __init__(
         self,
@@ -25,80 +28,41 @@ class ProcessCRMEventCommandHandler:
 
     async def handle(self, command: ProcessCRMEventCommand) -> None:
         """Handle process CRM event command"""
-        logger.info(
-            f"Processing {command.provider} event: {command.raw_event}"
-        )
+        logger.info(f"Processing {command.provider} event: {command.event}")
 
-        # 1. Get appropriate provider
         provider = self.provider_factory.create_provider(
             command.provider, self.provider_config
         )
 
-        # 2. Pass the raw AWS EventBridge data to provider parsing
-        raw_event_dict = (
-            command.raw_event.data
-        )  # Use the raw AWS EventBridge data
-        parsed_event = provider.parse_event(raw_event_dict)
-        if not parsed_event:
-            logger.warning(f"Failed to parse {command.provider} event")
-            raise ValueError(f"Failed to parse {command.provider} event")
-
-        logger.info(f"Parsed {command.provider} event: {parsed_event}")
-
-        # 3. Transform to domain event
-        domain_event = provider.translate_to_domain_event(parsed_event)
-
         # 4. Process through aggregate (pure business logic)
         aggregate = await self._get_or_create_aggregate(
-            domain_event.aggregate_id, domain_event.aggregate_type
+            command.event.aggregate_id, command.event.aggregate_type
         )
         events = await self._process_event_through_aggregate(
-            domain_event, aggregate, provider
+            command.event, aggregate, provider
         )
 
         # 5. Store events
         for event in events:
             await self.event_store.save_event(event)
-            logger.info(f"Saved domain event: {event}")
+            logger.info(f"Saved event: {event}")
 
     async def _process_event_through_aggregate(
-        self, domain_event: DomainEvent, aggregate: Any, provider: Any
-    ) -> List[DomainEvent]:
-        """Process domain event through aggregate for business logic"""
+        self, event_dto: EventDTO, aggregate: Any, provider: Any
+    ) -> List[EventDTO]:
+        """Process event through aggregate with business logic"""
         logger.info(
-            f"Processing domain event through aggregate: {domain_event.event_type}"
+            f"Processing event through aggregate: {event_dto.event_id}"
         )
 
-        # Check if we need to handle missing create events
-        if self._needs_create_event(domain_event, aggregate):
-            logger.info(
-                f"Handling missing create event for {domain_event.aggregate_id}"
-            )
-            complete_state = await provider.get_entity(
-                domain_event.aggregate_id, domain_event.aggregate_type
-            )
-            if complete_state:
-                create_event = self._create_missing_create_event(
-                    complete_state, domain_event
-                )
-                events = [create_event, domain_event]
-            else:
-                logger.warning(
-                    f"Could not fetch complete state for {domain_event.aggregate_id}"
-                )
-                events = [domain_event]
-        else:
-            # Process event through aggregate (pure business logic)
-            if hasattr(aggregate, "process_crm_event"):
-                events = aggregate.process_crm_event(domain_event)
-            else:
-                # Fallback: create domain event directly
-                events = [domain_event]
+        # Let aggregate process the event (business logic validation first)
+        processed_events = aggregate.process_crm_event(event_dto)
 
-        logger.info(
-            f"Aggregate processed event into {len(events)} domain events"
-        )
-        return events
+        # Apply event to aggregate state after validation
+        aggregate.apply(event_dto)
+
+        logger.info(f"Aggregate processed {len(processed_events)} events")
+        return processed_events  # type: ignore[no-any-return]
 
     async def _get_or_create_aggregate(
         self, aggregate_id: str, aggregate_type: str
@@ -123,30 +87,44 @@ class ProcessCRMEventCommandHandler:
 
         return aggregate
 
-    def _needs_create_event(self, event: DomainEvent, aggregate: Any) -> bool:
+    def _needs_create_event(self, event: EventDTO, aggregate: Any) -> bool:
         """Check if we need to create a missing CREATE event"""
         # Business rule: If UPDATE/DELETE received before CREATE, we need to fetch complete state
+        source = (
+            event.event_metadata.get("source")
+            if event.event_metadata
+            else None
+        )
         return (
-            event.event_type in ["Updated", "Deleted"]
+            event.event_type.value in ["CLIENT_UPDATED", "CLIENT_DELETED"]
             and not aggregate.events
-            and event.metadata.get("source") in ["salesforce", "hubspot"]
+            and source in ["salesforce", "hubspot"]
         )
 
     def _create_missing_create_event(
-        self, complete_state: dict, original_event: DomainEvent
-    ) -> DomainEvent:
+        self, complete_state: dict, original_event: EventDTO
+    ) -> EventDTO:
         """Create a missing CREATE event from complete state"""
-        from event_sourcing.domain.events.client import ClientCreatedEvent
 
         # Create CREATE event with complete state
-        create_event = ClientCreatedEvent.create(
+        create_event = EventDTO(
+            event_id=original_event.event_id,
             aggregate_id=original_event.aggregate_id,
+            aggregate_type=original_event.aggregate_type,
+            event_type=EventType.CLIENT_CREATED,
+            timestamp=original_event.timestamp,
+            version=original_event.version,
             data=complete_state,
-            metadata={
-                "source": original_event.metadata.get("source"),
+            event_metadata={
+                "source": original_event.event_metadata.get("source")
+                if original_event.event_metadata
+                else None,
                 "created_from_backfill": True,
                 "original_event_id": original_event.event_id,
             },
+            validation_info=original_event.validation_info,
+            source=original_event.source,
+            processed_at=original_event.processed_at,
         )
 
         logger.info(

@@ -26,8 +26,8 @@ def upgrade() -> None:
         sa.Column("parent_id", sa.String(length=255), nullable=True),
         sa.Column("status", sa.String(length=100), nullable=True),
         sa.Column("id", sa.Integer(), nullable=False),
-        sa.Column("created_at", sa.DateTime(), nullable=False),
-        sa.Column("updated_at", sa.DateTime(), nullable=False),
+        sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
+        sa.Column("updated_at", sa.DateTime(timezone=True), nullable=False),
         sa.PrimaryKeyConstraint("id"),
     )
     op.create_index("idx_client_name", "client", ["name"], unique=False)
@@ -50,8 +50,24 @@ def upgrade() -> None:
         sa.Column("event_id", postgresql.UUID(as_uuid=True), nullable=False),
         sa.Column("aggregate_id", sa.String(length=255), nullable=False),
         sa.Column("aggregate_type", sa.String(length=100), nullable=False),
-        sa.Column("event_type", sa.String(length=100), nullable=False),
-        sa.Column("timestamp", sa.DateTime(), nullable=False),
+        sa.Column(
+            "event_type",
+            sa.Enum(
+                "CLIENT_CREATED",
+                "CLIENT_UPDATED",
+                "CLIENT_DELETED",
+                "PROJECTION_CREATED",
+                "PROJECTION_UPDATED",
+                "SNAPSHOT_CREATED",
+                "SNAPSHOT_UPDATED",
+                "SNAPSHOT_DELETED",
+                "SYSTEM_ERROR",
+                "SYSTEM_WARNING",
+                name="eventtype",
+            ),
+            nullable=False,
+        ),
+        sa.Column("timestamp", sa.DateTime(timezone=True), nullable=False),
         sa.Column("version", sa.String(length=50), nullable=False),
         sa.Column(
             "data", postgresql.JSONB(astext_type=sa.Text()), nullable=False
@@ -71,10 +87,10 @@ def upgrade() -> None:
             sa.Enum("SALESFORCE", name="eventsourceenum"),
             nullable=False,
         ),
-        sa.Column("processed_at", sa.DateTime(), nullable=False),
+        sa.Column("processed_at", sa.DateTime(timezone=True), nullable=False),
         sa.Column("id", sa.Integer(), nullable=False),
-        sa.Column("created_at", sa.DateTime(), nullable=False),
-        sa.Column("updated_at", sa.DateTime(), nullable=False),
+        sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
+        sa.Column("updated_at", sa.DateTime(timezone=True), nullable=False),
         sa.PrimaryKeyConstraint("id"),
     )
     op.create_index(

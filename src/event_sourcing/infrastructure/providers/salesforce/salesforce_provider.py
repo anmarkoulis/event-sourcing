@@ -1,12 +1,10 @@
 import logging
+import uuid
+from datetime import datetime
 from typing import Any, Dict, Optional
 
-from event_sourcing.domain.events.base import DomainEvent
-from event_sourcing.domain.events.client import (
-    ClientCreatedEvent,
-    ClientDeletedEvent,
-    ClientUpdatedEvent,
-)
+from event_sourcing.dto.event import EventDTO
+from event_sourcing.enums import EventSourceEnum, EventType
 from event_sourcing.infrastructure.providers.base import CRMProviderInterface
 
 logger = logging.getLogger(__name__)
@@ -38,8 +36,8 @@ class SalesforceProvider(CRMProviderInterface):
             logger.error(f"Error fetching entity from Salesforce: {e}")
             return None
 
-    def parse_event(self, raw_event: Dict[str, Any]) -> Dict[str, Any]:
-        """Parse Salesforce CDC event format to common format"""
+    def create_event_dto(self, raw_event: Dict[str, Any]) -> EventDTO:
+        """Create EventDTO directly from raw Salesforce CDC event"""
         try:
             # Extract the payload from the CDC event structure
             payload = raw_event.get("detail", {}).get("payload", {})
@@ -50,76 +48,74 @@ class SalesforceProvider(CRMProviderInterface):
             record_ids = change_event_header.get("recordIds", [])
 
             if not record_ids:
-                logger.warning("No record IDs found in ChangeEventHeader")
-                return {}
+                raise ValueError("No record IDs found in ChangeEventHeader")
 
             record_id = record_ids[0]  # Take the first record ID
 
-            return {
-                "entity_id": record_id,
-                "entity_type": entity_name,
-                "change_type": change_type,
-                "raw_data": raw_event,
-                "metadata": {
-                    "source": "salesforce",
-                    "entity_name": entity_name,
-                    "change_type": change_type,
-                    "record_id": record_id,
-                    "commit_timestamp": change_event_header.get(
-                        "commitTimestamp"
-                    ),
-                },
+            # Map Salesforce entity names to our domain aggregate types
+            entity_to_aggregate_map = {
+                "Account": "client",
+                # Add more mappings as needed
+                # "Contact": "contact",
+                # "Opportunity": "deal",
+                # "Contract": "contract",
             }
-        except Exception as e:
-            logger.error(f"Error parsing Salesforce event: {e}")
-            return {}
 
-    def translate_to_domain_event(
-        self, parsed_event: Dict[str, Any]
-    ) -> DomainEvent:
-        """Transform parsed Salesforce event to domain event"""
-        entity_id = parsed_event.get("entity_id")
-        entity_type = parsed_event.get("entity_type")
-        change_type = parsed_event.get("change_type")
-        raw_data = parsed_event.get("raw_data", {})
-        metadata = parsed_event.get("metadata", {})
-
-        # Validate required fields
-        if not entity_id:
-            raise ValueError("entity_id is required")
-        if not entity_type:
-            raise ValueError("entity_type is required")
-        if not change_type:
-            raise ValueError("change_type is required")
-
-        # Extract the actual Salesforce record data from the CDC event
-        # The CDC event contains the record data in the payload
-        payload = raw_data.get("detail", {}).get("payload", {})
-
-        # Map Salesforce entity names to our domain entities
-        if entity_type == "Account":
-            if change_type == "CREATE":
-                return ClientCreatedEvent.create(
-                    aggregate_id=entity_id,
-                    data=payload,  # Use the actual record data, not the full CDC event
-                    metadata=metadata,
+            aggregate_type = entity_to_aggregate_map.get(entity_name)
+            if not aggregate_type:
+                raise ValueError(
+                    f"Unsupported Salesforce entity type: {entity_name}"
                 )
-            elif change_type == "UPDATE":
-                return ClientUpdatedEvent.create(
-                    aggregate_id=entity_id,
-                    data=payload,  # Use the actual record data, not the full CDC event
-                    metadata=metadata,
-                )
-            elif change_type == "DELETE":
-                return ClientDeletedEvent.create(
-                    aggregate_id=entity_id,
-                    data=payload,  # Use the actual record data, not the full CDC event
-                    metadata=metadata,
-                )
+
+            # Map Salesforce change type to EventType enum
+            event_type_map = {
+                "CREATE": EventType.CLIENT_CREATED,
+                "UPDATE": EventType.CLIENT_UPDATED,
+                "DELETE": EventType.CLIENT_DELETED,
+            }
+            event_type = event_type_map.get(
+                change_type.upper(), EventType.CLIENT_UPDATED
+            )
+
+            # Extract timestamp from raw event
+            timestamp_str = raw_event.get("time")
+            if timestamp_str:
+                try:
+                    if timestamp_str.endswith("Z"):
+                        timestamp_str = timestamp_str.replace("Z", "+00:00")
+                    timestamp = datetime.fromisoformat(timestamp_str)
+                except Exception:
+                    timestamp = datetime.utcnow()
             else:
-                raise ValueError(f"Unsupported change type: {change_type}")
-        else:
-            raise ValueError(f"Unsupported entity type: {entity_type}")
+                timestamp = datetime.utcnow()
+
+            # Create metadata
+            metadata = {
+                "salesforce_event_id": raw_event.get("id"),
+                "aws_source": raw_event.get("source"),
+                "aws_detail_type": raw_event.get("detail-type"),
+                "aws_account": raw_event.get("account"),
+                "aws_region": raw_event.get("region"),
+                "change_event_header": change_event_header,
+                "salesforce_entity_name": entity_name,  # Keep original entity name for reference
+            }
+
+            return EventDTO(
+                event_id=uuid.uuid4(),
+                aggregate_id=record_id,
+                aggregate_type=aggregate_type,  # Use mapped aggregate type
+                event_type=event_type,
+                timestamp=timestamp,
+                version="1.0",
+                data=raw_event,  # Keep the full raw event for reference
+                event_metadata=metadata,
+                validation_info=None,
+                source=EventSourceEnum.SALESFORCE,
+                processed_at=timestamp,
+            )
+        except Exception as e:
+            logger.error(f"Error creating EventDTO from Salesforce event: {e}")
+            raise
 
     def get_provider_name(self) -> str:
         """Get the name of this provider"""

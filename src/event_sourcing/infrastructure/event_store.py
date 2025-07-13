@@ -5,8 +5,7 @@ from typing import Any, List, Optional
 
 from sqlalchemy import select
 
-from event_sourcing.domain.events.base import DomainEvent
-from event_sourcing.enums import EventSourceEnum
+from event_sourcing.dto.event import EventDTO
 from event_sourcing.infrastructure.database.models.event import (
     Event as EventModel,
 )
@@ -22,7 +21,7 @@ class EventStore(ABC):
     """Abstract event store interface"""
 
     @abstractmethod
-    async def save_event(self, event: DomainEvent) -> None:
+    async def save_event(self, event: EventDTO) -> None:
         """Save event to store"""
 
     @abstractmethod
@@ -32,7 +31,7 @@ class EventStore(ABC):
         aggregate_type: str,
         start_time: Optional[datetime] = None,
         end_time: Optional[datetime] = None,
-    ) -> List[DomainEvent]:
+    ) -> List[EventDTO]:
         """Get events for aggregate with optional time filtering"""
 
 
@@ -47,11 +46,11 @@ class PostgreSQLEventStore(EventStore):
         self.database_manager = database_manager
         self.projection_manager = projection_manager
 
-    async def save_event(self, event: DomainEvent) -> None:
+    async def save_event(self, event: EventDTO) -> None:
         """Save event with validation metadata and trigger projections"""
         logger.info(f"Saving event {event.event_id} to PostgreSQL")
 
-        # Create database model from domain event
+        # Create database model from event DTO
         event_model = EventModel(
             event_id=event.event_id,
             aggregate_id=event.aggregate_id,
@@ -60,10 +59,10 @@ class PostgreSQLEventStore(EventStore):
             timestamp=event.timestamp,
             version=event.version,
             data=event.data,
-            event_metadata=event.metadata,
+            event_metadata=event.event_metadata,
             validation_info=event.validation_info,
-            source=EventSourceEnum.SALESFORCE,
-            processed_at=datetime.utcnow(),
+            source=event.source,
+            processed_at=event.processed_at or datetime.utcnow(),
         )
 
         async with AsyncDBContextManager(self.database_manager) as session:
@@ -91,7 +90,7 @@ class PostgreSQLEventStore(EventStore):
         aggregate_type: str,
         start_time: Optional[datetime] = None,
         end_time: Optional[datetime] = None,
-    ) -> List[DomainEvent]:
+    ) -> List[EventDTO]:
         """Get events with optional time filtering"""
         logger.info(f"Retrieving events for {aggregate_type} {aggregate_id}")
 
@@ -116,10 +115,10 @@ class PostgreSQLEventStore(EventStore):
             result = await session.execute(query)
             event_models = result.scalars().all()
 
-            # Convert to domain events
-            domain_events = []
+            # Convert to event DTOs
+            event_dtos = []
             for event_model in event_models:
-                domain_event = DomainEvent(
+                event_dto = EventDTO(
                     event_id=event_model.event_id,
                     aggregate_id=event_model.aggregate_id,
                     aggregate_type=event_model.aggregate_type,
@@ -127,19 +126,21 @@ class PostgreSQLEventStore(EventStore):
                     timestamp=event_model.timestamp,
                     version=event_model.version,
                     data=event_model.data,
-                    metadata=event_model.event_metadata or {},
+                    event_metadata=event_model.event_metadata,
                     validation_info=event_model.validation_info,
+                    source=event_model.source,
+                    processed_at=event_model.processed_at,
                 )
-                domain_events.append(domain_event)
+                event_dtos.append(event_dto)
 
             logger.info(
-                f"Retrieved {len(domain_events)} events for {aggregate_type} {aggregate_id}"
+                f"Retrieved {len(event_dtos)} events for {aggregate_type} {aggregate_id}"
             )
-            return domain_events
+            return event_dtos
 
     async def get_events_by_type(
         self, event_type: str, limit: int = 100
-    ) -> List[DomainEvent]:
+    ) -> List[EventDTO]:
         """Get events by type (useful for debugging and monitoring)"""
         logger.info(f"Retrieving {limit} events of type {event_type}")
 
@@ -154,9 +155,9 @@ class PostgreSQLEventStore(EventStore):
             result = await session.execute(query)
             event_models = result.scalars().all()
 
-            domain_events = []
+            event_dtos = []
             for event_model in event_models:
-                domain_event = DomainEvent(
+                event_dto = EventDTO(
                     event_id=event_model.event_id,
                     aggregate_id=event_model.aggregate_id,
                     aggregate_type=event_model.aggregate_type,
@@ -164,16 +165,18 @@ class PostgreSQLEventStore(EventStore):
                     timestamp=event_model.timestamp,
                     version=event_model.version,
                     data=event_model.data,
-                    metadata=event_model.event_metadata or {},
+                    event_metadata=event_model.event_metadata,
                     validation_info=event_model.validation_info,
+                    source=event_model.source,
+                    processed_at=event_model.processed_at,
                 )
-                domain_events.append(domain_event)
+                event_dtos.append(event_dto)
 
-            return domain_events
+            return event_dtos
 
     async def get_events_by_source(
         self, source: str, limit: int = 100
-    ) -> List[DomainEvent]:
+    ) -> List[EventDTO]:
         """Get events by source (e.g., 'salesforce', 'backfill')"""
         logger.info(f"Retrieving {limit} events from source {source}")
 
@@ -188,9 +191,9 @@ class PostgreSQLEventStore(EventStore):
             result = await session.execute(query)
             event_models = result.scalars().all()
 
-            domain_events = []
+            event_dtos = []
             for event_model in event_models:
-                domain_event = DomainEvent(
+                event_dto = EventDTO(
                     event_id=event_model.event_id,
                     aggregate_id=event_model.aggregate_id,
                     aggregate_type=event_model.aggregate_type,
@@ -198,9 +201,11 @@ class PostgreSQLEventStore(EventStore):
                     timestamp=event_model.timestamp,
                     version=event_model.version,
                     data=event_model.data,
-                    metadata=event_model.event_metadata or {},
+                    event_metadata=event_model.event_metadata,
                     validation_info=event_model.validation_info,
+                    source=event_model.source,
+                    processed_at=event_model.processed_at,
                 )
-                domain_events.append(domain_event)
+                event_dtos.append(event_dto)
 
-            return domain_events
+            return event_dtos

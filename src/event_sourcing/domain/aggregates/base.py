@@ -1,14 +1,14 @@
 from abc import ABC, abstractmethod
 
-from event_sourcing.domain.events.base import DomainEvent
+from event_sourcing.dto.event import EventDTO
 
 
-class BaseAggregate(ABC):
-    """Base aggregate - pure business logic only"""
+class Aggregate(ABC):
+    """Base aggregate interface"""
 
     def __init__(self, aggregate_id: str):
         self.aggregate_id = aggregate_id
 
     @abstractmethod
-    def apply(self, event: DomainEvent) -> None:
-        """Apply a domain event to the aggregate state"""
+    def apply(self, event: EventDTO) -> None:
+        """Apply event to aggregate state"""

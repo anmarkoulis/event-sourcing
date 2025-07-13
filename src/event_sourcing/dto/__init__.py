@@ -1,11 +1,10 @@
 from .base import ModelConfigBaseModel
-from .event import EventReadDTO, EventWriteDTO
+from .event import EventDTO
 from .salesforce import SalesforceChangeEventHeader, SalesforceEventDTO
 
 __all__ = [
     "ModelConfigBaseModel",
-    "EventWriteDTO",
-    "EventReadDTO",
+    "EventDTO",
     "SalesforceEventDTO",
     "SalesforceChangeEventHeader",
 ]
