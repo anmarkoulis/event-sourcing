@@ -5,9 +5,8 @@ from typing import Dict
 from event_sourcing.application.events.event_handler import (
     EventHandlerInterface,
 )
-from event_sourcing.domain.events.base import DomainEvent
-from event_sourcing.dto.event import EventWriteDTO
-from event_sourcing.enums import EventSourceEnum
+from event_sourcing.dto.event import EventDTO
+from event_sourcing.enums import EventType
 
 logger = logging.getLogger(__name__)
 
@@ -16,11 +15,11 @@ class ProjectionManagerInterface(ABC):
     """Abstract interface for projection managers"""
 
     @abstractmethod
-    async def handle_event(self, event: DomainEvent) -> None:
+    async def handle_event(self, event: EventDTO) -> None:
         """Handle a domain event by triggering appropriate projections"""
 
     @abstractmethod
-    async def handle_events(self, events: list[DomainEvent]) -> None:
+    async def handle_events(self, events: list[EventDTO]) -> None:
         """Handle multiple domain events"""
 
     @abstractmethod
@@ -64,32 +63,24 @@ class GenericProjectionManager(ProjectionManagerInterface):
             f"Registered projection handler: {event_key} -> {task_name}"
         )
 
-    async def handle_event(self, event: DomainEvent) -> None:
+    async def handle_event(self, event: EventDTO) -> None:
         """
         Handle a domain event by creating a projection job and dispatching it via the event handler
 
         :param event: The domain event to handle
         """
-        event_key = f"{event.aggregate_type}.{event.event_type}"
+        event_key = f"{event.aggregate_type}.{event.event_type.value}"
         task_name = self.projection_handlers.get(event_key)
 
         if task_name:
             logger.info(f"Handling projection for event: {event_key}")
 
-            # Get source from metadata or use default
-            source_str = event.metadata.get("source", "unknown")
-            try:
-                source = EventSourceEnum(source_str.upper())
-            except ValueError:
-                # Default to SALESFORCE if source is not recognized
-                source = EventSourceEnum.SALESFORCE
-
-            # Create projection job as EventWriteDTO
-            projection_job = EventWriteDTO(
+            # Create projection job as EventDTO with projection event type
+            projection_job = EventDTO(
                 event_id=event.event_id,
                 aggregate_id=event.aggregate_id,
                 aggregate_type=event.aggregate_type,
-                event_type=event.event_type,
+                event_type=EventType.PROJECTION_CREATED,  # Use projection event type
                 timestamp=event.timestamp,
                 version=event.version,
                 data={
@@ -103,7 +94,8 @@ class GenericProjectionManager(ProjectionManagerInterface):
                     "task_name": task_name,
                 },
                 validation_info=event.validation_info,
-                source=source,  # Use source from metadata
+                source=event.source,
+                processed_at=event.processed_at,
             )
 
             # Dispatch projection job via event handler (this will trigger Celery task)
@@ -123,7 +115,7 @@ class GenericProjectionManager(ProjectionManagerInterface):
                 f"No projection handler registered for event: {event_key}"
             )
 
-    async def handle_events(self, events: list[DomainEvent]) -> None:
+    async def handle_events(self, events: list[EventDTO]) -> None:
         """
         Handle multiple domain events
 
@@ -141,17 +133,17 @@ class MockProjectionManager(ProjectionManagerInterface):
     """Mock projection manager for testing"""
 
     def __init__(self) -> None:
-        self.handled_events: list[DomainEvent] = []
+        self.handled_events: list[EventDTO] = []
         self.registered_handlers: Dict[str, str] = {}
 
-    async def handle_event(self, event: DomainEvent) -> None:
+    async def handle_event(self, event: EventDTO) -> None:
         """Mock handle event - just store the event"""
         self.handled_events.append(event)
         logger.info(
             f"Mock projection manager handled event: {event.event_type}"
         )
 
-    async def handle_events(self, events: list[DomainEvent]) -> None:
+    async def handle_events(self, events: list[EventDTO]) -> None:
         """Mock handle events"""
         for event in events:
             await self.handle_event(event)

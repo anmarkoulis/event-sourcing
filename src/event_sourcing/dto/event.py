@@ -4,16 +4,16 @@ from typing import Any, Dict, Optional
 
 from pydantic import Field, field_validator
 
-from event_sourcing.enums import EventSourceEnum
+from event_sourcing.enums import EventSourceEnum, EventType
 
 from .base import ModelConfigBaseModel
 
 
-class EventWriteDTO(ModelConfigBaseModel):
-    """Event DTO for writing events to the system"""
+class EventDTO(ModelConfigBaseModel):
+    """Single Event DTO for all event operations"""
 
-    event_id: Optional[uuid.UUID] = (
-        None  # Optional for write, will be auto-generated if not provided
+    event_id: uuid.UUID = Field(
+        default_factory=uuid.uuid4, description="Event ID - required UUID"
     )
     aggregate_id: str = Field(
         ..., min_length=1, description="Aggregate ID cannot be empty"
@@ -21,8 +21,8 @@ class EventWriteDTO(ModelConfigBaseModel):
     aggregate_type: str = Field(
         ..., min_length=1, description="Aggregate type cannot be empty"
     )
-    event_type: str = Field(
-        ..., min_length=1, description="Event type cannot be empty"
+    event_type: EventType = Field(
+        ..., description="Event type using EventType enum"
     )
     timestamp: datetime
     version: str = Field(
@@ -34,8 +34,9 @@ class EventWriteDTO(ModelConfigBaseModel):
     source: EventSourceEnum = Field(
         ..., description="Event source must be a valid provider"
     )
+    processed_at: Optional[datetime] = None
 
-    @field_validator("aggregate_id", "aggregate_type", "event_type", "version")
+    @field_validator("aggregate_id", "aggregate_type", "version")
     @classmethod
     def validate_non_empty_strings(cls, v: str) -> str:
         """Validate that string fields are not empty"""
@@ -46,9 +47,9 @@ class EventWriteDTO(ModelConfigBaseModel):
     @classmethod
     def from_salesforce_event(
         cls, salesforce_event: Dict[str, Any]
-    ) -> "EventWriteDTO":
+    ) -> "EventDTO":
         """
-        Create EventWriteDTO from Salesforce AWS EventBridge payload.
+        Create EventDTO from Salesforce AWS EventBridge payload.
         Extracts relevant information and preserves the full original payload.
         """
         # Generate our own UUID for the event
@@ -73,8 +74,17 @@ class EventWriteDTO(ModelConfigBaseModel):
         change_type = change_header.get("changeType", "CREATE")
         record_ids = change_header.get("recordIds", [])
         aggregate_id = record_ids[0] if record_ids else str(uuid.uuid4())
-        aggregate_type = entity_name.lower()
-        event_type = change_type.lower()
+        aggregate_type = cls.get_aggregate_type(entity_name)
+
+        # Map Salesforce change type to ALL_CAPS EventType enum
+        event_type_map = {
+            "CREATE": EventType.CLIENT_CREATED,
+            "UPDATE": EventType.CLIENT_UPDATED,
+            "DELETE": EventType.CLIENT_DELETED,
+        }
+        event_type = event_type_map.get(
+            change_type.upper(), EventType.CLIENT_UPDATED
+        )
 
         # Compose event metadata with Salesforce ID for reference
         event_metadata = {
@@ -95,17 +105,19 @@ class EventWriteDTO(ModelConfigBaseModel):
             event_type=event_type,
             timestamp=timestamp,
             version="1.0",
-            data=salesforce_event,  # Store the full, untouched payload
+            data=payload,  # Store the Salesforce payload (actual record data)
             event_metadata=event_metadata,
             validation_info=None,
             source=EventSourceEnum.SALESFORCE,
+            processed_at=timestamp,
         )
 
-
-class EventReadDTO(EventWriteDTO):
-    """Event DTO for reading events from the system"""
-
-    event_id: uuid.UUID = Field(
-        default_factory=uuid.uuid4, description="Event ID cannot be empty"
-    )
-    processed_at: datetime
+    @classmethod
+    def get_aggregate_type(cls, entity_name: str) -> str:
+        """Get aggregate type from entity name"""
+        if entity_name == "Account":
+            return "client"
+        elif entity_name == "Contact":
+            return "contact"
+        else:
+            raise ValueError(f"Unknown entity name: {entity_name}")

@@ -43,8 +43,7 @@ src/event_sourcing/
 ## 🎯 Key Design Decisions
 
 ### 1. **Base Aggregate Hierarchy**
-- `BaseAggregate`: Abstract base with `apply()` method
-- `SalesforceAggregate`: Salesforce-specific base with field mapping capabilities
+- `Aggregate`: Abstract base with `apply()` method
 - `ClientAggregate`: Concrete implementation for Client entity
 
 ### 2. **Command Input Design**

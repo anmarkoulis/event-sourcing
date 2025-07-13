@@ -2,7 +2,7 @@ import logging
 from typing import List, Optional
 
 from event_sourcing.domain.aggregates.salesforce import SalesforceAggregate
-from event_sourcing.domain.events.base import DomainEvent
+from event_sourcing.dto.event import EventDTO
 
 logger = logging.getLogger(__name__)
 
@@ -14,14 +14,14 @@ class ClientAggregate(SalesforceAggregate):
         super().__init__(aggregate_id, "Account")
 
         # Track events for business logic validation
-        self.events: List[DomainEvent] = []
+        self.events: List[EventDTO] = []
 
         # Client-specific attributes (only what's needed for read model)
         self.name: Optional[str] = None
         self.parent_id: Optional[str] = None
         self.status: Optional[str] = None
 
-    def process_crm_event(self, crm_event: DomainEvent) -> List[DomainEvent]:
+    def process_crm_event(self, crm_event: EventDTO) -> List[EventDTO]:
         """
         Process CRM event with pure business logic (provider-agnostic).
 
@@ -45,27 +45,29 @@ class ClientAggregate(SalesforceAggregate):
                 f"Event for client {self.aggregate_id} will not be broadcasted (inactive client)"
             )
             # Still return the event for storage, but mark it as non-broadcastable
-            crm_event.metadata["broadcast"] = False
+            crm_event.event_metadata = crm_event.event_metadata or {}
+            crm_event.event_metadata["broadcast"] = False
         else:
-            crm_event.metadata["broadcast"] = True
+            crm_event.event_metadata = crm_event.event_metadata or {}
+            crm_event.event_metadata["broadcast"] = True
 
         return [crm_event]
 
-    def _is_valid_event_sequence(self, event: DomainEvent) -> bool:
+    def _is_valid_event_sequence(self, event: EventDTO) -> bool:
         """Business logic: Validate event ordering"""
-        if event.event_type == "Created" and self.events:
+        if event.event_type.value == "CLIENT_CREATED" and self.events:
             logger.warning(
                 f"CREATE event received for existing client {self.aggregate_id}"
             )
             return False
 
-        if event.event_type != "Created" and not self.events:
+        if event.event_type.value != "CLIENT_CREATED" and not self.events:
             # This is handled by domain service or command handler
             return True
 
         return True
 
-    def _should_broadcast_event(self, event: DomainEvent) -> bool:
+    def _should_broadcast_event(self, event: EventDTO) -> bool:
         """
         Business logic: Determine if event should be broadcasted.
 
@@ -73,11 +75,11 @@ class ClientAggregate(SalesforceAggregate):
         """
         # Extract status from event data
         status = None
-        if event.event_type == "Created":
+        if event.event_type.value == "CLIENT_CREATED":
             status = event.data.get("status")
-        elif event.event_type == "Updated":
+        elif event.event_type.value == "CLIENT_UPDATED":
             status = event.data.get("status")
-        elif event.event_type == "Deleted":
+        elif event.event_type.value == "CLIENT_DELETED":
             # Always broadcast deletions
             return True
 
@@ -90,21 +92,21 @@ class ClientAggregate(SalesforceAggregate):
 
         return True
 
-    def apply(self, event: DomainEvent) -> None:
+    def apply(self, event: EventDTO) -> None:
         """Apply a domain event to the client aggregate state"""
         # Track the event for business logic validation
         self.events.append(event)
 
-        if event.event_type == "Created":
+        if event.event_type.value == "CLIENT_CREATED":
             self._apply_created_event(event)
-        elif event.event_type == "Updated":
+        elif event.event_type.value == "CLIENT_UPDATED":
             self._apply_updated_event(event)
-        elif event.event_type == "Deleted":
+        elif event.event_type.value == "CLIENT_DELETED":
             self._apply_deleted_event(event)
         else:
             logger.warning(f"Unknown event type: {event.event_type}")
 
-    def _apply_created_event(self, event: DomainEvent) -> None:
+    def _apply_created_event(self, event: EventDTO) -> None:
         """Apply client created event"""
         super()._apply_created_event(event)
 
@@ -113,7 +115,7 @@ class ClientAggregate(SalesforceAggregate):
         self.parent_id = data.get("parent_id")
         self.status = data.get("status")
 
-    def _apply_updated_event(self, event: DomainEvent) -> None:
+    def _apply_updated_event(self, event: EventDTO) -> None:
         """Apply client updated event"""
         super()._apply_updated_event(event)
 
@@ -126,6 +128,6 @@ class ClientAggregate(SalesforceAggregate):
         if "status" in data:
             self.status = data["status"]
 
-    def _apply_deleted_event(self, event: DomainEvent) -> None:
+    def _apply_deleted_event(self, event: EventDTO) -> None:
         """Apply client deleted event"""
         super()._apply_deleted_event(event)

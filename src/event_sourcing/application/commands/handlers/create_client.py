@@ -1,9 +1,11 @@
 import logging
+import uuid
 from datetime import datetime
 
 from event_sourcing.application.commands.salesforce import CreateClientCommand
-from event_sourcing.domain.events.client import ClientCreatedEvent
 from event_sourcing.domain.mappings.registry import MappingRegistry
+from event_sourcing.dto.event import EventDTO
+from event_sourcing.enums import EventSourceEnum, EventType
 from event_sourcing.infrastructure.event_store import EventStore
 from event_sourcing.infrastructure.messaging import EventPublisher
 
@@ -28,15 +30,23 @@ class CreateClientCommandHandler:
         # Apply mappings to raw data
         mapped_data = self._apply_mappings(command.data, "Account")
 
-        # Create domain event
-        event = ClientCreatedEvent.create(
+        # Create event DTO
+        event = EventDTO(
+            event_id=uuid.uuid4(),
             aggregate_id=command.client_id,
+            aggregate_type="client",
+            event_type=EventType.CLIENT_CREATED,
+            timestamp=datetime.utcnow(),
+            version="1.0.0",
             data=mapped_data,
-            metadata={
+            event_metadata={
                 "source": command.source,
                 "command_id": command.client_id,
                 "timestamp": datetime.utcnow().isoformat(),
             },
+            validation_info={},
+            source=EventSourceEnum.SALESFORCE,
+            processed_at=datetime.utcnow(),
         )
 
         # Save event to event store (this will trigger projections automatically)

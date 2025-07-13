@@ -100,10 +100,14 @@ class InfrastructureFactory:
             from event_sourcing.application.tasks.process_projection import (
                 process_projection_task,
             )
+            from event_sourcing.application.tasks.publish_snapshot import (
+                publish_snapshot_task,
+            )
 
             return {
                 "process_crm_event": process_crm_event_task,
                 "process_projection": process_projection_task,
+                "publish_snapshot": publish_snapshot_task,
             }
         except ImportError as e:
             logger.warning(f"Could not import Celery tasks: {e}")
@@ -124,13 +128,13 @@ class InfrastructureFactory:
 
             # Register projection handlers for different event types
             projection_manager.register_projection_handler(
-                "client.Created", "process_client_created_projection"
+                "client.CLIENT_CREATED", "process_client_created_projection"
             )
             projection_manager.register_projection_handler(
-                "client.Updated", "process_client_updated_projection"
+                "client.CLIENT_UPDATED", "process_client_updated_projection"
             )
             projection_manager.register_projection_handler(
-                "client.Deleted", "process_client_deleted_projection"
+                "client.CLIENT_DELETED", "process_client_deleted_projection"
             )
 
             self._projection_manager = projection_manager
@@ -169,18 +173,6 @@ class InfrastructureFactory:
             event_store=self.event_store,
             provider_factory=self.provider_factory,
             provider_config={},  # Empty config for now
-        )
-
-    def create_async_process_crm_event_command_handler(self) -> Any:
-        """Create AsyncProcessCRMEventCommandHandler with event handler dependency"""
-        logger.info("Creating AsyncProcessCRMEventCommandHandler")
-        # Dynamic import to avoid circular dependency
-        from event_sourcing.application.commands.handlers.async_process_crm_event import (
-            AsyncProcessCRMEventCommandHandler,
-        )
-
-        return AsyncProcessCRMEventCommandHandler(
-            event_handler=self.event_handler
         )
 
     def create_backfill_entity_type_command_handler(self) -> Any:

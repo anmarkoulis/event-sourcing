@@ -1,7 +1,7 @@
 # Command handlers - Orchestrate command execution
 
 # Command handlers package
-from .async_process_crm_event import AsyncProcessCRMEventCommandHandler
+
 from .async_publish_snapshot import AsyncPublishSnapshotCommandHandler
 from .backfill_entity_type import BackfillEntityTypeCommandHandler
 from .backfill_specific_entity import BackfillSpecificEntityCommandHandler
@@ -15,7 +15,6 @@ __all__ = [
     "AsyncPublishSnapshotCommandHandler",
     # CRM handlers
     "ProcessCRMEventCommandHandler",
-    "AsyncProcessCRMEventCommandHandler",
     # Salesforce handlers
     "CreateClientCommandHandler",
     # Backfill handlers

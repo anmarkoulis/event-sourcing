@@ -1,7 +1,7 @@
 from abc import ABC, abstractmethod
 from typing import Any, Dict, Optional
 
-from event_sourcing.domain.events.base import DomainEvent
+from event_sourcing.dto.event import EventDTO
 
 
 class CRMProviderInterface(ABC):
@@ -14,14 +14,8 @@ class CRMProviderInterface(ABC):
         """Fetch entity from CRM"""
 
     @abstractmethod
-    def parse_event(self, raw_event: Dict[str, Any]) -> Dict[str, Any]:
-        """Parse CRM-specific event format to common format"""
-
-    @abstractmethod
-    def translate_to_domain_event(
-        self, parsed_event: Dict[str, Any]
-    ) -> DomainEvent:
-        """Transform parsed event to domain event"""
+    def create_event_dto(self, raw_event: Dict[str, Any]) -> EventDTO:
+        """Create EventDTO directly from raw CRM event"""
 
     @abstractmethod
     def get_provider_name(self) -> str:

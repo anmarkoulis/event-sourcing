@@ -6,7 +6,7 @@ from asgiref.sync import async_to_sync
 
 from event_sourcing.application.commands.crm import ProcessCRMEventCommand
 from event_sourcing.config.celery_app import app
-from event_sourcing.dto.event import EventWriteDTO
+from event_sourcing.dto.event import EventDTO
 from event_sourcing.infrastructure.provider import get_infrastructure_factory
 from event_sourcing.utils import sync_error_logger
 
@@ -14,20 +14,17 @@ logger = logging.getLogger(__name__)
 
 
 async def process_crm_event_async(
-    command_id: str,
-    raw_event: Dict[str, Any],
-    provider: str,
-    entity_type: str,
+    event_data: Dict[str, Any],
 ) -> None:
     """
     Process CRM event asynchronously.
 
-    :param command_id: The ID of the command
-    :param raw_event: Raw CRM event dict (converted from EventWriteDTO)
-    :param provider: CRM provider name (salesforce, hubspot, etc.)
-    :param entity_type: Entity type (client, deal, etc.)
+    :param event_data: The event data to process
     """
-    logger.info(f"Processing {provider} event asynchronously: {raw_event}")
+    event = EventDTO(**event_data)
+    logger.info(
+        f"Processing {event.source.value} event asynchronously: {event}"
+    )
     # Get infrastructure components
     infrastructure_factory = get_infrastructure_factory()
 
@@ -35,15 +32,10 @@ async def process_crm_event_async(
     handler = infrastructure_factory.create_process_crm_event_command_handler()
     logger.debug(f"Handler: {handler}")
 
-    # Convert raw dict back to EventWriteDTO for validation
-    event_dto = EventWriteDTO(**raw_event)
-    logger.debug(f"EventWriteDTO: {event_dto}")
-
-    # Create command with EventWriteDTO
+    # Create command with EventDTO
     command = ProcessCRMEventCommand(
-        raw_event=event_dto,
-        provider=provider,
-        entity_type=entity_type,
+        event=event,
+        provider=event.source.value,
     )
     logger.debug(f"Command: {command}")
 
@@ -52,7 +44,7 @@ async def process_crm_event_async(
     logger.debug(f"Command handled")
 
     logger.info(
-        f"Successfully processed {provider} CRM event asynchronously: {command_id}"
+        f"Successfully processed {event.source.value} CRM event asynchronously: {event.event_id}"
     )
 
 
@@ -61,15 +53,10 @@ async def process_crm_event_async(
 )
 @sync_error_logger
 def process_crm_event_task(
-    command_id: str,
-    raw_event: Dict[str, Any],
-    provider: str,
-    entity_type: str,
+    event_data: Dict[str, Any],
 ) -> None:
     """Process CRM event via Celery task."""
-    logger.info(
-        f"Starting Celery task for process CRM event command: {command_id}"
-    )
+    logger.info(f"Starting Celery task for process CRM event")
 
     # Convert async function to sync for Celery
     process_crm_event_async_sync = async_to_sync(process_crm_event_async)
@@ -80,13 +67,6 @@ def process_crm_event_task(
     )
 
     # Execute the async function
-    process_crm_event_async_sync(
-        command_id=command_id,
-        raw_event=raw_event,
-        provider=provider,
-        entity_type=entity_type,
-    )
+    process_crm_event_async_sync(event_data=event_data)
 
-    logger.info(
-        f"Completed Celery task for process CRM event command: {command_id}"
-    )
+    logger.info(f"Completed Celery task for process CRM event: {event_data}")

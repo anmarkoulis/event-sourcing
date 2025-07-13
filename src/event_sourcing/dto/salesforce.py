@@ -4,10 +4,10 @@ from typing import Any, Dict, List
 
 from pydantic import Field, field_validator
 
-from event_sourcing.enums import EventSourceEnum
+from event_sourcing.enums import EventSourceEnum, EventType
 
 from .base import ModelConfigBaseModel
-from .event import EventWriteDTO
+from .event import EventDTO
 
 
 class SalesforceChangeEventHeader(ModelConfigBaseModel):
@@ -74,8 +74,8 @@ class SalesforceEventDTO(ModelConfigBaseModel):
 
         return payload
 
-    def to_event_write_dto(self) -> EventWriteDTO:
-        """Convert Salesforce DTO to generic EventWriteDTO"""
+    def to_event_dto(self) -> EventDTO:
+        """Convert Salesforce DTO to generic EventDTO"""
         # Parse timestamp
         if self.time.endswith("Z"):
             timestamp_str = self.time.replace("Z", "+00:00")
@@ -94,7 +94,16 @@ class SalesforceEventDTO(ModelConfigBaseModel):
         # Use the first record ID as aggregate_id, or generate one
         aggregate_id = record_ids[0] if record_ids else str(uuid.uuid4())
         aggregate_type = entity_name.lower()
-        event_type = change_type.lower()
+
+        # Map Salesforce change type to ALL_CAPS EventType enum
+        event_type_map = {
+            "CREATE": EventType.CLIENT_CREATED,
+            "UPDATE": EventType.CLIENT_UPDATED,
+            "DELETE": EventType.CLIENT_DELETED,
+        }
+        event_type = event_type_map.get(
+            change_type.upper(), EventType.CLIENT_UPDATED
+        )
 
         # Create event metadata with AWS context
         event_metadata = {
@@ -106,8 +115,8 @@ class SalesforceEventDTO(ModelConfigBaseModel):
             "change_event_header": change_header,
         }
 
-        return EventWriteDTO(
-            event_id=uuid.UUID(self.id),
+        return EventDTO(
+            event_id=uuid.uuid4(),  # Generate our own UUID
             aggregate_id=aggregate_id,
             aggregate_type=aggregate_type,
             event_type=event_type,
@@ -117,4 +126,5 @@ class SalesforceEventDTO(ModelConfigBaseModel):
             event_metadata=event_metadata,
             validation_info=None,
             source=EventSourceEnum.SALESFORCE,
+            processed_at=timestamp,
         )

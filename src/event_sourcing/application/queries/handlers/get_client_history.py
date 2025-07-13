@@ -1,8 +1,8 @@
 import logging
 from typing import List
 
-from event_sourcing.application.queries.base import GetClientHistoryQuery
-from event_sourcing.domain.events.base import DomainEvent
+from event_sourcing.application.queries.client import GetClientHistoryQuery
+from event_sourcing.dto.event import EventDTO
 from event_sourcing.infrastructure.event_store import EventStore
 
 logger = logging.getLogger(__name__)
@@ -14,29 +14,23 @@ class GetClientHistoryQueryHandler:
     def __init__(self, event_store: EventStore):
         self.event_store = event_store
 
-    async def handle(self, query: GetClientHistoryQuery) -> List[DomainEvent]:
+    async def handle(self, query: GetClientHistoryQuery) -> List[EventDTO]:
         """Handle get client history query"""
-        logger.info(f"Getting client history: {query.client_id}")
+        logger.info(f"Getting history for client: {query.client_id}")
 
         # Get events from event store
-        events: List[DomainEvent] = await self.event_store.get_events(
-            aggregate_id=query.client_id,
-            aggregate_type="client",
+        events: List[EventDTO] = await self.event_store.get_events(
+            query.client_id, "client"
         )
 
-        # Filter by date range if specified
-        if query.from_date or query.to_date:
-            filtered_events: List[DomainEvent] = []
-            for event in events:
-                # Include event if it's within the date range
-                if query.from_date and event.timestamp < query.from_date:
-                    continue
-                if query.to_date and event.timestamp > query.to_date:
-                    continue
-                filtered_events.append(event)
-            events = filtered_events
+        # Filter events if needed
+        filtered_events: List[EventDTO] = []
+
+        for event in events:
+            # Add any filtering logic here if needed
+            filtered_events.append(event)
 
         logger.info(
-            f"Found {len(events)} events for client: {query.client_id}"
+            f"Retrieved {len(filtered_events)} events for client {query.client_id}"
         )
-        return events
+        return filtered_events
