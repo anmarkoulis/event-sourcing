@@ -1,4 +1,5 @@
 import logging
+import uuid
 from abc import ABC, abstractmethod
 from datetime import datetime
 from typing import Any, List, Optional
@@ -27,12 +28,18 @@ class EventStore(ABC):
     @abstractmethod
     async def get_events(
         self,
-        aggregate_id: str,
+        aggregate_id: uuid.UUID,
         aggregate_type: str,
         start_time: Optional[datetime] = None,
         end_time: Optional[datetime] = None,
     ) -> List[EventDTO]:
         """Get events for aggregate with optional time filtering"""
+
+    @abstractmethod
+    async def get_events_by_external_id_and_source(
+        self, external_id: str, source: str
+    ) -> List[EventDTO]:
+        """Get events by external_id and source (for finding existing aggregates)"""
 
 
 class PostgreSQLEventStore(EventStore):
@@ -54,6 +61,7 @@ class PostgreSQLEventStore(EventStore):
         event_model = EventModel(
             event_id=event.event_id,
             aggregate_id=event.aggregate_id,
+            external_id=event.external_id,
             aggregate_type=event.aggregate_type,
             event_type=event.event_type,
             timestamp=event.timestamp,
@@ -86,7 +94,7 @@ class PostgreSQLEventStore(EventStore):
 
     async def get_events(
         self,
-        aggregate_id: str,
+        aggregate_id: uuid.UUID,
         aggregate_type: str,
         start_time: Optional[datetime] = None,
         end_time: Optional[datetime] = None,
@@ -121,6 +129,7 @@ class PostgreSQLEventStore(EventStore):
                 event_dto = EventDTO(
                     event_id=event_model.event_id,
                     aggregate_id=event_model.aggregate_id,
+                    external_id=event_model.external_id,
                     aggregate_type=event_model.aggregate_type,
                     event_type=event_model.event_type,
                     timestamp=event_model.timestamp,
@@ -135,6 +144,51 @@ class PostgreSQLEventStore(EventStore):
 
             logger.info(
                 f"Retrieved {len(event_dtos)} events for {aggregate_type} {aggregate_id}"
+            )
+            return event_dtos
+
+    async def get_events_by_external_id_and_source(
+        self, external_id: str, source: str
+    ) -> List[EventDTO]:
+        """Get events by external_id and source (for finding existing aggregates)"""
+        logger.info(
+            f"Retrieving events for external_id: {external_id}, source: {source}"
+        )
+
+        query = (
+            select(EventModel)
+            .where(
+                EventModel.external_id == external_id,
+                EventModel.source == source,
+            )
+            .order_by(EventModel.timestamp.asc())
+        )
+
+        async with AsyncDBContextManager(self.database_manager) as session:
+            result = await session.execute(query)
+            event_models = result.scalars().all()
+
+            # Convert to event DTOs
+            event_dtos = []
+            for event_model in event_models:
+                event_dto = EventDTO(
+                    event_id=event_model.event_id,
+                    aggregate_id=event_model.aggregate_id,
+                    external_id=event_model.external_id,
+                    aggregate_type=event_model.aggregate_type,
+                    event_type=event_model.event_type,
+                    timestamp=event_model.timestamp,
+                    version=event_model.version,
+                    data=event_model.data,
+                    event_metadata=event_model.event_metadata,
+                    validation_info=event_model.validation_info,
+                    source=event_model.source,
+                    processed_at=event_model.processed_at,
+                )
+                event_dtos.append(event_dto)
+
+            logger.info(
+                f"Retrieved {len(event_dtos)} events for external_id: {external_id}, source: {source}"
             )
             return event_dtos
 
@@ -160,6 +214,7 @@ class PostgreSQLEventStore(EventStore):
                 event_dto = EventDTO(
                     event_id=event_model.event_id,
                     aggregate_id=event_model.aggregate_id,
+                    external_id=event_model.external_id,
                     aggregate_type=event_model.aggregate_type,
                     event_type=event_model.event_type,
                     timestamp=event_model.timestamp,
@@ -196,6 +251,7 @@ class PostgreSQLEventStore(EventStore):
                 event_dto = EventDTO(
                     event_id=event_model.event_id,
                     aggregate_id=event_model.aggregate_id,
+                    external_id=event_model.external_id,
                     aggregate_type=event_model.aggregate_type,
                     event_type=event_model.event_type,
                     timestamp=event_model.timestamp,

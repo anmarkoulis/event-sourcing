@@ -70,11 +70,16 @@ class PostgreSQLReadModel(ReadModel):
                     existing_client.parent_id = client_data.get("parent_id")
                 if client_data.get("status") is not None:
                     existing_client.status = client_data.get("status")
+                if client_data.get("external_id") is not None:
+                    existing_client.external_id = client_data.get(
+                        "external_id"
+                    )
                 existing_client.updated_at = datetime.utcnow()
             else:
                 # Create new client
                 client_model = ClientModel(
                     aggregate_id=aggregate_id,
+                    external_id=client_data.get("external_id"),
                     name=client_data.get("name"),
                     parent_id=client_data.get("parent_id"),
                     status=client_data.get("status"),

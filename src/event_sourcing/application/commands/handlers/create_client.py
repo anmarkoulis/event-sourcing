@@ -30,10 +30,14 @@ class CreateClientCommandHandler:
         # Apply mappings to raw data
         mapped_data = self._apply_mappings(command.data, "Account")
 
+        # Generate UUID for aggregate_id
+        aggregate_id = uuid.uuid4()
+
         # Create event DTO
         event = EventDTO(
             event_id=uuid.uuid4(),
-            aggregate_id=command.client_id,
+            aggregate_id=aggregate_id,
+            external_id=command.client_id,  # Use command.client_id as external_id
             aggregate_type="client",
             event_type=EventType.CLIENT_CREATED,
             timestamp=datetime.utcnow(),
@@ -51,19 +55,20 @@ class CreateClientCommandHandler:
 
         # Save event to event store (this will trigger projections automatically)
         await self.event_store.save_event(event)
+        logger.info(f"Client creation event saved: {event.event_id}")
 
-        # Publish to external systems if needed
-        if self.event_publisher:
-            await self.event_publisher.publish(
-                {
-                    "event_type": "ClientCreated",
-                    "aggregate_id": command.client_id,
-                    "data": mapped_data,
-                    "timestamp": event.timestamp.isoformat(),
-                }
-            )
-
-        logger.info(f"Successfully created client: {command.client_id}")
+        # Publish event to EventBridge
+        await self.event_publisher.publish(
+            {
+                "event_type": "ClientCreated",
+                "aggregate_id": str(event.aggregate_id),
+                "external_id": event.external_id,
+                "data": mapped_data,
+                "timestamp": event.timestamp.isoformat(),
+                "source": event.source.value,
+            }
+        )
+        logger.info(f"Client creation event published to EventBridge")
 
     def _apply_mappings(self, raw_data: dict, entity_name: str) -> dict:
         """Apply field mappings to raw data"""

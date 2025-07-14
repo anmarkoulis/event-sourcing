@@ -27,7 +27,6 @@ This document outlines the improvements needed to achieve a proper Domain-Driven
 6. `EventReadDTO` is returned with processing information
 
 
-
 ## 2. Aggregate Design Issues (Critical Priority)
 
 ### Current Issues
@@ -64,18 +63,6 @@ class ClientAggregate:
 
     # Remove process_crm_event() - this should be in application service
 ```
-
-## 3. Projection Management Issues (High Priority) - ✅ COMPLETED
-
-### Summary
-All projection management issues have been resolved with the implementation of a generic projection manager that:
-- ✅ Uses proper typing with `ProjectionManagerInterface`
-- ✅ Supports multiple aggregate types
-- ✅ Abstracts Celery dependencies via event handler
-- ✅ Works with any event store implementation
-- ✅ Follows standard CQRS patterns
-
-The `GenericProjectionManager` now properly handles projection jobs as internal messages (not domain events) and dispatches them via the event handler to appropriate Celery tasks.
 
 ## 4. Domain Services (High Priority)
 
@@ -488,48 +475,7 @@ class EventProcessingPipeline:
             raise
 ```
 
-## 10. Aggregate Identity Management
 
-### Current Issues
-- Aggregate IDs are set to the external Salesforce record ID
-- No internal, stable aggregate identity
-- Hard to support cross-provider or multi-source scenarios
-- Risk of ID collisions or changes if external system changes
-
-### Specific Problems
-1. **Aggregate ID = Salesforce ID** — breaks aggregate isolation and internal consistency
-2. **No UUIDs for aggregates** — not using best practice for unique, internal IDs
-3. **No mapping layer** — can't relate external IDs to internal aggregates robustly
-4. **Hard to migrate or merge** — if Salesforce changes, aggregates break
-5. **No lookup logic** — can't find existing aggregate by external ID+source
-
-### Improvements Needed
-- **Generate internal UUIDs** for all aggregates
-- **Maintain mapping** from (external_id, source) → aggregate_id
-- **On event receipt:**
-  - If (external_id, source) mapping exists, use mapped aggregate_id
-  - Else, generate new UUID and create mapping
-- **Never expose internal aggregate_id as external_id**
-- **Support multiple sources/providers** for the same aggregate type
-
-### Example Implementation
-```python
-class AggregateIdMapping(BaseModel):
-    aggregate_id: UUID
-    external_id: str
-    source: str  # e.g. 'salesforce', 'hubspot'
-
-# On event receipt:
-def get_or_create_aggregate_id(external_id: str, source: str) -> UUID:
-    mapping = mapping_store.get((external_id, source))
-    if mapping:
-        return mapping.aggregate_id
-    new_id = uuid.uuid4()
-    mapping_store[(external_id, source)] = AggregateIdMapping(
-        aggregate_id=new_id, external_id=external_id, source=source
-    )
-    return new_id
-```
 
 ## Implementation Priority
 
@@ -539,6 +485,7 @@ def get_or_create_aggregate_id(external_id: str, source: str) -> UUID:
 
 ### Phase 2 (High Priority - Do Soon)
 - ✅ **Projection Management Issues** - Create generic projection manager with internal message handler - **COMPLETED**
+- ✅ **Aggregate Identity Management** - Implement UUID-based aggregate IDs with external ID mapping - **COMPLETED**
 - **Domain Services** - Extract complex business logic from aggregates
 - **Command Validation** - Implement comprehensive validation pipeline
 - **Aggregate Purity** - Remove infrastructure concerns from aggregates
@@ -711,12 +658,13 @@ After implementing these improvements, the system should have:
 - ✅ **Clear Event Handling** - Domain events vs internal messages properly separated
 - ✅ **Pure Domain Aggregates** - Only apply events to state, no business logic
 - ✅ **Generic Projection Management** - Supporting multiple aggregate types
-- ✅ **Domain Services** - Complex business logic properly organized
-- ✅ **Comprehensive Validation** - Command validation pipeline
-- ✅ **Clean Command Handlers** - Proper separation of concerns
-- ✅ **Testable Business Logic** - Isolated and testable
-- ✅ **Proper Error Handling** - Clear error boundaries
-- ✅ **Clear Event Processing Pipeline** - Well-defined processing steps
+- ✅ **Aggregate Identity Management** - UUID-based internal IDs with external ID mapping
+- **Domain Services** - Complex business logic properly organized
+- **Comprehensive Validation** - Command validation pipeline
+- **Clean Command Handlers** - Proper separation of concerns
+- **Testable Business Logic** - Isolated and testable
+- **Proper Error Handling** - Clear error boundaries
+- **Clear Event Processing Pipeline** - Well-defined processing steps
 
 ## Notes
 

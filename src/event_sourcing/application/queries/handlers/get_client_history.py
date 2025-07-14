@@ -1,4 +1,5 @@
 import logging
+import uuid
 from typing import List
 
 from event_sourcing.application.queries.client import GetClientHistoryQuery
@@ -18,9 +19,21 @@ class GetClientHistoryQueryHandler:
         """Handle get client history query"""
         logger.info(f"Getting history for client: {query.client_id}")
 
+        # Convert string client_id to UUID if needed
+        if isinstance(query.client_id, str):
+            try:
+                aggregate_id = uuid.UUID(query.client_id)
+            except ValueError:
+                logger.error(
+                    f"Invalid UUID format for client_id: {query.client_id}"
+                )
+                return []
+        else:
+            aggregate_id = query.client_id
+
         # Get events from event store
         events: List[EventDTO] = await self.event_store.get_events(
-            query.client_id, "client"
+            aggregate_id, "client"
         )
 
         # Filter events if needed

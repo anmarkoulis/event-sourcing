@@ -1,4 +1,6 @@
 import logging
+import uuid
+from typing import List
 
 from event_sourcing.domain.aggregates.base import Aggregate
 from event_sourcing.dto.event import EventDTO
@@ -9,10 +11,10 @@ logger = logging.getLogger(__name__)
 class SalesforceAggregate(Aggregate):
     """Base Salesforce aggregate with common Salesforce-specific logic"""
 
-    def __init__(self, aggregate_id: str, entity_type: str):
+    def __init__(self, aggregate_id: uuid.UUID, entity_type: str):
         super().__init__(aggregate_id)
         self.entity_type = entity_type
-        self.events: list[EventDTO] = []
+        self.events: List[EventDTO] = []
 
     def apply(self, event: EventDTO) -> None:
         """Apply a domain event to the aggregate state"""

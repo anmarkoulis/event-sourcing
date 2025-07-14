@@ -1,5 +1,6 @@
 import logging
-from typing import Any, List
+import uuid
+from typing import Any
 
 from event_sourcing.application.commands.crm import ProcessCRMEventCommand
 from event_sourcing.domain.aggregates.registry import AggregateRegistry
@@ -30,55 +31,64 @@ class ProcessCRMEventCommandHandler:
         """Handle process CRM event command"""
         logger.info(f"Processing {command.provider} event: {command.event}")
 
-        provider = self.provider_factory.create_provider(
-            command.provider, self.provider_config
-        )
+        # Note: Provider is created but not currently used in this implementation
+        # This is a placeholder for future provider-specific event parsing
+        # provider = self.provider_factory.create_provider(
+        #     command.provider, self.provider_config
+        # )
 
-        # 4. Process through aggregate (pure business logic)
+        # Get or create aggregate using external_id + source lookup
         aggregate = await self._get_or_create_aggregate(
-            command.event.aggregate_id, command.event.aggregate_type
-        )
-        events = await self._process_event_through_aggregate(
-            command.event, aggregate, provider
-        )
-
-        # 5. Store events
-        for event in events:
-            await self.event_store.save_event(event)
-            logger.info(f"Saved event: {event}")
-
-    async def _process_event_through_aggregate(
-        self, event_dto: EventDTO, aggregate: Any, provider: Any
-    ) -> List[EventDTO]:
-        """Process event through aggregate with business logic"""
-        logger.info(
-            f"Processing event through aggregate: {event_dto.event_id}"
+            command.event.external_id,
+            command.event.source.value,
+            command.event.aggregate_type,
         )
 
-        # Let aggregate process the event (business logic validation first)
-        processed_events = aggregate.process_crm_event(event_dto)
+        # Set the aggregate_id on the event if it was None
+        if command.event.aggregate_id is None:
+            command.event.aggregate_id = aggregate.aggregate_id
 
-        # Apply event to aggregate state after validation
-        aggregate.apply(event_dto)
+        # Apply event to aggregate (pure domain logic)
+        aggregate.apply(command.event)
 
-        logger.info(f"Aggregate processed {len(processed_events)} events")
-        return processed_events  # type: ignore[no-any-return]
+        # Store the event
+        await self.event_store.save_event(command.event)
+        logger.info(f"Saved event: {command.event}")
 
     async def _get_or_create_aggregate(
-        self, aggregate_id: str, aggregate_type: str
+        self, external_id: str, source: str, aggregate_type: str
     ) -> Any:
-        """Get or create aggregate instance"""
-        # Get existing events for this aggregate
-        existing_events = await self.event_store.get_events(
-            aggregate_id, aggregate_type
+        """Get or create aggregate instance using external_id + source lookup"""
+        # Try to find existing aggregate by external_id + source
+        existing_events = (
+            await self.event_store.get_events_by_external_id_and_source(
+                external_id, source
+            )
         )
+
+        if existing_events:
+            # Use existing aggregate_id from first event
+            aggregate_id = existing_events[0].aggregate_id
+            if aggregate_id is None:
+                raise ValueError(
+                    f"Found existing event with None aggregate_id for external_id: {external_id}"
+                )
+            logger.info(
+                f"Found existing aggregate: {aggregate_id} for external_id: {external_id}"
+            )
+        else:
+            # Generate new aggregate_id for new aggregate
+            aggregate_id = uuid.uuid4()
+            logger.info(
+                f"Creating new aggregate: {aggregate_id} for external_id: {external_id}"
+            )
 
         # Get aggregate class from registry
         aggregate_class = AggregateRegistry.get_aggregate(aggregate_type)
         if not aggregate_class:
             raise ValueError(f"No aggregate found for type: {aggregate_type}")
 
-        # Create aggregate instance
+        # Create aggregate instance with the determined aggregate_id
         aggregate = aggregate_class(aggregate_id)
 
         # Apply existing events to reconstruct state
@@ -110,6 +120,7 @@ class ProcessCRMEventCommandHandler:
         create_event = EventDTO(
             event_id=original_event.event_id,
             aggregate_id=original_event.aggregate_id,
+            external_id=original_event.external_id,
             aggregate_type=original_event.aggregate_type,
             event_type=EventType.CLIENT_CREATED,
             timestamp=original_event.timestamp,

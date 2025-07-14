@@ -1,3 +1,4 @@
+import uuid
 from abc import ABC, abstractmethod
 
 from event_sourcing.dto.event import EventDTO
@@ -6,7 +7,7 @@ from event_sourcing.dto.event import EventDTO
 class Aggregate(ABC):
     """Base aggregate interface"""
 
-    def __init__(self, aggregate_id: str):
+    def __init__(self, aggregate_id: uuid.UUID):
         self.aggregate_id = aggregate_id
 
     @abstractmethod
