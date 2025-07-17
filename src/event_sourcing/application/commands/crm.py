@@ -1,10 +1,10 @@
-from pydantic import BaseModel
+from typing import Any, Dict
 
-from event_sourcing.dto.event import EventDTO
+from pydantic import BaseModel
 
 
 class ProcessCRMEventCommand(BaseModel):
     """Generic command for processing CRM events from any provider"""
 
-    event: EventDTO
     provider: str  # "salesforce", "hubspot", etc.
+    raw_event: Dict[str, Any]  # Raw CRM event from external system

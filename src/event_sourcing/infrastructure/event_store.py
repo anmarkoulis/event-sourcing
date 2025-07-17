@@ -41,6 +41,12 @@ class EventStore(ABC):
     ) -> List[EventDTO]:
         """Get events by external_id and source (for finding existing aggregates)"""
 
+    @abstractmethod
+    async def find_or_create_aggregate_id(
+        self, external_id: str, source: str, aggregate_type: str
+    ) -> uuid.UUID:
+        """Find existing aggregate ID by external_id and source, or create new one"""
+
 
 class PostgreSQLEventStore(EventStore):
     """PostgreSQL implementation of event store with automatic projection triggering"""
@@ -57,7 +63,6 @@ class PostgreSQLEventStore(EventStore):
         """Save event with validation metadata and trigger projections"""
         logger.info(f"Saving event {event.event_id} to PostgreSQL")
 
-        # Create database model from event DTO
         event_model = EventModel(
             event_id=event.event_id,
             aggregate_id=event.aggregate_id,
@@ -78,7 +83,6 @@ class PostgreSQLEventStore(EventStore):
             await session.commit()
             logger.info(f"Event {event.event_id} saved successfully")
 
-        # Trigger projections automatically (event-driven)
         if self.projection_manager:
             try:
                 await self.projection_manager.handle_event(event)
@@ -89,8 +93,6 @@ class PostgreSQLEventStore(EventStore):
                 logger.error(
                     f"Error triggering projections for event {event.event_id}: {e}"
                 )
-                # Don't fail the event save if projections fail
-                # Projections can be retried later
 
     async def get_events(
         self,
@@ -168,7 +170,6 @@ class PostgreSQLEventStore(EventStore):
             result = await session.execute(query)
             event_models = result.scalars().all()
 
-            # Convert to event DTOs
             event_dtos = []
             for event_model in event_models:
                 event_dto = EventDTO(
@@ -191,6 +192,35 @@ class PostgreSQLEventStore(EventStore):
                 f"Retrieved {len(event_dtos)} events for external_id: {external_id}, source: {source}"
             )
             return event_dtos
+
+    async def find_or_create_aggregate_id(
+        self, external_id: str, source: str, aggregate_type: str
+    ) -> uuid.UUID:
+        """Find existing aggregate ID by external_id and source, or create new one"""
+        logger.info(
+            f"Finding or creating aggregate ID for external_id: {external_id}, source: {source}, type: {aggregate_type}"
+        )
+
+        existing_events = await self.get_events_by_external_id_and_source(
+            external_id, source
+        )
+
+        if existing_events:
+            aggregate_id = existing_events[0].aggregate_id
+            if aggregate_id is None:
+                raise ValueError(
+                    f"Aggregate ID is None for existing events with external_id: {external_id}"
+                )
+            logger.info(
+                f"Found existing aggregate ID: {aggregate_id} for external_id: {external_id}"
+            )
+            return uuid.UUID(str(aggregate_id))
+        else:
+            new_aggregate_id = uuid.uuid4()
+            logger.info(
+                f"Created new aggregate ID: {new_aggregate_id} for external_id: {external_id}"
+            )
+            return new_aggregate_id
 
     async def get_events_by_type(
         self, event_type: str, limit: int = 100
