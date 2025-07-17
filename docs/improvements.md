@@ -64,6 +64,107 @@ class ClientAggregate:
     # Remove process_crm_event() - this should be in application service
 ```
 
+## 3. External Event Processing & CQRS Separation (Critical Priority)
+
+### Current Problem
+The current flow treats Salesforce events as internal events, which violates clean CQRS separation:
+
+```python
+# Current problematic flow
+@events_router.post("/salesforce/")
+async def process_salesforce_event(salesforce_event: Dict[str, Any]):
+    # ❌ BAD: Treating external event as internal event
+    event_dto = EventDTO.from_salesforce_event(salesforce_event)
+    await event_handler.dispatch(event_dto)  # Direct to event handler
+```
+
+### Issues with Current Approach
+1. **Mixing external and internal events** – Salesforce events are external, not domain events
+2. **Violating CQRS separation** – External events should go through the command layer first
+3. **Bypassing business logic** – No proper command validation or business rules
+4. **Poor separation of concerns** – Event handler should only handle internal domain events
+
+### Proposed Solution: Proper CQRS Flow
+
+#### Ideal Flow
+```
+Salesforce Event → Command Handler → Aggregate → Domain Event → Event Handler → Projections
+```
+
+#### Implementation
+```python
+# ✅ GOOD: Proper CQRS flow
+@events_router.post("/salesforce/")
+async def process_salesforce_event(salesforce_event: Dict[str, Any]):
+    # 1. Create command (not event)
+    command = ProcessCRMEventCommand(
+        provider="salesforce",
+        raw_event=salesforce_event
+    )
+    # 2. Process through command handler (synchronously)
+    await command_handler.handle(command)
+    return {"status": "processing"}
+
+# Command Handler (Thin orchestration)
+class ProcessCRMEventCommandHandler:
+    async def handle(self, command: ProcessCRMEventCommand) -> None:
+        # 1. Create empty aggregate instance
+        aggregate = ClientAggregate()
+        # 2. Let aggregate handle CRM parsing, lifecycle, and business logic
+        domain_events = aggregate.process_crm_event(command.raw_event)
+        # 3. Store domain events (event store handles dispatching)
+        for event in domain_events:
+            await self.event_store.append(event)
+
+# Aggregate (Handles CRM parsing, lifecycle, and business logic)
+class ClientAggregate:
+    def process_crm_event(self, raw_crm_event: Dict[str, Any]) -> List[DomainEvent]:
+        # 1. Parse CRM event (business logic about interpreting external data)
+        parsed_event = self._parse_crm_event(raw_crm_event)
+        # 2. Handle aggregate lifecycle (get existing state or create new)
+        self._handle_lifecycle(parsed_event)
+        # 3. Apply business rules and produce domain events
+        return self._apply_business_rules(parsed_event)
+
+    def _parse_crm_event(self, raw_event: Dict[str, Any]) -> ParsedCRMEvent:
+        # Business logic: how to interpret Salesforce/HubSpot/etc. events
+        pass
+
+    def _handle_lifecycle(self, parsed_event: ParsedCRMEvent) -> None:
+        # Business logic: determine if aggregate exists, load state, or create new
+        # This could involve checking if this is a CREATE vs UPDATE event
+        pass
+
+    def _apply_business_rules(self, parsed_event: ParsedCRMEvent) -> List[DomainEvent]:
+        # Business logic: what domain events to produce
+        pass
+```
+
+### Where Should CRM-to-Aggregate Mapping Live?
+- **Aggregate**: Mapping CRM (external) events to domain events is business logic about how the aggregate evolves. The aggregate should handle both parsing the raw CRM event and applying business rules to produce domain events.
+- **Domain Service**: Could be used if mapping is very complex or cross-aggregate, but adds indirection and complexity.
+- **Command Handler**: Should be thin - only orchestrate the flow, not handle business logic.
+
+**Recommendation:**
+- Keep CRM parsing and domain mapping in the aggregate (e.g., `process_crm_event`). This is business logic about how the aggregate interprets external changes.
+- The aggregate should not know about infrastructure, but it *should* know how to interpret business events from the outside world.
+- The command handler should be thin and only orchestrate the flow.
+- The event store should handle dispatching events to projections.
+
+### Benefits of This Approach
+1. **Clean CQRS separation** – External events go through the command layer
+2. **Proper business logic** – CRM mapping happens in aggregate
+3. **Event handler purity** – Only handles internal domain events
+4. **Better testability** – Command handlers and aggregates can be tested independently
+5. **Scalability** – Command processing can be async, event handling can be separate
+
+### Migration Strategy
+1. **Create ProcessCRMEventCommand** and handler
+2. **Move CRM mapping logic** to aggregate's `process_crm_event` method
+3. **Update API endpoint** to use command handler instead of direct event dispatch
+4. **Test thoroughly** – ensure all CRM events are properly mapped
+5. **Remove old direct event dispatch code**
+
 ## 4. Domain Services (High Priority)
 
 ### Current Issues
