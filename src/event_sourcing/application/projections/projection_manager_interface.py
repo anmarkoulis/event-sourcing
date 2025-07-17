@@ -79,6 +79,7 @@ class GenericProjectionManager(ProjectionManagerInterface):
             projection_job = EventDTO(
                 event_id=event.event_id,
                 aggregate_id=event.aggregate_id,
+                external_id=event.external_id,  # Include external_id from original event
                 aggregate_type=event.aggregate_type,
                 event_type=EventType.PROJECTION_CREATED,  # Use projection event type
                 timestamp=event.timestamp,

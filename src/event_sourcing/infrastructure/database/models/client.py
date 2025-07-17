@@ -1,4 +1,5 @@
 from sqlalchemy import Column, Index, String
+from sqlalchemy.dialects.postgresql import UUID
 
 from event_sourcing.infrastructure.database.base import BaseModel
 
@@ -7,7 +8,12 @@ class Client(BaseModel):
     """Database model for client read model (denormalized data)"""
 
     # Client identification
-    aggregate_id = Column(String(255), unique=True, nullable=False, index=True)
+    aggregate_id = Column(
+        UUID(as_uuid=True), unique=True, nullable=False, index=True
+    )
+    external_id = Column(
+        String(255), nullable=False, index=True
+    )  # External system ID
 
     # Basic client information
     name = Column(String(500), nullable=True, index=True)

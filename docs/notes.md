@@ -1,6 +1,6 @@
 # Speaker Notes: Event Sourcing & CQRS with FastAPI and Celery
 
-## Section 1: Intro & Motivation (3-4 minutes)
+## Section 1: What We'll Discuss
 
 ### Slide 1: Title Slide (30 seconds)
 **Key Points:**
@@ -14,49 +14,47 @@
 
 ---
 
-### Slide 2: Section Overview (15 seconds)
+### Slide 2: What We'll Discuss (30 seconds)
 **Key Points:**
-- Introduce the structure
-- Set expectations for the section
+- Introduce the structure and what will be covered
+- Set expectations for the talk
 
 **Speaking Notes:**
-"In the next few minutes, I'll introduce myself, explain what raw events are and why they're powerful, show you the pain points of traditional architectures, and give you a quick teaser of what an audited-by-design system looks like."
+"Today we'll cover three main areas. First, the core principles of event sourcing and CQRS - how to store every change as an immutable event and separate read and write concerns. Second, how the Python ecosystem offers excellent solutions for this - FastAPI for APIs, Celery for async processing, and Pydantic for data validation. Finally, we'll look at the aftermath - real-world patterns, performance considerations, and how to debug and test in an immutable world."
 
 ---
 
 ### Slide 3: Who Am I? (45 seconds)
 **Key Points:**
 - Establish credibility as a staff engineer
-- Show real-world experience with scale
-- Position as someone who's been through the journey
-- Connect with audience's Python experience
+- Show academic background with a joke
+- Position as someone passionate about building systems with quality
+- Keep it concise
 
 **Speaking Notes:**
-"I'm a staff engineer who's been working with Python for over a decade. I've built systems that handle millions of events daily, and I've learned the hard way why traditional architectures break down at scale. I'm what you might call an 'event sourcing evangelist' - someone who's recovered from the pain of mutable state and tight coupling. I love immutable data and audit trails, and I want to share why."
+"I'm a staff engineer who's been working with Python for over a decade. I studied Physics, then Computational Physics, and then made the switch to software engineering. I went from calculating planet trajectories to debugging production systems - turns out, both involve a lot of uncertainty! I'm passionate about building systems with quality."
 
 ---
 
-### Slide 4: What Are Raw Events? (1 minute)
+### Slide 4: Traditional Approach (1 minute)
 **Key Points:**
-- Show the contrast between traditional and event sourcing approaches
-- Introduce the fundamental concept
-- Show concrete examples of events
-- Emphasize immutability
+- Show the problems with current state storage
+- Highlight the issues with traditional approach
+- Set up the motivation for event sourcing
 
 **Speaking Notes:**
-"Instead of storing current state, we store every change as an immutable event. Look at this contrast - on the left, we have the traditional approach where we get a user, mutate their state, and save it back, overwriting history. On the right, we have the event sourcing approach where we record a UserCreated event when a user is created, and a UserNameChanged event when their name changes. Each event is immutable, timestamped, and tells us exactly what happened. We're not overwriting history - we're building it."
+"Let's start with what we're used to - the traditional approach. We store the current state, we get a user, mutate their state, and save it back, overwriting history. This approach has several problems: history is lost - we only see current state, no audit trail - we can't answer who changed what when, mutable state creates data corruption risks, and tight coupling between read and write operations."
 
 ---
 
-### Slide 5: Why Would Anyone Love Raw Events? (45 seconds)
+### Slide 5: Event Sourcing Approach (1 minute)
 **Key Points:**
-- Highlight the superpowers this gives you
-- Connect to real debugging scenarios
-- Show business value
-- Build excitement
+- Show the solution with immutable events
+- Demonstrate the fundamental shift
+- Highlight the benefits
 
 **Speaking Notes:**
-"When you store every change, you get these superpowers. Complete audit trail - every action is recorded. Time travel - you can replay any point in history. Debugging superpowers - you can see exactly what happened when something goes wrong. Data integrity - no more lost changes. And scalability - you can separate read and write concerns."
+"Event sourcing is a fundamental shift. Instead of storing current state, we store what actually happened - immutable events. Here we have a UserCreated event with an event_id, aggregate_id, timestamp, event_type, and the actual data of what changed. This gives us complete history - every change is recorded, audit trail - we can see exactly what happened, immutable events ensure data integrity, and time travel - we can replay any point in history."
 
 ---
 
@@ -71,7 +69,19 @@
 
 ---
 
-### Slide 7: Quick Teaser: Audited-by-Design System (45 seconds)
+### Slide 7: Why Event Sourcing? (45 seconds)
+**Key Points:**
+- Highlight the superpowers this gives you
+- Connect to real debugging scenarios
+- Show business value
+- Build excitement
+
+**Speaking Notes:**
+"When you store every change, you get these superpowers. Complete audit trail - every action is recorded. Time travel - you can replay any point in history. Debugging superpowers - you can see exactly what happened when something goes wrong. Data integrity - no more lost changes. And scalability - you can separate read and write concerns."
+
+---
+
+### Slide 8: Quick Teaser: Audited-by-Design System (45 seconds)
 **Key Points:**
 - Show what the end result looks like
 - Demonstrate the power of events
@@ -82,137 +92,197 @@
 
 ---
 
-## Section 2: Core Concepts (5-6 minutes)
+## Section 2: Core Concepts
 
-### Slide 8: Section Overview (15 seconds)
+### Slide 9: Section Overview (15 seconds)
 **Key Points:**
 - Introduce the core concepts section
 - Set expectations
 
 **Speaking Notes:**
-"Now let's dive into the core concepts. I'll explain event sourcing, show you how system state equals the result of replaying events, introduce CQRS, show you the benefits, and bust the misconception that you need Kafka to do this."
+"Now let's dive into the core concepts. I'll explain events as the building blocks, show you how aggregates work, introduce the event store, talk about projections, show the event bus, and explain CQRS with separate databases."
 
 ---
 
-### Slide 9: Event Sourcing: The Fundamental Idea (1 minute)
+### Slide 10: Events: The Building Blocks (1 minute)
 **Key Points:**
-- Explain the fundamental equation
-- Show the mental model shift
-- Highlight key principles
-- Use the quote to emphasize the concept
+- Show the Event structure
+- Explain each field's purpose
+- Emphasize immutability
+- Connect to standard patterns
 
 **Speaking Notes:**
-"This is the fundamental idea of event sourcing: system state equals the result of replaying all events. Instead of saying 'give me the current state,' we say 'replay all events to build the current state.' The key principles are: store every change as an immutable event, never update or delete events, replay events to build current state, and events are the source of truth."
+"Events are the building blocks of our system. Here's the Event structure we use. Each event has an event_id - a unique identifier, an aggregate_id - which aggregate this belongs to, an event_type - what happened like UserCreated or UserUpdated, a timestamp - when it happened, a version - for event versioning, and data - the actual change data. The key principle is that events are immutable facts - they never change once created."
 
 ---
 
-### Slide 10: Event Sourcing in Practice (1.5 minutes)
+### Slide 11: Aggregates: Domain Models (1 minute)
 **Key Points:**
-- Show the aggregate pattern
-- Demonstrate event application
-- Show state reconstruction
-- Emphasize simplicity
+- Show the UserAggregate structure
+- Demonstrate the apply method pattern
+- Show domain methods with validation
+- Emphasize the core equation
 
 **Speaking Notes:**
-"Here's how we implement this in practice. We have an aggregate that knows how to apply events. When we want to get the current state of a user, we get all their events and apply them one by one. This is the core of event sourcing - state is just the result of replaying events. Notice how simple this is - we just apply events in order."
+"Aggregates are where we model our business logic. Here's our UserAggregate. It has an apply method that updates aggregate state based on event type, and domain methods like create_user that validate business rules and return new events. The core equation is: State equals the result of applying all events. This is how we build current state from the event stream."
 
 ---
 
-### Slide 11: CQRS: Command Query Responsibility Segregation (1 minute)
+### Slide 12: Event Store: The Source of Truth (1 minute)
 **Key Points:**
-- Explain the separation of concerns
-- Show concrete examples
-- Keep it simple
+- Show the EventStore interface
+- Emphasize append-only nature
+- Show technology agnostic approach
+- Demonstrate immutability
 
 **Speaking Notes:**
-"CQRS stands for Command Query Responsibility Segregation. We separate our write model - commands that change state - from our read model - queries that retrieve data. Commands handle business logic and emit events. Queries are optimized for fast, flexible reads. This gives us independent scaling and technology flexibility."
+"The event store is our source of truth. It's append-only - we never update or delete events. Here's the interface with save_event, get_events_by_aggregate, and get_events_by_type methods. The implementation can be PostgreSQL, EventStoreDB, DynamoDB, or any other technology. The key is that it's append-only, immutable, and replayable."
 
 ---
 
-### Slide 12: CQRS Benefits (1 minute)
+### Slide 13: Projections: Building Read Models (1 minute)
+**Key Points:**
+- Show the UserProjection structure
+- Demonstrate event-to-read-model transformation
+- Show the optimization principle
+- Connect to CQRS
+
+**Speaking Notes:**
+"Projections are how we build read models from events. Here's our UserProjection. When a user_created event comes in, we transform it into read model data with aggregate_id, name, email, and created_at. We save this to a read-optimized database. The key principle is that read models are optimized for queries, not consistency. They're triggered from the event store and optimized for queries."
+
+---
+
+### Slide 14: Event Bus: Communication Layer (1 minute)
+**Key Points:**
+- Show the EventBus interface
+- Demonstrate publish/subscribe pattern
+- Show technology options
+- Emphasize decoupling
+
+**Speaking Notes:**
+"The event bus is our communication layer. It has publish and subscribe methods. We can implement it with RabbitMQ, Kafka, EventBridge, SNS, or other messaging technologies. The key benefit is decoupled communication between components - systems can communicate without tight coupling."
+
+---
+
+### Slide 15: CQRS: Command Query Responsibility Segregation (1 minute)
+**Key Points:**
+- Explain the separation with different databases
+- Show command vs query responsibilities
+- Emphasize the database separation
+- Connect to scalability benefits
+
+**Speaking Notes:**
+"CQRS stands for Command Query Responsibility Segregation. We separate our write model - command handlers process commands and call aggregates, aggregates apply business logic and create events, event store persists events, and event bus publishes events - from our read model - query handlers process queries and return data, read models are optimized for fast reads, data is denormalized for performance, and we use a separate database. The key insight is that we use different databases for different purposes."
+
+---
+
+### Slide 16: CQRS Benefits (30 seconds)
 **Key Points:**
 - Reinforce the benefits
 - Address common misconceptions
 - Keep it practical
 
 **Speaking Notes:**
-"This separation gives us real benefits. Auditability - commands emit events, queries are optimized. Modularity - different models for different concerns. Scalability - read/write workloads differ. Technology flexibility - different DBs for different needs. And here's the key point: you don't need Kafka to start with CQRS. You can start simple."
+"This separation gives us real benefits. Auditability - commands emit events, queries are optimized. Modularity - different models for different concerns. Scalability - read/write workloads differ. Technology flexibility - different DBs for different needs. And here's the key point: you don't need Kafka to start with CQRS. You can start simple with what you have."
 
 ---
 
-## Section 3: Architecture Walkthrough (10-12 minutes)
+## Section 3: Architecture Walkthrough
 
-### Slide 13: Section Overview (15 seconds)
+### Slide 17: Section Overview (15 seconds)
 **Key Points:**
 - Introduce the architecture section
 - Set expectations for the deep dive
 
 **Speaking Notes:**
-"Now let's walk through the architecture. I'll show you the high-level flow, the tools and layers we use, the key components, and how we achieve design flexibility through services, repositories, and async decoupling."
+"Now let's walk through the architecture. I'll show you the high-level flow, how the entities work together, and how the Python ecosystem implements these concepts."
 
 ---
 
-### Slide 14: High-Level Architecture Flow (1 minute)
+### Slide 18: High-Level Architecture Flow (1 minute)
 **Key Points:**
-- Show the high-level flow
+- Show the conceptual flow
 - Introduce key components
-- Keep it conceptual
-- Set up for detailed examples
+- Keep it technology agnostic
+- Set up for Python implementation
 
 **Speaking Notes:**
-"Here's the high-level flow. External request comes in, we process it as a command, we store the event, we publish it to an event bus, and we update our read model. The key components are FastAPI for our API surface, Celery for async event processing, an event store for our append-only log, a read model optimized for queries, and an event bus for pub/sub communication."
+"Here's how the entities work together. External request comes in, becomes a command, calls the aggregate, creates an event, stores it in the event store, publishes to event bus, triggers projections, and updates the read model. The core flow is: command, aggregate, event, event store, event bus, projections, read model."
 
 ---
 
-### Slide 15: FastAPI: The Command Interface (2 minutes)
+### Slide 19: Python Ecosystem Solutions (1 minute)
+**Key Points:**
+- Show how Python tools implement the concepts
+- Introduce FastAPI, Celery, and other tools
+- Keep it practical
+
+**Speaking Notes:**
+"Here's how we implement this in Python. External request goes to FastAPI, which calls command handlers, which work with aggregates, create events, store them in event stores like PostgreSQL or EventStoreDB, publish to event buses like RabbitMQ or Kafka, trigger projections via Celery workers, and update read models. The Python ecosystem provides excellent tools for this architecture."
+
+---
+
+### Slide 20: FastAPI: The Command Interface (2 minutes)
 **Key Points:**
 - Show real FastAPI code
-- Emphasize async nature
+- Emphasize Pydantic validation
 - Show immediate response pattern
 - Keep it practical
 
 **Speaking Notes:**
-"Here's how we implement this with FastAPI. We define our commands using Pydantic models. When a request comes in, we validate it, create an event, append it to our event store, publish it to our event bus, and return immediately. Notice we're not waiting for the event to be processed - we return right away. This gives us high availability and responsiveness."
+"Here's how we implement this with FastAPI. We define our endpoints to accept user data. We create commands using Pydantic models for validation. When a request comes in, we create a CreateUserCommand, get the appropriate handler from our infrastructure factory, and process the command. Notice we return immediately - we don't wait for the event to be processed. This gives us high availability and responsiveness."
 
 ---
 
-### Slide 16: Celery: Async Task Runner & Scalable Workers (2 minutes)
+### Slide 21: Command Handlers: Business Logic (2 minutes)
 **Key Points:**
-- Show Celery task definitions
+- Show the CreateUserCommandHandler
+- Emphasize the handle method pattern
+- Show aggregate creation and event application
+- Demonstrate clean separation
+
+**Speaking Notes:**
+"Command handlers are where the business logic lives. Here's our CreateUserCommandHandler. It takes an event store and event bus in its constructor. The handle method is the key - it creates an aggregate, calls the domain method to validate and create an event, applies the event to the aggregate, stores it in the event store, and publishes it to the event bus. This gives us clean separation between business logic and infrastructure concerns."
+
+---
+
+### Slide 22: Celery: Async Task Runner & Scalable Workers (2 minutes)
+**Key Points:**
+- Show the Celery task
 - Emphasize async processing
-- Show business logic separation
+- Show the async_to_sync pattern
 - Demonstrate flexibility
 
 **Speaking Notes:**
-"Celery is our async task runner and scalable workers. We define tasks for each event type. When a UserCreated event is published, this task processes it. It can do business logic, update the read model, send emails, notify other services - whatever we need. Each task is independent and can be scaled separately. This gives us tremendous flexibility."
+"Celery is our async task runner and scalable workers. Here's how we implement it. We define a Celery task that takes event data. We use async_to_sync to convert our async function to sync for Celery. The async function creates an Event, gets the event handler, and processes it. Each task is independent and can be scaled separately. This gives us tremendous flexibility for processing different types of events."
 
 ---
 
-### Slide 17: Event Store: The Source of Truth (2 minutes)
+### Slide 23: Projections: Event-Driven Read Models (2 minutes)
 **Key Points:**
-- Show append-only operations
-- Emphasize immutability
-- Show stream-based retrieval
-- Keep it simple
+- Show the UserProjection
+- Demonstrate event-to-read-model transformation
+- Show the broadcast pattern
+- Emphasize the event-driven nature
 
 **Speaking Notes:**
-"The event store is our source of truth. It's append-only - we never update or delete events. We store each event with a stream ID, event type, data, and version. To get events for a stream, we query by stream ID and version. This gives us the ability to replay any stream from any point in time."
+"Projections are how we build read models from events. Here's our UserProjection. When a user_created event comes in, we build user data with aggregate_id, name, email, and created_at. We save this to the read model. And we broadcast the event to EventBridge for other systems. This gives us event-driven read model updates."
 
 ---
 
-### Slide 18: Read Model: Search-Optimized Database (1.5 minutes)
+### Slide 24: FastAPI: Query Interface (2 minutes)
 **Key Points:**
-- Show optimized queries
-- Emphasize performance
-- Show flexibility
-- Keep it practical
+- Show the FastAPI query endpoints
+- Demonstrate both current and historical queries
+- Show the query handler pattern
+- Emphasize the separation
 
 **Speaking Notes:**
-"Our read model is optimized for queries. We can do fast, direct queries by ID. We can do complex searches. We can optimize for different query patterns. This is where we get the performance benefits of CQRS - our reads are fast because they're optimized for reading, not for consistency with writes."
+"Here's how we expose read models through FastAPI. We have endpoints for getting current user data and user history. For current data, we create a GetUserQuery, get the query handler from our infrastructure factory, and execute the query. For history, we create a GetUserHistoryQuery with optional date filters and get events from the event store. This gives us both current state and historical data through the same API."
 
 ---
 
-### Slide 19: Design Flexibility: Services + Repositories (2 minutes)
+### Slide 25: Design Flexibility: Services + Repositories (1 minute)
 **Key Points:**
 - Show service layer pattern
 - Demonstrate separation of concerns
@@ -224,7 +294,7 @@
 
 ---
 
-### Slide 20: Async + Decoupling for Scale (1 minute)
+### Slide 26: Async + Decoupling for Scale (1 minute)
 **Key Points:**
 - Reinforce the benefits
 - Show scalability advantages
@@ -235,19 +305,19 @@
 
 ---
 
-## Section 4: Real-World Patterns & Gotchas (6-7 minutes)
+## Section 4: Real-World Patterns & Gotchas
 
-### Slide 21: Section Overview (15 seconds)
+### Slide 27: Section Overview (15 seconds)
 **Key Points:**
 - Introduce the real-world section
 - Set expectations for practical advice
 
 **Speaking Notes:**
-"Now let's talk about real-world patterns and gotchas. I'll cover eventual consistency, snapshots for performance, initial backfill, fixes by reprocessing history, and debugging and testing in an immutable world."
+"Now let's talk about real-world patterns and gotchas. I'll cover eventual consistency, snapshots for performance, fixes by reprocessing history, and debugging and testing in an immutable world."
 
 ---
 
-### Slide 22: Eventual Consistency: Feature, Not Bug (1.5 minutes)
+### Slide 28: Eventual Consistency: Feature, Not Bug (1.5 minutes)
 **Key Points:**
 - Address the consistency concern
 - Show why it's beneficial
@@ -259,7 +329,7 @@
 
 ---
 
-### Slide 23: Snapshots for Performance on Replay (1.5 minutes)
+### Slide 29: Snapshots for Performance on Replay (1.5 minutes)
 **Key Points:**
 - Address the performance concern
 - Show the snapshot pattern
@@ -271,18 +341,7 @@
 
 ---
 
-### Slide 24: Initial Backfill: Bootstrapping from Source APIs (1 minute)
-**Key Points:**
-- Show migration strategy
-- Demonstrate practical approach
-- Keep it simple
-
-**Speaking Notes:**
-"When you're migrating to event sourcing, you need to backfill existing data. Here's how to do it. We get users from the existing system, create events for their current state, store them in the event store, publish them to the event bus, and update the read model. This gives us a clean migration path."
-
----
-
-### Slide 25: Fixes by Reprocessing History (1 minute)
+### Slide 30: Fixes by Reprocessing History (1 minute)
 **Key Points:**
 - Show safe data fixes
 - Contrast with traditional approach
@@ -294,7 +353,7 @@
 
 ---
 
-### Slide 26: Debugging in an Immutable World (1 minute)
+### Slide 31: Debugging in an Immutable World (1 minute)
 **Key Points:**
 - Show debugging superpowers
 - Give concrete examples
@@ -306,7 +365,7 @@
 
 ---
 
-### Slide 27: Testing in an Immutable World (1 minute)
+### Slide 32: Testing in an Immutable World (1 minute)
 **Key Points:**
 - Show testing strategies
 - Emphasize simplicity
@@ -318,74 +377,25 @@
 
 ---
 
-## Section 5: Key Takeaways & Reflections (2-3 minutes)
-
-### Slide 28: Section Overview (15 seconds)
-**Key Points:**
-- Introduce the final section
-- Set expectations for takeaways
-
-**Speaking Notes:**
-"Let me wrap up with some key takeaways and reflections. I want to leave you with some thoughts about raw events, the Python ecosystem, event sourcing as a mindset, and building systems that can explain themselves."
-
----
-
-### Slide 29: Key Takeaways (1.5 minutes)
-**Key Points:**
-- Reinforce main messages
-- Keep it memorable
-- End strong
-- Connect to audience
-
-**Speaking Notes:**
-"Here are the key things I want you to remember. Raw events are powerful - they give you audit trails, time travel, and debugging superpowers. The Python ecosystem is ready - FastAPI, Celery, and async/await are perfect for this. Start simple - you don't need complex infrastructure. Event sourcing is a mindset shift - think in terms of what happened, not what is. And your system should explain itself - six months from now, you'll thank yourself."
-
----
-
-### Slide 30: Questions to Challenge Your Architecture (1 minute)
-**Key Points:**
-- Give actionable questions
-- Encourage thinking
-- End with reflection
-- Connect to next steps
-
-**Speaking Notes:**
-"Before your next project, ask yourself these questions. What if I stored every change instead of just current state? How would I debug this if I could replay every action? What would complete audit trails mean for my business? Could I separate read and write concerns? What if my data was immutable? These questions will help you think differently about your architecture."
-
----
-
-### Slide 31: Thank You (30 seconds)
+### Slide 33: Thank You (30 seconds)
 **Key Points:**
 - Thank the audience
-- Provide contact info
 - Invite questions
 - End warmly
 
 **Speaking Notes:**
-"Thank you all for your attention. I hope I've convinced you that raw events are worth loving. I'm happy to take questions, and you can find me on Twitter or email. Let's have a great discussion!"
-
----
-
-### Slide 32: Resources (30 seconds)
-**Key Points:**
-- Provide further reading
-- Show tools and libraries
-- Keep it practical
-- End with action items
-
-**Speaking Notes:**
-"Here are some resources to dive deeper. These books will give you the theoretical foundation. These tools and libraries will help you implement event sourcing in Python. Start with the simple stuff and work your way up."
+"Thank you all for your attention. I hope I've convinced you that raw events are worth loving. I'm happy to take questions. Let's have a great discussion!"
 
 ---
 
 ## Overall Presentation Flow:
 
 **Timing Breakdown:**
-- Section 1: Intro & Motivation (Slides 1-7): 4 minutes
-- Section 2: Core Concepts (Slides 8-12): 5.5 minutes
-- Section 3: Architecture Walkthrough (Slides 13-20): 12 minutes
-- Section 4: Real-World Patterns (Slides 21-27): 7 minutes
-- Section 5: Key Takeaways (Slides 28-32): 3 minutes
+- Section 1: What We'll Discuss (Slides 1-8): 4 minutes
+- Section 2: Core Concepts (Slides 9-16): 6 minutes
+- Section 3: Architecture Walkthrough (Slides 17-26): 12 minutes
+- Section 4: Real-World Patterns (Slides 27-32): 6 minutes
+- Thank You (Slide 33): 30 seconds
 
 **Key Speaking Tips:**
 - Use the code examples to anchor concepts
@@ -407,3 +417,9 @@
 - Clear transitions between sections
 - Consistent timing throughout
 - Build complexity gradually
+
+**Code Examples Strategy:**
+- Use actual code to show real implementation
+- Explain the patterns (Events, Aggregates, Command Handlers, Projections, etc.)
+- Show how Python features (Pydantic, async/await, Celery) enable this architecture
+- Demonstrate the separation of concerns and clean design

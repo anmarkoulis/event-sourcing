@@ -30,6 +30,7 @@ class ClientProjection:
         # Build read model from event
         client_data = {
             "aggregate_id": event.aggregate_id,
+            "external_id": event.external_id,  # Include external_id from event
             "name": mapped_data.get("name"),
             "parent_id": mapped_data.get("parent_id"),
             "status": mapped_data.get("status"),
@@ -54,6 +55,7 @@ class ClientProjection:
         # Build read model from event
         client_data = {
             "aggregate_id": event.aggregate_id,
+            "external_id": event.external_id,  # Include external_id from event
             "name": mapped_data.get("name"),
             "parent_id": mapped_data.get("parent_id"),
             "status": mapped_data.get("status"),

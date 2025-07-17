@@ -16,7 +16,12 @@ class Event(BaseModel):
     event_id = Column(
         UUID(as_uuid=True), unique=True, nullable=False, index=True
     )
-    aggregate_id = Column(String(255), nullable=False, index=True)
+    aggregate_id = Column(
+        UUID(as_uuid=True), nullable=False, index=True
+    )  # Internal UUID
+    external_id = Column(
+        String(255), nullable=False, index=True
+    )  # External system ID (e.g., Salesforce record ID)
     aggregate_type = Column(String(100), nullable=False, index=True)
     event_type: Mapped[EventType] = mapped_column(
         SQLEnum(EventType), nullable=False, index=True
@@ -39,6 +44,12 @@ class Event(BaseModel):
 
     # Indexes for efficient querying
     __table_args__ = (
+        # Composite index for external ID + source lookups (for finding existing aggregates)
+        Index(
+            "idx_external_id_source",
+            "external_id",
+            "source",
+        ),
         # Composite index for aggregate queries
         Index(
             "idx_aggregate_events",
@@ -55,4 +66,4 @@ class Event(BaseModel):
     )
 
     def __repr__(self) -> str:
-        return f"<Event(id={self.event_id}, aggregate_id={self.aggregate_id}, event_type={self.event_type})>"
+        return f"<Event(id={self.event_id}, aggregate_id={self.aggregate_id}, external_id={self.external_id}, event_type={self.event_type})>"

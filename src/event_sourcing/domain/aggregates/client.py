@@ -1,4 +1,5 @@
 import logging
+import uuid
 from typing import List, Optional
 
 from event_sourcing.domain.aggregates.salesforce import SalesforceAggregate
@@ -10,7 +11,7 @@ logger = logging.getLogger(__name__)
 class ClientAggregate(SalesforceAggregate):
     """Client domain aggregate - encapsulates client business logic"""
 
-    def __init__(self, aggregate_id: str):
+    def __init__(self, aggregate_id: uuid.UUID):
         super().__init__(aggregate_id, "Account")
 
         # Track events for business logic validation
@@ -20,77 +21,6 @@ class ClientAggregate(SalesforceAggregate):
         self.name: Optional[str] = None
         self.parent_id: Optional[str] = None
         self.status: Optional[str] = None
-
-    def process_crm_event(self, crm_event: EventDTO) -> List[EventDTO]:
-        """
-        Process CRM event with pure business logic (provider-agnostic).
-
-        Business Rules:
-        1. Validate event sequence
-        2. Only broadcast events for active clients (status != 'Inactive')
-        """
-        logger.info(
-            f"Processing CRM event: {crm_event.event_type} for client {self.aggregate_id}"
-        )
-
-        # Business Rule 1: Validate event sequence
-        if not self._is_valid_event_sequence(crm_event):
-            raise ValueError(
-                f"Invalid event sequence: {crm_event.event_type} for client {self.aggregate_id}"
-            )
-
-        # Business Rule 2: Check if event should be broadcasted
-        if not self._should_broadcast_event(crm_event):
-            logger.info(
-                f"Event for client {self.aggregate_id} will not be broadcasted (inactive client)"
-            )
-            # Still return the event for storage, but mark it as non-broadcastable
-            crm_event.event_metadata = crm_event.event_metadata or {}
-            crm_event.event_metadata["broadcast"] = False
-        else:
-            crm_event.event_metadata = crm_event.event_metadata or {}
-            crm_event.event_metadata["broadcast"] = True
-
-        return [crm_event]
-
-    def _is_valid_event_sequence(self, event: EventDTO) -> bool:
-        """Business logic: Validate event ordering"""
-        if event.event_type.value == "CLIENT_CREATED" and self.events:
-            logger.warning(
-                f"CREATE event received for existing client {self.aggregate_id}"
-            )
-            return False
-
-        if event.event_type.value != "CLIENT_CREATED" and not self.events:
-            # This is handled by domain service or command handler
-            return True
-
-        return True
-
-    def _should_broadcast_event(self, event: EventDTO) -> bool:
-        """
-        Business logic: Determine if event should be broadcasted.
-
-        Rule: Don't broadcast events for inactive clients (they haven't signed yet)
-        """
-        # Extract status from event data
-        status = None
-        if event.event_type.value == "CLIENT_CREATED":
-            status = event.data.get("status")
-        elif event.event_type.value == "CLIENT_UPDATED":
-            status = event.data.get("status")
-        elif event.event_type.value == "CLIENT_DELETED":
-            # Always broadcast deletions
-            return True
-
-        # Business rule: Don't broadcast inactive clients
-        if status and status.lower() in ["inactive", "pending", "draft"]:
-            logger.info(
-                f"Client {self.aggregate_id} status '{status}' - event will not be broadcasted"
-            )
-            return False
-
-        return True
 
     def apply(self, event: EventDTO) -> None:
         """Apply a domain event to the client aggregate state"""
@@ -131,3 +61,7 @@ class ClientAggregate(SalesforceAggregate):
     def _apply_deleted_event(self, event: EventDTO) -> None:
         """Apply client deleted event"""
         super()._apply_deleted_event(event)
+        # Mark as deleted (could set a deleted flag or clear fields)
+        self.name = None
+        self.parent_id = None
+        self.status = None

@@ -91,8 +91,9 @@ class SalesforceEventDTO(ModelConfigBaseModel):
         change_type = change_header.get("changeType", "CREATE")
         record_ids = change_header.get("recordIds", [])
 
-        # Use the first record ID as aggregate_id, or generate one
-        aggregate_id = record_ids[0] if record_ids else str(uuid.uuid4())
+        # Use the first record ID as external_id, generate UUID for aggregate_id
+        external_id = record_ids[0] if record_ids else str(uuid.uuid4())
+        aggregate_id = uuid.uuid4()  # Generate UUID for internal aggregate_id
         aggregate_type = entity_name.lower()
 
         # Map Salesforce change type to ALL_CAPS EventType enum
@@ -118,6 +119,7 @@ class SalesforceEventDTO(ModelConfigBaseModel):
         return EventDTO(
             event_id=uuid.uuid4(),  # Generate our own UUID
             aggregate_id=aggregate_id,
+            external_id=external_id,  # Add external_id parameter
             aggregate_type=aggregate_type,
             event_type=event_type,
             timestamp=timestamp,

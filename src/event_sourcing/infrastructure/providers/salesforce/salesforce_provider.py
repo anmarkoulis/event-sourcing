@@ -1,11 +1,13 @@
 import logging
 import uuid
 from datetime import datetime
-from typing import Any, Dict, Optional
+from typing import Any, Dict
 
 from event_sourcing.dto.event import EventDTO
 from event_sourcing.enums import EventSourceEnum, EventType
-from event_sourcing.infrastructure.providers.base import CRMProviderInterface
+from event_sourcing.infrastructure.providers.base.provider_interface import (
+    CRMProviderInterface,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -15,26 +17,7 @@ class SalesforceProvider(CRMProviderInterface):
 
     def __init__(self, config: Dict[str, Any]):
         self.config = config
-        self.client = None  # Will be set by infrastructure factory
-        logger.info("Initialized Salesforce provider")
-
-    def set_client(self, client: Any) -> None:
-        """Set the Salesforce client (called by infrastructure factory)"""
-        self.client = client
-
-    async def get_entity(
-        self, entity_id: str, entity_type: str
-    ) -> Optional[Dict[str, Any]]:
-        """Fetch entity from Salesforce"""
-        if not self.client:
-            logger.warning("Salesforce client not available")
-            return None
-
-        try:
-            return await self.client.get_entity(entity_id, entity_type)
-        except Exception as e:
-            logger.error(f"Error fetching entity from Salesforce: {e}")
-            return None
+        logger.info("Salesforce provider initialized")
 
     def create_event_dto(self, raw_event: Dict[str, Any]) -> EventDTO:
         """Create EventDTO directly from raw Salesforce CDC event"""
@@ -89,33 +72,50 @@ class SalesforceProvider(CRMProviderInterface):
             else:
                 timestamp = datetime.utcnow()
 
-            # Create metadata
-            metadata = {
-                "salesforce_event_id": raw_event.get("id"),
+            # Generate UUID for aggregate_id and use Salesforce record_id as external_id
+            aggregate_id = uuid.uuid4()
+            external_id = record_id
+
+            # Create event metadata with AWS context
+            event_metadata = {
+                "aws_event_id": raw_event.get("id"),
                 "aws_source": raw_event.get("source"),
                 "aws_detail_type": raw_event.get("detail-type"),
                 "aws_account": raw_event.get("account"),
                 "aws_region": raw_event.get("region"),
                 "change_event_header": change_event_header,
-                "salesforce_entity_name": entity_name,  # Keep original entity name for reference
             }
 
             return EventDTO(
                 event_id=uuid.uuid4(),
-                aggregate_id=record_id,
-                aggregate_type=aggregate_type,  # Use mapped aggregate type
+                aggregate_id=aggregate_id,
+                external_id=external_id,
+                aggregate_type=aggregate_type,
                 event_type=event_type,
                 timestamp=timestamp,
                 version="1.0",
-                data=raw_event,  # Keep the full raw event for reference
-                event_metadata=metadata,
+                data=payload,  # Store the Salesforce payload (actual record data)
+                event_metadata=event_metadata,
                 validation_info=None,
                 source=EventSourceEnum.SALESFORCE,
                 processed_at=timestamp,
             )
+
         except Exception as e:
             logger.error(f"Error creating EventDTO from Salesforce event: {e}")
             raise
+
+    def get_entity(self, entity_id: str, entity_type: str) -> Dict[str, Any]:
+        """Get entity from Salesforce (for backfill scenarios)"""
+        # This would make actual Salesforce API calls
+        # For now, return mock data
+        logger.info(f"Getting {entity_type} {entity_id} from Salesforce")
+        return {
+            "id": entity_id,
+            "name": f"Mock {entity_type} {entity_id}",
+            "status": "Active",
+            "created_at": "2024-01-01T00:00:00Z",
+        }
 
     def get_provider_name(self) -> str:
         """Get the name of this provider"""
