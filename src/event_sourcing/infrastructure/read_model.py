@@ -35,6 +35,10 @@ class ReadModel(ABC):
     async def get_client(self, client_id: str) -> Optional[ClientDTO]:
         """Get a specific client by ID"""
 
+    @abstractmethod
+    async def delete_client(self, client_id: str) -> None:
+        """Delete client from read model"""
+
 
 class PostgreSQLReadModel(ReadModel):
     """PostgreSQL implementation of read model"""
@@ -163,6 +167,27 @@ class PostgreSQLReadModel(ReadModel):
 
             logger.info(f"Retrieved client {client_id}")
             return client_dto
+
+    async def delete_client(self, client_id: str) -> None:
+        """Delete client from read model"""
+        logger.info(f"Deleting client {client_id} from PostgreSQL")
+
+        async with AsyncDBContextManager(self.database_manager) as session:
+            # Find the client to delete
+            result = await session.execute(
+                select(ClientModel).where(
+                    ClientModel.aggregate_id == client_id
+                )
+            )
+            client_model = result.scalar_one_or_none()
+
+            if client_model:
+                # Delete the client
+                await session.delete(client_model)
+                await session.commit()
+                logger.info(f"Client {client_id} deleted successfully")
+            else:
+                logger.warning(f"Client {client_id} not found for deletion")
 
     async def get_clients_by_status(
         self, status: str, limit: int = 100

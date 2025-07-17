@@ -105,6 +105,38 @@ class SalesforceProvider(CRMProviderInterface):
             logger.error(f"Error creating EventDTO from Salesforce event: {e}")
             raise
 
+    def extract_identifiers(self, raw_event: dict) -> tuple[str, str]:
+        """Extract external_id and source from raw Salesforce event"""
+        payload = raw_event.get("detail", {}).get("payload", {})
+        change_event_header = payload.get("ChangeEventHeader", {})
+        record_ids = change_event_header.get("recordIds", [])
+        external_id = record_ids[0] if record_ids else str(uuid.uuid4())
+        source = "SALESFORCE"
+        return external_id, source
+
+    def extract_aggregate_type(self, raw_event: dict) -> str:
+        """Extract aggregate type from raw Salesforce event"""
+        payload = raw_event.get("detail", {}).get("payload", {})
+        change_event_header = payload.get("ChangeEventHeader", {})
+        entity_name = change_event_header.get("entityName")
+
+        # Map Salesforce entity names to our domain aggregate types
+        entity_to_aggregate_map = {
+            "Account": "client",
+            # Add more mappings as needed
+            # "Contact": "contact",
+            # "Opportunity": "deal",
+            # "Contract": "contract",
+        }
+
+        aggregate_type = entity_to_aggregate_map.get(entity_name)
+        if not aggregate_type:
+            raise ValueError(
+                f"Unsupported Salesforce entity type: {entity_name}"
+            )
+
+        return aggregate_type
+
     def get_entity(self, entity_id: str, entity_type: str) -> Dict[str, Any]:
         """Get entity from Salesforce (for backfill scenarios)"""
         # This would make actual Salesforce API calls

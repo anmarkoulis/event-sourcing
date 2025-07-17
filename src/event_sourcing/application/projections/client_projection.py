@@ -63,7 +63,7 @@ class ClientProjection:
         }
 
         # Update read model
-        await self.read_model.update_client(client_data)
+        await self.read_model.save_client(client_data)
         logger.info(f"Client read model updated: {event.aggregate_id}")
 
         # Broadcast read model to EventBridge

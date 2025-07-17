@@ -1,144 +1,104 @@
 import logging
 import uuid
-from typing import Any
+from typing import Any, Dict
 
 from event_sourcing.application.commands.crm import ProcessCRMEventCommand
 from event_sourcing.domain.aggregates.registry import AggregateRegistry
-from event_sourcing.dto.event import EventDTO
-from event_sourcing.enums import EventType
 from event_sourcing.infrastructure.event_store import EventStore
-from event_sourcing.infrastructure.providers.base.provider_factory import (
-    CRMProviderFactory,
-)
+from event_sourcing.infrastructure.providers.base import CRMProviderFactory
 
 logger = logging.getLogger(__name__)
 
 
 class ProcessCRMEventCommandHandler:
-    """Handler for processing CRM events"""
+    """Handler for processing CRM events - thin orchestration layer"""
 
     def __init__(
         self,
         event_store: EventStore,
         provider_factory: CRMProviderFactory,
-        provider_config: dict,
+        provider_config: Dict[str, Any],
     ):
         self.event_store = event_store
         self.provider_factory = provider_factory
         self.provider_config = provider_config
 
     async def handle(self, command: ProcessCRMEventCommand) -> None:
-        """Handle process CRM event command"""
-        logger.info(f"Processing {command.provider} event: {command.event}")
+        """Handle process CRM event command - thin orchestration"""
+        logger.info(f"Processing {command.provider} event via command handler")
 
-        # Note: Provider is created but not currently used in this implementation
-        # This is a placeholder for future provider-specific event parsing
-        # provider = self.provider_factory.create_provider(
-        #     command.provider, self.provider_config
-        # )
-
-        # Get or create aggregate using external_id + source lookup
-        aggregate = await self._get_or_create_aggregate(
-            command.event.external_id,
-            command.event.source.value,
-            command.event.aggregate_type,
+        # 1. Get provider instance
+        provider = self.provider_factory.create_provider(
+            command.provider, self.provider_config
         )
 
-        # Set the aggregate_id on the event if it was None
-        if command.event.aggregate_id is None:
-            command.event.aggregate_id = aggregate.aggregate_id
+        # 2. Use provider to extract external_id and source
+        external_id, source = provider.extract_identifiers(command.raw_event)
 
-        # Apply event to aggregate (pure domain logic)
-        aggregate.apply(command.event)
+        # 3. Use provider to determine aggregate type
+        aggregate_type = provider.extract_aggregate_type(command.raw_event)
 
-        # Store the event
-        await self.event_store.save_event(command.event)
-        logger.info(f"Saved event: {command.event}")
-
-    async def _get_or_create_aggregate(
-        self, external_id: str, source: str, aggregate_type: str
-    ) -> Any:
-        """Get or create aggregate instance using external_id + source lookup"""
-        # Try to find existing aggregate by external_id + source
-        existing_events = (
+        # 4. Query previous events for this external_id and source
+        previous_events = (
             await self.event_store.get_events_by_external_id_and_source(
                 external_id, source
             )
         )
 
-        if existing_events:
-            # Use existing aggregate_id from first event
-            aggregate_id = existing_events[0].aggregate_id
-            if aggregate_id is None:
-                raise ValueError(
-                    f"Found existing event with None aggregate_id for external_id: {external_id}"
-                )
-            logger.info(
-                f"Found existing aggregate: {aggregate_id} for external_id: {external_id}"
-            )
+        # 5. Find or create aggregate ID using event store
+        aggregate_id = await self.event_store.find_or_create_aggregate_id(
+            external_id, source, aggregate_type
+        )
+
+        # 6. Create aggregate instance with the correct ID and provider
+        aggregate = self._create_aggregate_instance(
+            aggregate_id, provider, aggregate_type
+        )
+
+        # 7. Let aggregate handle CRM parsing, lifecycle, and business logic
+        domain_events = aggregate.process_crm_event(
+            command.raw_event, previous_events, command.provider
+        )
+
+        # 7. Store domain events (event store handles dispatching)
+        for event in domain_events:
+            await self.event_store.save_event(event)
+            logger.info(f"Saved domain event: {event.event_id}")
+
+    def _extract_identifiers(
+        self, raw_event: Dict[str, Any], provider: Any
+    ) -> tuple[str, str]:
+        """Extract external_id and source from raw CRM event"""
+        # For Salesforce events
+        if (
+            hasattr(provider, "get_provider_name")
+            and provider.get_provider_name() == "salesforce"
+        ):
+            payload = raw_event.get("detail", {}).get("payload", {})
+            change_header = payload.get("ChangeEventHeader", {})
+            record_ids = change_header.get("recordIds", [])
+            external_id = record_ids[0] if record_ids else str(uuid.uuid4())
+            source = "SALESFORCE"  # This should match EventSourceEnum.SALESFORCE.value
+            return external_id, source
         else:
-            # Generate new aggregate_id for new aggregate
-            aggregate_id = uuid.uuid4()
-            logger.info(
-                f"Creating new aggregate: {aggregate_id} for external_id: {external_id}"
+            # For other providers, implement as needed
+            raise ValueError(
+                f"Unsupported provider for identifier extraction: {provider}"
             )
 
+    def _create_aggregate_instance(
+        self, aggregate_id: uuid.UUID, provider: Any, aggregate_type: str
+    ) -> Any:
+        """Create empty aggregate instance based on aggregate type"""
         # Get aggregate class from registry
         aggregate_class = AggregateRegistry.get_aggregate(aggregate_type)
         if not aggregate_class:
             raise ValueError(f"No aggregate found for type: {aggregate_type}")
 
-        # Create aggregate instance with the determined aggregate_id
-        aggregate = aggregate_class(aggregate_id)
-
-        # Apply existing events to reconstruct state
-        for event in existing_events:
-            aggregate.apply(event)
+        # Create empty aggregate instance with the provided ID and provider
+        aggregate = aggregate_class(aggregate_id, provider)
+        logger.info(
+            f"Created {aggregate_type} aggregate instance with ID: {aggregate_id}"
+        )
 
         return aggregate
-
-    def _needs_create_event(self, event: EventDTO, aggregate: Any) -> bool:
-        """Check if we need to create a missing CREATE event"""
-        # Business rule: If UPDATE/DELETE received before CREATE, we need to fetch complete state
-        source = (
-            event.event_metadata.get("source")
-            if event.event_metadata
-            else None
-        )
-        return (
-            event.event_type.value in ["CLIENT_UPDATED", "CLIENT_DELETED"]
-            and not aggregate.events
-            and source in ["salesforce", "hubspot"]
-        )
-
-    def _create_missing_create_event(
-        self, complete_state: dict, original_event: EventDTO
-    ) -> EventDTO:
-        """Create a missing CREATE event from complete state"""
-
-        # Create CREATE event with complete state
-        create_event = EventDTO(
-            event_id=original_event.event_id,
-            aggregate_id=original_event.aggregate_id,
-            external_id=original_event.external_id,
-            aggregate_type=original_event.aggregate_type,
-            event_type=EventType.CLIENT_CREATED,
-            timestamp=original_event.timestamp,
-            version=original_event.version,
-            data=complete_state,
-            event_metadata={
-                "source": original_event.event_metadata.get("source")
-                if original_event.event_metadata
-                else None,
-                "created_from_backfill": True,
-                "original_event_id": original_event.event_id,
-            },
-            validation_info=original_event.validation_info,
-            source=original_event.source,
-            processed_at=original_event.processed_at,
-        )
-
-        logger.info(
-            f"Created missing CREATE event for {original_event.aggregate_id}"
-        )
-        return create_event

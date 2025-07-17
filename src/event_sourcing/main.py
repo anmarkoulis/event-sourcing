@@ -1,10 +1,8 @@
 from fastapi import FastAPI
 
 from event_sourcing.api.handlers import (
-    configure_exception_handlers,
     configure_lifespan,
     configure_logging,
-    configure_middlewares,
     configure_openapi_tags,
     configure_routers,
 )
@@ -28,6 +26,6 @@ app = FastAPI(
 )
 
 configure_logging()
-configure_exception_handlers(app)
-configure_middlewares(app)
+# configure_exception_handlers(app)
+# configure_middlewares(app)
 configure_routers(app)

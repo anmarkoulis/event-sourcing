@@ -21,5 +21,13 @@ class CRMProviderInterface(ABC):
     def get_provider_name(self) -> str:
         """Get the name of this provider"""
 
+    @abstractmethod
+    def extract_identifiers(self, raw_event: dict) -> tuple[str, str]:
+        """Extract external_id and source from raw CRM event"""
+
+    @abstractmethod
+    def extract_aggregate_type(self, raw_event: dict) -> str:
+        """Extract aggregate type from raw CRM event"""
+
     def set_client(self, client: Any) -> None:
         """Set the CRM client (optional method for providers that need it)"""
