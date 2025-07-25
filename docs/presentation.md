@@ -158,11 +158,7 @@ UserCreated(
 
 ## Key principle: **Events are immutable facts** - they never change
 
----
-
-# 2. Event Streams: The Story of an Entity
-
-## Events belong to ordered sequences:
+## Events belong to ordered sequences (Event Streams):
 
 ```python
 # A user's complete story
@@ -175,59 +171,117 @@ user_stream = [
 ]
 ```
 
-## **The stream is the source of truth** - rebuild any point in time
-
 ![Event Stream Sequence](../diagrams/generated/event-stream-sequence.png)
 
+## **The stream is the source of truth** - rebuild any point in time
+
 ---
 
-# 3. CQRS: Separate Reading from Writing
-
-## The problem with traditional systems:
+## 2. Commands: Intent to Change
 
 ```python
-# Everything mixed together
-class UserService:
-    def update_user(self, user_id, data):  # Write
-        # Complex business logic
-        pass
+# Commands represent the intent to change something
+CreateUserCommand(
+    name="Sarah",
+    email="sarah@example.com"
+)
 
-    def get_user(self, user_id):           # Read
-        # Simple data retrieval
-        pass
+ChangeUserEmailCommand(
+    user_id="user_123",
+    new_email="sarah.new@example.com"
+)
 ```
 
-## The solution: **Different models for different purposes**
+## **Commands are the entry point** - they represent what we want to do
 
 ---
 
-# CQRS: Commands vs Queries
+## 3. Queries: Intent to Read (CQRS Separation)
 
-## Commands (Write Model):
-- **Command Handlers** - Process commands, call aggregates
-- **Aggregates** - Apply business logic, create events
-- **Event Store** - Persist events (source of truth)
+```python
+# Queries represent the intent to read something
+GetUserQuery(user_id="user_123")
+GetUserHistoryQuery(user_id="user_123", from_date="2024-01-01")
+GetUsersByStatusQuery(status="active")
+```
 
-## Queries (Read Model):
-- **Query Handlers** - Process queries, return data
-- **Read Models** - Optimized for fast reads
-- **Separate database** - No business logic
-
-## **Different databases for different purposes**
-
-![CQRS Separation](../diagrams/generated/cqrs-separation.png)
+## **Queries are separate from commands** - different models for different purposes
 
 ---
 
-# The Complete Picture: How Everything Connects
+## 3. Aggregates: Domain Logic
 
-## A real-world example: "User changes their email"
+```python
+class UserAggregate:
+    def create_user(self, name: str, email: str) -> UserCreated:
+        # Business logic validation
+        if not name or not email:
+            raise ValueError("Name and email required")
 
-![User Changes Email Flow](../diagrams/generated/user_changes_email.png)
+        # Create and return event
+        return UserCreated(
+            event_id=uuid4(),
+            aggregate_id=self.aggregate_id,
+            version=self.version + 1,
+            timestamp=datetime.now(),
+            event_type="USER_CREATED",
+            data={"name": name, "email": email}
+        )
+```
 
-## **Every change flows through this pattern**
+## **Aggregates apply business logic** and create events
 
 ---
+
+## 4. Event Store: Source of Truth
+
+```python
+# Event Store - append-only storage
+await event_store.append_to_stream(
+    stream_id="user_123",
+    expected_version=0,
+    events=[user_created_event]
+)
+
+# Retrieve events for replay
+events = await event_store.get_stream("user_123")
+```
+
+## **Event Store is append-only** - events never change or delete
+
+---
+
+## 5. Projections: Building Read Models
+
+```python
+class UserProjection:
+    async def handle_user_created(self, event: UserCreated):
+        # Build read model from event
+        user_data = {
+            "user_id": event.aggregate_id,
+            "name": event.data["name"],
+            "email": event.data["email"],
+            "status": "active",
+            "created_at": event.timestamp
+        }
+        await self.read_model.save_user(user_data)
+```
+
+## **Projections build optimized read models** from events
+
+---
+
+# How Everything Works Together
+
+## The complete flow:
+
+![Event Sourcing Flow](../diagrams/generated/event-sourcing-flow.png)
+
+## **Each interaction follows this pattern** - from command to projection
+
+---
+
+
 
 # The Python Way: FastAPI + Celery
 
