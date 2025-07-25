@@ -104,23 +104,30 @@ create-directories: ## Create necessary directories for diagrams
 	mkdir -p diagrams/generated
 	@echo "Directories created successfully!"
 
-generate-diagrams: install-mermaid-cli create-directories ## Generate diagrams from Mermaid source files
+generate-diagrams: create-directories ## Generate diagrams from Mermaid source files
 	@echo "Generating diagrams..."
-	@if [ -d "diagrams/source" ] && [ "$(ls -A diagrams/source)" ]; then \
-		for file in diagrams/source/*.mmd; do \
-			if [ -f "$$file" ]; then \
-				filename=$$(basename $$file .mmd); \
-				echo "Generating $$filename.png from $$file"; \
-				mmdc -i $$file -o diagrams/generated/$$filename.png; \
-			fi; \
-		done; \
-		echo "Diagrams generated successfully!"; \
+	@if [ -d "diagrams/source" ]; then \
+		echo "Found diagrams/source directory"; \
+		file_count=$$(find diagrams/source -name "*.mmd" | wc -l); \
+		echo "Found $$file_count .mmd files"; \
+		if [ $$file_count -gt 0 ]; then \
+			for file in diagrams/source/*.mmd; do \
+				if [ -f "$$file" ]; then \
+					filename=$$(basename $$file .mmd); \
+					echo "Generating $$filename.png from $$file"; \
+					npx --yes @mermaid-js/mermaid-cli -i $$file -o diagrams/generated/$$filename.png; \
+				fi; \
+			done; \
+			echo "Diagrams generated successfully!"; \
+		else \
+			echo "No .mmd files found in diagrams/source/"; \
+			echo "Creating example diagram..."; \
+			echo 'graph TD\n    A[Client Request] --> B[FastAPI]\n    B --> C[Event Store]\n    B --> D[Event Bus]\n    D --> E[Celery Workers]\n    E --> F[Read Model]\n    F --> G[Client Response]' > diagrams/source/architecture.mmd; \
+			npx --yes @mermaid-js/mermaid-cli -i diagrams/source/architecture.mmd -o diagrams/generated/architecture.png; \
+			echo "Example architecture diagram created!"; \
+		fi; \
 	else \
-		echo "No diagram source files found in diagrams/source/"; \
-		echo "Creating example diagram..."; \
-		echo 'graph TD\n    A[Client Request] --> B[FastAPI]\n    B --> C[Event Store]\n    B --> D[Event Bus]\n    D --> E[Celery Workers]\n    E --> F[Read Model]\n    F --> G[Client Response]' > diagrams/source/architecture.mmd; \
-		mmdc -i diagrams/source/architecture.mmd -o diagrams/generated/architecture.png; \
-		echo "Example architecture diagram created!"; \
+		echo "diagrams/source directory not found"; \
 	fi
 
 pdf: install-marp generate-diagrams ## Generate presentation PDF from markdown
