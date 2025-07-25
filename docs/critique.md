@@ -8,27 +8,19 @@ As an experienced software engineer who has worked with event sourcing in produc
 
 ### 1. **Incomplete Event Sourcing Fundamentals**
 
-**Problem**: The presentation jumps too quickly into implementation without establishing core event sourcing concepts.
+**Problem**: The presentation jumps too quickly into implementation without establishing some core event sourcing concepts.
 
 **Missing Elements**:
-- **Event Sourcing vs Event-Driven Architecture**: These are different concepts that are conflated
-- **Event Stream**: The fundamental concept of an ordered sequence of events is never clearly explained
-- **Event Versioning**: Critical for handling concurrent modifications
-- **Optimistic Concurrency Control**: Essential for event sourcing but never mentioned
+- **Additional advanced patterns**: Could cover more production scenarios
 
 **Bibliography Mismatch**:
-- Martin Fowler's event sourcing pattern emphasizes event streams and versioning
-- Greg Young's work focuses heavily on optimistic concurrency control
-- The presentation treats events as isolated entities rather than part of a stream
+- The presentation could better align with established patterns in some areas
 
 ### 2. **Aggregate Pattern Misrepresentation**
 
 **Problem**: The aggregate implementation shown is overly simplified and doesn't follow established patterns.
 
 **Issues**:
-- **Missing Aggregate Root Concept**: Aggregates should enforce business invariants, not just apply events
-- **No Command Validation**: The `create_user` method should validate business rules before creating events
-- **Missing Event Sourcing**: Aggregates should be reconstructed from events, not created fresh
 - **No Aggregate Factory**: Standard pattern is missing
 
 **Bibliography Mismatch**:
@@ -54,9 +46,7 @@ As an experienced software engineer who has worked with event sourcing in produc
 ### 4. **Missing Critical Concepts**
 
 **Event Store Design**:
-- **Stream Management**: How to handle event streams for different aggregates
 - **Event Serialization**: Critical for production systems
-- **Event Schema Evolution**: How to handle changing event structures
 - **Event Store Performance**: Indexing, partitioning, and scaling strategies
 
 **Projection Patterns**:
@@ -72,7 +62,6 @@ As an experienced software engineer who has worked with event sourcing in produc
 **Issues**:
 - **Error Handling**: No discussion of failure scenarios and recovery
 - **Transaction Management**: Event sourcing requires careful transaction handling
-- **Event Ordering**: No discussion of event ordering guarantees
 - **Idempotency**: Critical for event processing but never mentioned
 
 ## Structural Issues
@@ -112,8 +101,6 @@ class Event:
 ```
 
 **Issues**:
-- **Missing Stream ID**: Events should be part of a stream
-- **Version Handling**: Version should be stream-specific, not event-specific
 - **Event Metadata**: Missing correlation IDs, causation IDs, user context
 - **Event Schema**: No discussion of event schema design
 
@@ -130,8 +117,6 @@ async def handle(self, command: CreateUserCommand) -> None:
 ```
 
 **Problems**:
-- **Aggregate Loading**: Should load existing aggregate, not create new one
-- **Concurrency**: No optimistic concurrency control
 - **Transaction Scope**: Event store and event bus should be in same transaction
 - **Error Handling**: No rollback strategy
 
@@ -150,7 +135,6 @@ async def handle_user_created(self, event: Event) -> None:
 ```
 
 **Problems**:
-- **Event Ordering**: No guarantee of event processing order
 - **Failure Handling**: No retry or dead letter queue strategy
 - **Data Validation**: No validation of event data
 - **Performance**: No batching or optimization strategies
@@ -160,17 +144,12 @@ async def handle_user_created(self, event: Event) -> None:
 ### 1. **Restructure Core Concepts Section**
 
 **Add These Slides**:
-- Event Streams and Event Ordering
-- Aggregate Roots and Business Invariants
-- Optimistic Concurrency Control
-- Event Versioning and Schema Evolution
+- Additional production patterns
 
 ### 2. **Improve Implementation Examples**
 
 **Enhance Code Examples**:
-- Show proper aggregate loading and version checking
 - Include error handling and rollback strategies
-- Demonstrate event stream management
 - Show projection failure handling
 
 ### 3. **Add Real-World Context**
@@ -184,8 +163,6 @@ async def handle_user_created(self, event: Event) -> None:
 ### 4. **Align with Literature**
 
 **Reference Standards**:
-- Martin Fowler's Event Sourcing pattern
-- Greg Young's CQRS and Event Sourcing
 - Eric Evans' Domain-Driven Design
 - EventStore documentation and patterns
 
@@ -194,7 +171,6 @@ async def handle_user_created(self, event: Event) -> None:
 **Cover**:
 - Event store scaling and performance
 - Projection failure and recovery
-- Event schema evolution
 - Monitoring and observability
 
 ## Positive Aspects
@@ -209,11 +185,11 @@ Despite these issues, the presentation has several strengths:
 
 ## Conclusion
 
-This presentation provides a good introduction to event sourcing with Python, but it needs significant enhancement to be truly educational for experienced developers. The main issues are:
+This presentation provides a good introduction to event sourcing with Python, but it still needs some enhancement to be truly educational for experienced developers. The main remaining issues are:
 
-1. **Incomplete fundamentals** - missing core event sourcing concepts
-2. **Oversimplified examples** - not production-ready patterns
+1. **Some incomplete fundamentals** - missing aggregate factory pattern
+2. **Oversimplified examples** - not production-ready patterns in some areas
 3. **Missing real-world context** - no connection to business value
-4. **Bibliography misalignment** - doesn't follow established patterns
+4. **Some bibliography misalignment** - could better align with established patterns in certain areas
 
 With these improvements, this could be an excellent presentation that truly helps developers understand and implement event sourcing effectively.

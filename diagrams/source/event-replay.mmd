@@ -1,18 +1,17 @@
-graph LR
-    A[Event Store] --> B[Get Events for Stream]
-    B --> C[UserCreated Event]
-    C --> D[UserNameChanged Event]
-    D --> E[UserEmailChanged Event]
+graph TD
+    A[Event Stream] --> B[Event 1: UserCreated]
+    A --> C[Event 2: UserNameChanged]
+    A --> D[Event 3: UserEmailChanged]
 
-    F[UserAggregate] --> G[Apply UserCreated]
-    G --> H[Apply UserNameChanged]
-    H --> I[Apply UserEmailChanged]
-    I --> J[Current State]
+    B --> E[Apply Events]
+    C --> E
+    D --> E
 
-    C --> F
-    D --> F
-    E --> F
+    E --> F[Current State]
 
-    style A fill:#4B8BBE
-    style F fill:#FFD43B
-    style J fill:#306998
+    style A fill:#f3e5f5
+    style B fill:#e8f5e8
+    style C fill:#e8f5e8
+    style D fill:#e8f5e8
+    style E fill:#fff3e0
+    style F fill:#e1f5fe

@@ -60,6 +60,18 @@ style: |
 
 **PyCon Athens 2025**
 
+*"Gentlemen, you can't fight in here! This is the War Room!"*
+
+---
+
+# Who Am I?
+
+- **Staff Engineer** with 10+ years in Python
+- Studied **Physics** → **Computational Physics** → **Software Engineering**
+- **Passionate about building systems** with quality
+
+## **My journey**: From "Events are too complex!" to "Events are the solution to complexity!"
+
 ---
 
 # What We'll Discuss
@@ -80,299 +92,228 @@ style: |
 
 ---
 
-# Who Am I?
+# The Nightmare: "Who Deleted My User?"
 
-- **Staff Engineer** with 10+ years in Python
-- Studied **Physics** → **Computational Physics** → **Software Engineering**
-  - *"I went from calculating planet trajectories to debugging production systems. Turns out, both involve a lot of uncertainty!"*
-- **Passionate about building systems** with quality
-
----
-
-# Traditional Approach
-
-## We store the current state:
+## A real debugging story:
 
 ```python
-class UserService:
-    def update_user(self, user_id: int, data: dict):
-        user = self.db.get_user(user_id)
-        user.name = data['name']      # Mutate state
-        user.email = data['email']
-        self.db.save(user)            # Overwrite history
+def delete_user(user_id: int):
+    db.delete_user(user_id)
 ```
 
-## Problems:
-- **History is lost** - we only see current state
-- **No audit trail** - who changed what when?
-- **Mutable state** - data corruption risks
-- **Tight coupling** - read/write in same model
+## The problem:
+**Monday 3:47 PM**: "Sarah's account is missing!"
+**Tuesday 9:15 AM**: "When was it deleted? Who did it? Why?"
+
+## What we can't answer:
+- ❌ **When** was the user deleted?
+- ❌ **Who** deleted the user?
+- ❌ **Why** was it deleted?
+
+## **The system has no memory of what happened**
 
 ---
 
-# Event Sourcing Approach
+# Enter Event Sourcing: The System That Remembers
 
-## We store what happened:
+## We store every change as an immutable event:
 
 ```python
-class UserCreated:
-    event_id: UUID
-    aggregate_id: UUID
-    timestamp: datetime
-    event_type: str = "USER_CREATED"
-    data: dict  # What actually happened
+UserDeleted(
+    event_id=uuid4(),
+    aggregate_id="user_123",
+    version=5,
+    timestamp=datetime.now(),
+    event_type="USER_DELETED",
+    data={ "deleted_by": "admin_456", "reason": "Account closure request" }
+)
 ```
 
-## Benefits:
-- **Complete history** - every change is recorded
-- **Audit trail** - see exactly what happened
-- **Immutable events** - data integrity
-- **Time travel** - replay any point in history
+## Now we can answer everything:
+- ✅ **When**: March 15, 3:47 PM
+- ✅ **Who**: Admin ID 456
+- ✅ **Why**: Account closure request
+
+## **Every action becomes a permanent record**
 
 ---
 
-# Pain Points of Traditional Architectures
 
-## What we're used to:
 
-- **Tight coupling** between read and write
-- **Poor auditability** - who changed what when?
-- **Mutable state** - data corruption risks
-- **Scaling challenges** - read/write conflicts
+# Core Concepts: The Building Blocks
 
-## The result: systems that can't explain themselves
-
----
-
-# Why Event Sourcing?
-
-## The superpowers you get:
-
-- **Complete audit trail** - every action is recorded
-- **Time travel** - replay any point in history
-- **Debugging superpowers** - see exactly what happened
-- **Data integrity** - no more "lost" changes
-- **Scalability** - separate read and write concerns
-
----
-
-# Quick Teaser: Audited-by-Design System
-
-## What does it look like?
-
-```
-Every action becomes an event:
-UserCreated → UserNameChanged → UserEmailChanged → UserStatusChanged
-```
-
-## Benefits:
-- **Complete history** - nothing is ever lost
-- **Temporal queries** - "what was the user state at 3pm?"
-- **Event replay** - rebuild state from scratch
-- **Audit by design** - every change is recorded
-
----
-
-# 2. Core Concepts
-
-- Events: The building blocks with their payload structure
-- Aggregates: Domain logic that applies events
-- Event Store: The append-only source of truth
-- Projections: Building read models from events
-- Event Bus: Communication layer between components
-- CQRS: Commands vs Queries, separate databases
-
----
-
-# Events: The Building Blocks
-
-## Event structure in our system:
+## 1. Events: Immutable Facts
 
 ```python
-class Event:
-    event_id: UUID                    # Unique identifier
-    aggregate_id: UUID                # Which aggregate this belongs to
-    event_type: str                   # What happened (UserCreated, UserUpdated, etc.)
-    timestamp: datetime               # When it happened
-    version: int                      # Event version
-    data: Dict[str, Any]              # The actual change data
+# Every change becomes an event
+UserCreated(
+    event_id=uuid4(),
+    aggregate_id="user_123",
+    version=1,
+    timestamp=datetime.now(),
+    event_type="USER_CREATED",
+    data={"name": "Sarah", "email": "sarah@example.com"}
+)
 ```
 
-## Key principle: **Events are immutable facts**
+## Key principle: **Events are immutable facts** - they never change
+
+## Events belong to ordered sequences (Event Streams):
+
+```python
+# A user's complete story
+user_stream = [
+    UserCreated(...),           # Version 1
+    UserNameChanged(...),       # Version 2
+    UserEmailChanged(...),      # Version 3
+    UserStatusChanged(...),     # Version 4
+    UserDeleted(...)            # Version 5
+]
+```
+
+![Event Stream Sequence](../diagrams/generated/event-stream-sequence.png)
+
+## **The stream is the source of truth** - rebuild any point in time
 
 ---
 
-# Aggregates: Domain Models
+## 2. Commands: Intent to Change
 
-## How we model business logic:
+```python
+# Commands represent the intent to change something
+CreateUserCommand(
+    name="Sarah",
+    email="sarah@example.com"
+)
+
+ChangeUserEmailCommand(
+    user_id="user_123",
+    new_email="sarah.new@example.com"
+)
+```
+
+## **Commands are the entry point** - they represent what we want to do
+
+---
+
+## 3. Queries: Intent to Read (CQRS Separation)
+
+```python
+# Queries represent the intent to read something
+GetUserQuery(user_id="user_123")
+GetUserHistoryQuery(user_id="user_123", from_date="2024-01-01")
+GetUsersByStatusQuery(status="active")
+```
+
+## **Queries are separate from commands** - different models for different purposes
+
+---
+
+## 3. Aggregates: Domain Logic
 
 ```python
 class UserAggregate:
-    def apply(self, event: Event) -> None:
-        """Apply a domain event to build state"""
-        # Update aggregate state based on event type
-        pass
+    def create_user(self, name: str, email: str) -> UserCreated:
+        # Business logic validation
+        if not name or not email:
+            raise ValueError("Name and email required")
 
-    def create_user(self, name: str, email: str) -> Event:
-        """Domain method with validation"""
-        # Validate business rules
-        # Return new event
-        pass
+        # Create and return event
+        return UserCreated(
+            event_id=uuid4(),
+            aggregate_id=self.aggregate_id,
+            version=self.version + 1,
+            timestamp=datetime.now(),
+            event_type="USER_CREATED",
+            data={"name": name, "email": email}
+        )
 ```
 
-## **State = Result of applying all events**
+## **Aggregates apply business logic** and create events
 
 ---
 
-# Event Store: The Source of Truth
-
-## Interface examples:
+## 4. Event Store: Source of Truth
 
 ```python
-class EventStore:
-    async def save_event(self, event: Event):
-        """Store event - never update or delete"""
-        # Implementation: PostgreSQL, EventStoreDB, DynamoDB, etc.
-        pass
+# Event Store - append-only storage
+await event_store.append_to_stream(
+    stream_id="user_123",
+    expected_version=0,
+    events=[user_created_event]
+)
 
-    async def get_events_by_aggregate(self, aggregate_id: UUID):
-        """Get all events for an aggregate"""
-        # Implementation: PostgreSQL, EventStoreDB, DynamoDB, etc.
-        pass
-
-    async def get_events_by_type(self, event_type: str):
-        """Get all events of a specific type"""
-        # Implementation: PostgreSQL, EventStoreDB, DynamoDB, etc.
-        pass
+# Retrieve events for replay
+events = await event_store.get_stream("user_123")
 ```
 
-## **Append-only, immutable, replayable**
+## **Event Store is append-only** - events never change or delete
 
 ---
 
-# Projections: Building Read Models
-
-## How we build optimized views:
+## 5. Projections: Building Read Models
 
 ```python
 class UserProjection:
-    async def handle_user_created(self, event: Event) -> None:
-        """Transform event into read model"""
+    async def handle_user_created(self, event: UserCreated):
+        # Build read model from event
         user_data = {
-            "aggregate_id": event.aggregate_id,
-            "name": event.data.get("name"),
-            "email": event.data.get("email"),
-            "created_at": event.timestamp,
+            "user_id": event.aggregate_id,
+            "name": event.data["name"],
+            "email": event.data["email"],
+            "status": "active",
+            "created_at": event.timestamp
         }
-
-        # Save to read-optimized database
         await self.read_model.save_user(user_data)
 ```
 
-## **Triggered from event store, optimized for queries**
+## **Projections build optimized read models** from events
 
 ---
 
-# Event Bus: Communication Layer
+# How Everything Works Together
 
-## How we publish events to other systems:
+## The complete flow:
 
-```python
-class EventBus:
-    async def publish(self, event: Event) -> None:
-        """Publish event to subscribers"""
-        # Implementation: RabbitMQ, Kafka, EventBridge, SNS, etc.
-        pass
+![Event Sourcing Flow](../diagrams/generated/event-sourcing-flow.png)
 
-    async def subscribe(self, event_type: str, handler) -> None:
-        """Subscribe to specific event types"""
-        # Implementation: RabbitMQ, Kafka, EventBridge, SNS, etc.
-        pass
-```
-
-## **Decoupled communication between components**
+## **Each interaction follows this pattern** - from command to projection
 
 ---
 
-# CQRS: Command Query Responsibility Segregation
 
-## Separate concerns with different databases:
 
-**Commands** (Write Model):
-- **Command Handlers** - Process commands, call aggregates
-- **Aggregates** - Apply business logic, create events
-- **Event Store** - Persist events (source of truth)
-- **Event Bus** - Publish events to subscribers
-
-**Queries** (Read Model):
-- **Query Handlers** - Process queries, return data
-- **Read Models** - Optimized for fast reads
-- **Denormalized data** - Performance over consistency
-- **Separate database** - No business logic
-
-## **Different databases for different purposes**
-
----
-
-# CQRS Benefits
-
-## What you get:
-
-- **Auditability** - commands emit events, queries are optimized
-- **Modularity** - different models for different concerns
-- **Scalability** - read/write workloads differ
-- **Technology flexibility** - different DBs for different needs
-
-## Key point: **You don't need Kafka to start with CQRS**
-
-Start simple, evolve as needed!
-
----
-
-# 3. Architecture Walkthrough
-
-- High-level flow: External event → queue → processing → publish → read model
-- Tools & layers: Celery, FastAPI, Event Bus
-- Key components: Event ingestion, event store, replay, read DB
-- Design flexibility: Services + repositories, async + decoupling
-
----
-
-# High-Level Architecture Flow
-
-## How the entities work together:
-
-```
-External Request → Command → Aggregate → Event → Event Store
-                                        ↓
-Read Model ← Event Bus ← Projections ← Event
-```
-
-## Core flow:
-1. **Command** - Intent to change system state
-2. **Aggregate** - Applies business logic, creates events
-3. **Event Store** - Persists events (source of truth)
-4. **Event Bus** - Publishes events to subscribers
-5. **Projections** - Build read models from events
-6. **Read Model** - Optimized for fast queries
-
----
-
-# Python Ecosystem Solutions
+# The Python Way: FastAPI + Celery
 
 ## How we implement this in Python:
 
-```
-External Request → FastAPI → Command Handler → Aggregate → Event → Event Store
-                                                                    ↓
-Read Model ← Event Bus ← Celery Workers ← Projections ← Event
-```
+![Event Flow](../diagrams/generated/event-flow.png)
 
 ## Python tools:
 - **FastAPI**: API surface for commands/queries
 - **Celery**: Async task runner, scalable workers
-- **Event Store**: PostgreSQL, EventStoreDB, DynamoDB
+- **Event Store**: PostgreSQL, EventStoreDB, DynamoDB (with stream support)
 - **Event Bus**: RabbitMQ, Kafka, EventBridge, SNS
+
+---
+
+# Mapping: Theory to Python Implementation
+
+## Core Entities → Python Implementation:
+
+| **Theory** | **Python Implementation** |
+|------------|---------------------------|
+| **Events** | Pydantic models with validation |
+| **Event Streams** | PostgreSQL tables with versioning |
+| **Aggregates** | Domain classes with apply() methods |
+| **Command Handlers** | FastAPI dependency injection |
+| **Event Store** | Repository pattern with async/await |
+| **Projections** | Celery tasks with event handlers |
+| **Read Models** | Optimized database views |
+
+## **Python ecosystem provides excellent tools for each concept**
+
+![System Architecture](../diagrams/generated/architecture.png)
 
 ---
 
@@ -408,28 +349,27 @@ async def create_user(
 
 ```python
 class CreateUserCommandHandler:
-    def __init__(self, event_store: EventStore, event_bus: EventBus):
-        self.event_store = event_store
-        self.event_bus = event_bus
-
     async def handle(self, command: CreateUserCommand) -> None:
-        # Create aggregate
-        user = UserAggregate(uuid.uuid4())
+        # Load existing aggregate from stream (if exists)
+        stream_id = command.user_id
+        events = await self.event_store.get_stream(stream_id)
+        user = UserAggregate(stream_id)
+
+        # Reconstruct state from events
+        for event in events:
+            user.apply(event)
 
         # Call domain method (validates and creates event)
         event = user.create_user(command.name, command.email)
 
-        # Apply event to aggregate
-        user.apply(event)
+        # Append to stream with version check
+        await self.event_store.append_to_stream(stream_id, len(events), [event])
 
-        # Command Handler: Store in event store
-        await self.event_store.save_event(event)
-
-        # Command Handler: Publish to event bus
+        # Publish to event bus
         await self.event_bus.publish(event)
 ```
 
-## **Command Handler orchestrates: Event Store + Event Bus**
+## **Command Handler orchestrates: Stream-based Event Store + Event Bus**
 
 ---
 
@@ -441,11 +381,7 @@ class CreateUserCommandHandler:
 @app.task(name="process_user_event")
 def process_user_event_task(event_data: Dict[str, Any]) -> None:
     """Process user event via Celery task."""
-
-    # Convert async function to sync for Celery
     process_user_event_async_sync = async_to_sync(process_user_event_async)
-
-    # Execute the async function
     process_user_event_async_sync(event_data=event_data)
 
 async def process_user_event_async(event_data: Dict[str, Any]) -> None:
@@ -475,9 +411,6 @@ class UserProjection:
 
         # Save to read model
         await self.read_model.save_user(user_data)
-
-        # Broadcast to EventBridge
-        await self._publish_user_event("UserCreated", user_data, event)
 ```
 
 ---
@@ -494,13 +427,8 @@ async def get_user(
 ) -> Dict[str, Any]:
     # Create query handler
     query_handler = infrastructure_factory.create_get_user_query_handler()
-
-    # Create query object
     query = GetUserQuery(user_id=user_id)
-
-    # Execute query
     user = await query_handler.handle(query)
-
     return {"status": "success", "user": user.dict()}
 
 @users_router.get("/{user_id}/history")
@@ -509,201 +437,143 @@ async def get_user_history(user_id: str, from_date: Optional[str] = None):
     query_handler = infrastructure_factory.create_get_user_history_query_handler()
     query = GetUserHistoryQuery(user_id=user_id, from_date=from_date)
     events = await query_handler.handle(query)
-
     return {"status": "success", "events": [event.dict() for event in events]}
 ```
 
 ---
 
-# Design Flexibility: Services + Repositories
+# The Aftermath: Real-World Patterns & Gotchas
 
-## Clean separation of concerns:
+## What happens when you actually build this?
 
-```python
-# Command side service
-class UserCommandService:
-    def __init__(self, event_store: EventStore, event_bus: EventBus):
-        self.event_store = event_store
-        self.event_bus = event_bus
+- **Eventual consistency**: Why it's a feature, not a bug
+- **Performance challenges**: When replaying becomes slow
+- **Debugging superpowers**: What debugging looks like in an immutable world
+- **The dark side**: When NOT to use event sourcing
 
-    async def create_user(self, command: CreateUserCommand):
-        # Business logic
-        event = UserCreated(
-            user_id=command.user_id,
-            name=command.name,
-            email=command.email
-        )
-
-        # Store and publish
-        await self.event_store.append(event)
-        await self.event_bus.publish(event)
-
-# Query side service
-class UserQueryService:
-    def __init__(self, read_model: UserReadModel):
-        self.read_model = read_model
-
-    async def get_user(self, user_id: str) -> User:
-        return await self.read_model.get_user(user_id)
-```
+## **Let's talk about the real challenges**
 
 ---
 
-# Async + Decoupling for Scale
+# Eventual Consistency: The Feature Nobody Talks About
 
-## Benefits of this architecture:
-
-- **High availability** - commands return immediately
-- **Independent scaling** - read/write workloads differ
-- **Resilience** - failures don't cascade
-- **Technology flexibility** - different DBs for different needs
-- **Eventual consistency** - a feature, not a bug
-
-## Real performance:
-Systems process external events with proper choreography and maintain complete audit trails.
-
----
-
-# 4. Real-World Patterns & Gotchas (6-7 min)
-
-- Eventual consistency: why it's a feature, not a bug
-- Snapshots for performance on replay
-- Initial backfill: bootstrapping from source APIs
-- Fixes by reprocessing history — no manual data patching
-- Debugging & testing in an immutable world
-
----
-
-# Eventual Consistency: Feature, Not Bug
-
-## Why it's powerful:
+## The story: "Why isn't my data updated?"
 
 ```
-User creates account → Event stored → API returns success
+User creates account → Event stored → API returns success ✅
                     ↓
-              Event processing (async)
+              Event processing (async) ⏳
                     ↓
-              Read model updated (eventually)
+              Read model updated (eventually) ✅
 ```
 
-## Benefits:
-- **High availability** - API responds immediately
-- **Scalability** - processing can be distributed
-- **Fault tolerance** - retry on failure
-- **Performance** - no blocking operations
+## The reality:
+- **User sees success immediately** - great UX
+- **Data appears in UI within seconds** - acceptable
+- **Processing can retry on failure** - resilient
+
+## **Eventual consistency is a feature, not a bug**
 
 ---
 
-# Snapshots for Performance
+# When Event Sourcing Goes Wrong
 
-## The replay problem:
-
-```python
-# Without snapshots - slow for long histories
-def get_user_state(user_id: str, at_time: datetime):
-    events = event_store.get_events(user_id, until=at_time)
-    return replay_events(events)  # Could be thousands of events
-```
-
-## With snapshots:
+## The performance nightmare:
 
 ```python
-# With snapshots - fast state reconstruction
-def get_user_state(user_id: str, at_time: datetime):
-    snapshot = get_latest_snapshot(user_id, before=at_time)
-    events = event_store.get_events(user_id, from_version=snapshot.version, until=at_time)
-    return replay_events_from_snapshot(snapshot, events)  # Much faster
+# The problem: Replaying 10,000 events
+def get_user_state(user_id: str):
+    events = event_store.get_stream(user_id)  # 10,000 events!
+    return replay_events(events)  # Takes 5 seconds 😱
 ```
+
+## The solution: Snapshots
+
+```python
+# The fix: Start from a snapshot
+def get_user_state(user_id: str):
+    snapshot = get_latest_snapshot(user_id)  # Current state
+    recent_events = get_events_since_snapshot(user_id, snapshot.version)
+    return replay_from_snapshot(snapshot, recent_events)  # 50ms ✅
+```
+
+## **Performance is a feature you have to design for**
 
 ---
 
+# Debugging Superpowers: The Immutable World
 
+## The story: "Something broke at 3:47 PM"
 
----
-
-# Fixes by Reprocessing History
-
-## No manual data patching:
+![Debugging Superpowers](../diagrams/generated/debugging-superpowers.png)
 
 ```python
-# Instead of: UPDATE users SET name = 'John' WHERE id = '123'
+# Traditional debugging: "I don't know what happened"
+def debug_issue():
+    # Check logs... maybe?
+    # Check database... current state only
+    # Ask users... unreliable
+    pass
 
-# We do: Reprocess all events with the fix
-@celery_app.task
-def reprocess_user_events(user_id: str):
-    events = event_store.get_stream(user_id)
-
-    # Clear read model
-    read_model.delete_user(user_id)
-
-    # Replay with fix
-    for event in events:
-        if event.type == "UserCreated":
-            process_user_created.delay(event.dict())
-        elif event.type == "UserNameChanged":
-            process_user_name_changed.delay(event.dict())
-```
-
----
-
-# Debugging in an Immutable World
-
-## What debugging looks like:
-
-```python
-# See exactly what happened
-def debug_user_issue(user_id: str, timestamp: datetime):
+# Event sourcing debugging: "I can see exactly what happened"
+def debug_issue(user_id: str, timestamp: datetime):
     events = event_store.get_events(user_id, around=timestamp)
 
-    print(f"User {user_id} events around {timestamp}:")
+    print(f"User {user_id} at {timestamp}:")
     for event in events:
         print(f"  {event.timestamp}: {event.type} - {event.data}")
 
-    # Replay to see state
+    # Replay to see exact state
     state = replay_events(events)
-    print(f"Final state: {state}")
+    print(f"State: {state}")
 ```
 
-## Benefits:
-- **Complete visibility** - every change is recorded
-- **Time travel** - see state at any point
-- **No lost data** - nothing is ever overwritten
+## **Every change is recorded - nothing is lost**
 
 ---
 
-# Testing in an Immutable World
+# The Dark Side: When NOT to Use Event Sourcing
 
-## Testing strategies:
+## Event sourcing is NOT for:
 
-```python
-# Test aggregates by applying events
-def test_user_aggregate():
-    user = UserAggregate()
+- **Simple CRUD applications** - overkill
+- **Teams new to distributed systems** - steep learning curve
+- **Systems with simple audit requirements** - traditional logging suffices
+- **Performance-critical reads** - eventual consistency overhead
 
-    # Apply events
-    user.apply(UserCreated(user_id="123", name="John", email="john@example.com"))
-    user.apply(UserNameChanged(user_id="123", old_name="John", new_name="Johnny"))
+## **Event sourcing is for systems that need to explain themselves**
 
-    # Assert final state
-    assert user.name == "Johnny"
-    assert user.email == "john@example.com"
+---
 
-# Test event store
-def test_event_store():
-    event = UserCreated(user_id="123", name="John", email="john@example.com")
+# Real-World Trade-offs
 
-    # Store and retrieve
-    event_store.append(event)
-    events = event_store.get_stream("123")
+## What you gain:
+- ✅ **Complete audit trail** - every change recorded
+- ✅ **Time travel** - see any point in history
+- ✅ **Debugging superpowers** - trace every decision
+- ✅ **Scalability** - separate read/write concerns
 
-    assert len(events) == 1
-    assert events[0].type == "UserCreated"
-```
+## What you lose:
+- ❌ **Simplicity** - more complex than CRUD
+- ❌ **Immediate consistency** - eventual consistency
+- ❌ **Storage overhead** - events take more space
+- ❌ **Learning curve** - new patterns to master
 
-## Benefits:
-- **Predictable testing** - immutability makes tests reliable
-- **Event-based testing** - test business logic through events
-- **Integration testing** - test full event processing pipeline
+## **Event sourcing is a trade-off, not a silver bullet**
+
+---
+
+# Key Takeaways
+
+## What we learned:
+
+1. **Event sourcing is about building systems that can explain themselves**
+2. **Python + FastAPI + Celery are more than capable for serious architecture**
+3. **Eventual consistency is a feature, not a bug**
+4. **Performance requires design - snapshots, indexing, caching**
+5. **Event sourcing is not for every system - know when to use it**
+
+## **The goal**: Build systems that can explain themselves 6 months from now
 
 ---
 

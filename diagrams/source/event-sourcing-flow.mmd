@@ -1,0 +1,24 @@
+graph LR
+    A[Entry Point<br/>API Request] --> B[Command]
+    B --> C[Command Handler]
+    C --> D[Aggregate]
+    D --> E[Event]
+    E --> F[Event Store]
+    E --> G[Event Bus]
+    G --> H[Projections]
+    H --> I[Read Model]
+
+    J[Query] --> K[Query Handler]
+    K --> I
+
+    style A fill:#e1f5fe
+    style B fill:#e3f2fd
+    style C fill:#fff3e0
+    style D fill:#fff3e0
+    style E fill:#e8f5e8
+    style F fill:#f3e5f5
+    style G fill:#fff3e0
+    style H fill:#fff3e0
+    style I fill:#e8f5e8
+    style J fill:#e3f2fd
+    style K fill:#fff3e0
