@@ -7,9 +7,10 @@ header: "PyCon Athens 2025"
 footer: "Event Sourcing & CQRS with FastAPI and Celery"
 style: |
   section {
-    font-size: 1.5em;
+    font-size: 1.3em;
     background-color: #1E1E1E;
     color: #E0E0E0;
+    line-height: 1.4;
   }
   h1 {
     font-size: 1.8em;
@@ -20,7 +21,7 @@ style: |
     color: #306998;
   }
   code {
-    font-size: 0.9em;
+    font-size: 0.8em;
     background-color: #2D2D2D;
     color: #E0E0E0;
   }
@@ -51,6 +52,13 @@ style: |
   }
   section.lead {
     text-align: center;
+  }
+  /* Target the specific event-sourcing-flow image */
+  img[src*="event-sourcing-flow"] {
+    transform: scale(1.4) !important;
+    transform-origin: center !important;
+    margin: 2em 0 !important;
+    margin-left: 9em !important;
   }
 ---
 
@@ -140,9 +148,9 @@ UserDeleted(
 
 
 
-# Core Concepts: The Building Blocks
+# Core Concepts: Events
 
-## 1. Events: Immutable Facts
+## Immutable Facts
 
 ```python
 # Every change becomes an event
@@ -158,7 +166,11 @@ UserCreated(
 
 ## Key principle: **Events are immutable facts** - they never change
 
-## Events belong to ordered sequences (Event Streams):
+---
+
+# Core Concepts: Event Streams
+
+## Ordered Sequences
 
 ```python
 # A user's complete story
@@ -177,7 +189,9 @@ user_stream = [
 
 ---
 
-## 2. Commands: Intent to Change
+# Core Concepts: Commands
+
+## Intent to Change
 
 ```python
 # Commands represent the intent to change something
@@ -196,7 +210,9 @@ ChangeUserEmailCommand(
 
 ---
 
-## 3. Queries: Intent to Read (CQRS Separation)
+# Core Concepts: Queries
+
+## Intent to Read (CQRS Separation)
 
 ```python
 # Queries represent the intent to read something
@@ -209,7 +225,9 @@ GetUsersByStatusQuery(status="active")
 
 ---
 
-## 3. Aggregates: Domain Logic
+# Core Concepts: Aggregates
+
+## Domain Logic
 
 ```python
 class UserAggregate:
@@ -233,7 +251,9 @@ class UserAggregate:
 
 ---
 
-## 4. Event Store: Source of Truth
+# Core Concepts: Event Store
+
+## Source of Truth
 
 ```python
 # Event Store - append-only storage
@@ -251,7 +271,9 @@ events = await event_store.get_stream("user_123")
 
 ---
 
-## 5. Projections: Building Read Models
+# Core Concepts: Projections
+
+## Building Read Models
 
 ```python
 class UserProjection:
