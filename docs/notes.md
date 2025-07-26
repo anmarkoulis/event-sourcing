@@ -1,6 +1,6 @@
 # Speaker Notes: Event Sourcing & CQRS with FastAPI and Celery
 
-## Section 1: Opening Story
+## Section 1: Opening Story (5 minutes)
 
 ### Slide 1: Title Slide
 **Key Points:**
@@ -61,23 +61,11 @@
 
 ---
 
-### Slide 6: The Journey: From Chaos to Clarity
+## Section 2: Core Concepts (8 minutes)
+
+### Slide 6: Core Concepts: Events
 **Key Points:**
-- Transition from problem to solution
-- Introduce the building blocks
-- Set up the theoretical foundation
-- Keep the narrative flowing
-
-**Speaking Notes:**
-"Now that we've seen the problem and the solution, let's understand the building blocks. We need to understand events as immutable facts, event streams as the story of an entity, CQRS as the separation of reading and writing, and how the Python ecosystem implements all of this. The goal is to build systems that can explain themselves."
-
----
-
-## Section 2: Core Concepts (Theory with Real-World Examples)
-
-### Slide 7: Core Concepts: The Building Blocks
-**Key Points:**
-- Introduce the first building block: Events
+- Introduce events as immutable facts
 - Show concrete event structure
 - Emphasize immutability
 - Connect to the debugging story
@@ -87,7 +75,7 @@
 
 ---
 
-### Slide 8: Event Streams: The Story of an Entity
+### Slide 7: Core Concepts: Event Streams
 **Key Points:**
 - Show how events belong to ordered sequences
 - Demonstrate the concept of a user's complete story
@@ -99,67 +87,79 @@
 
 ---
 
-### Slide 9: CQRS: Separate Reading from Writing
+### Slide 8: Core Concepts: Commands
 **Key Points:**
-- Show the problem with traditional mixed models
-- Demonstrate the separation principle
-- Connect to scalability concerns
-- Set up the solution
+- Show commands as intent to change
+- Demonstrate the command pattern
+- Emphasize validation and idempotency
+- Connect to CQRS separation
 
 **Speaking Notes:**
-"Traditional systems mix everything together. Here's a typical UserService with update_user and get_user methods in the same class. The problem is that reads and writes have different requirements - reads need to be fast, writes need to be consistent. CQRS separates these concerns with different models for different purposes."
+"Commands represent the intent to change the system state. They express what we want to happen - like 'Create a new user account'. Commands can be validated before execution, are idempotent for safety, and serve as the entry point for all changes. This is the command side of CQRS."
 
 ---
 
-### Slide 10: CQRS: Commands vs Queries
+### Slide 9: Core Concepts: Queries
 **Key Points:**
-- Show the command side components
-- Show the query side components
-- Emphasize the database separation
-- Connect to scalability benefits
+- Show queries as intent to read
+- Demonstrate the separation from commands
+- Emphasize read optimization
+- Connect to CQRS separation
 
 **Speaking Notes:**
-"Here's how CQRS works in practice. On the command side, we have command handlers that process commands and call aggregates, aggregates that apply business logic and create events, an event store that persists events, and an event bus that publishes events. On the query side, we have query handlers that process queries, read models optimized for fast reads, and a separate database with no business logic. Different databases for different purposes."
+"Queries represent the intent to read data from the system. They're read-only, optimized for specific patterns, use separate models from commands, and are designed for fast retrieval. This is the query side of CQRS - completely separate from the command side."
 
 ---
 
-### Slide 11: The Complete Picture: How Everything Connects
+### Slide 10: Core Concepts: Aggregates
 **Key Points:**
-- Show end-to-end flow with real example using the diagram
+- Show aggregates as domain logic containers
+- Demonstrate business rule enforcement
+- Emphasize state management and event creation
+- Connect to consistency
+
+**Speaking Notes:**
+"Aggregates contain domain logic and apply business rules to create events. They enforce domain-specific validation like 'User email must be unique' and 'Cannot delete already deleted user'. When rules pass, they create events. When rules fail, they return errors. This ensures business invariants are maintained."
+
+---
+
+### Slide 11: Core Concepts: Event Store
+**Key Points:**
+- Show event store as source of truth
+- Demonstrate append-only nature
+- Emphasize immutability and stream management
+- Connect to optimistic concurrency
+
+**Speaking Notes:**
+"The Event Store is the append-only storage for all events in the system. Here's a user's event stream: UserCreated, EmailChanged, UserDeleted. Operations are simple: store new events, read in order, never modify. Events are immutable - once written, they're permanent. This gives us optimistic concurrency control."
+
+---
+
+### Slide 12: Core Concepts: Projections
+**Key Points:**
+- Show projections as read model builders
+- Demonstrate event-driven updates
+- Emphasize optimization and eventual consistency
+- Connect to performance
+
+**Speaking Notes:**
+"Projections build optimized read models from events for fast querying. When a UserCreated event happens, we create a user record. When EmailChanged happens, we update the email field. This gives us event-driven read model updates that are optimized for queries and eventually consistent."
+
+---
+
+### Slide 13: How Everything Works Together
+**Key Points:**
+- Show end-to-end flow with the diagram
 - Demonstrate how all components work together
 - Make it concrete and understandable
 - Set up for implementation section
 
 **Speaking Notes:**
-"Here's how everything connects in a real-world example. This diagram shows what happens when a user changes their email. We start with a PUT request to FastAPI, which creates a ChangeEmailCommand. The command handler loads the existing aggregate from the event store, reconstructs the state by applying previous events, validates business rules, and creates a UserEmailChanged event. This gets appended to the user's stream with version checking for concurrency control. The event is published to the event bus, which triggers a Celery task that updates the read model through a projection. Finally, when the user queries their data, they get the updated information. Every change flows through this pattern - it's the complete event sourcing and CQRS workflow in action."
+"Here's how everything connects in a real-world example. This diagram shows the complete flow from command to projection. Each interaction follows this pattern - from command to projection. This is the complete event sourcing and CQRS workflow in action."
 
 ---
 
-## Section 3: Python Ecosystem Implementation
-
-### Slide 12: The Python Way: FastAPI + Celery
-**Key Points:**
-- Show the high-level architecture
-- Introduce Python tools
-- Emphasize the ecosystem's capabilities
-- Set up for detailed implementation
-
-**Speaking Notes:**
-"Now let's see how the Python ecosystem implements this architecture. We use FastAPI for the API surface, Celery for async task processing, PostgreSQL or EventStoreDB for the event store, and RabbitMQ or Kafka for the event bus. The Python ecosystem provides excellent tools for each component of this architecture."
-
----
-
-### Slide 13: Mapping: Theory to Python Implementation
-**Key Points:**
-- Show clear mapping between theory and implementation
-- Demonstrate Python's strengths
-- Emphasize the ecosystem's maturity
-- Build confidence in the approach
-
-**Speaking Notes:**
-"Here's how each theoretical concept maps to Python implementation. Events become Pydantic models with validation. Event streams become PostgreSQL tables with versioning. Aggregates become domain classes with apply methods. Command handlers use FastAPI dependency injection. The event store uses the repository pattern with async/await. Projections become Celery tasks with event handlers. And read models become optimized database views. The Python ecosystem provides excellent tools for each concept."
-
----
+## Section 3: Python Ecosystem Implementation (10 minutes)
 
 ### Slide 14: FastAPI: The Command Interface
 **Key Points:**
@@ -185,19 +185,31 @@
 
 ---
 
-### Slide 16: Celery: Async Task Runner & Scalable Workers
+### Slide 16: Event Handler: Celery Integration
 **Key Points:**
-- Show the Celery task
-- Emphasize async processing
-- Show the async_to_sync pattern
-- Demonstrate flexibility
+- Show the CeleryEventHandler
+- Emphasize event type mapping
+- Show dispatch mechanism
+- Demonstrate message queue integration
 
 **Speaking Notes:**
-"Celery is our async task runner and scalable workers. Here's how we implement it. We define a Celery task that takes event data. We use async_to_sync to convert our async function to sync for Celery. The async function creates an Event, gets the event handler, and processes it. Each task is independent and can be scaled separately. This gives us tremendous flexibility for processing different types of events."
+"The Event Handler dispatches events to message queues. Here's our CeleryEventHandler that maps event types to Celery tasks. When a USER_CREATED event comes in, it triggers process_user_created_task and send_welcome_email_task. The dispatch method sends each task to Celery with the event data. This gives us scalable, async event processing."
 
 ---
 
-### Slide 17: Projections: Event-Driven Read Models
+### Slide 17: Celery Tasks: Event Processing
+**Key Points:**
+- Show the Celery task wrapper
+- Emphasize async-to-sync conversion
+- Show projection calling
+- Demonstrate clean separation
+
+**Speaking Notes:**
+"Celery tasks are wrappers that call the appropriate projection handlers. Here's how it works: we define a Celery task that receives an event, convert our async function to sync for Celery using async_to_sync, and then call the projection. The task is just a wrapper - the actual business logic is in the projection handlers."
+
+---
+
+### Slide 18: Projections: Event-Driven Read Models
 **Key Points:**
 - Show the UserProjection
 - Demonstrate event-to-read-model transformation
@@ -205,11 +217,11 @@
 - Emphasize the separation
 
 **Speaking Notes:**
-"Projections are how we build read models from events. Here's our UserProjection. When a user_created event comes in, we build user data with aggregate_id, name, email, and created_at. We save this to the read model. This gives us event-driven read model updates that are optimized for queries."
+"Projections handle business logic and update read models from events. Here's our UserProjection. When a user_created event comes in, we build user data with aggregate_id, name, email, and created_at. We save this to the read model. This gives us event-driven read model updates that are optimized for queries."
 
 ---
 
-### Slide 18: FastAPI: Query Interface
+### Slide 19: FastAPI: Query Interface
 **Key Points:**
 - Show the FastAPI query endpoints
 - Demonstrate both current and historical queries
@@ -217,13 +229,11 @@
 - Emphasize the separation
 
 **Speaking Notes:**
-"Here's how we expose read models through FastAPI. We have endpoints for getting current user data and user history. For current data, we create a GetUserQuery, get the query handler from our infrastructure factory, and execute the query. For history, we create a GetUserHistoryQuery with optional date filters and get events from the event store. This gives us both current state and historical data through the same API."
+"FastAPI queries expose read models with dependency injection. Here's how we expose read models through FastAPI. We have endpoints for getting current user data and user history. For current data, we create a GetUserQuery, get the query handler from our infrastructure factory, and execute the query. For history, we create a GetUserHistoryQuery and get events from the event store. This gives us both current state and historical data through the same API."
 
 ---
 
-## Section 4: Real-World Patterns & Gotchas
-
-### Slide 19: The Aftermath: Real-World Patterns & Gotchas
+### Slide 20: The Aftermath: Real-World Patterns & Gotchas
 **Key Points:**
 - Introduce the real-world section
 - Set expectations for practical advice
@@ -234,7 +244,7 @@
 
 ---
 
-### Slide 20: Eventual Consistency: The Feature Nobody Talks About
+### Slide 21: Eventual Consistency: The Feature Nobody Talks About
 **Key Points:**
 - Address the consistency concern head-on
 - Show why it's beneficial
@@ -246,7 +256,7 @@
 
 ---
 
-### Slide 21: When Event Sourcing Goes Wrong
+### Slide 22: When Event Sourcing Goes Wrong
 **Key Points:**
 - Address the performance concern
 - Show the snapshot pattern
@@ -258,7 +268,19 @@
 
 ---
 
-### Slide 22: Debugging Superpowers: The Immutable World
+### Slide 23: Retries: The Resilience Pattern
+**Key Points:**
+- Show real-world failure scenarios
+- Demonstrate retry strategies
+- Emphasize resilience
+- Keep it practical
+
+**Speaking Notes:**
+"What happens when things fail? Network failures, database timeouts, third-party service failures, processing errors. The solution is retry with backoff: immediate retry for transient failures, exponential backoff for persistent issues, dead letter queues for permanent failures, circuit breakers to prevent cascade failures. Retries make your system resilient to real-world failures."
+
+---
+
+### Slide 24: Debugging Superpowers: The Immutable World
 **Key Points:**
 - Show debugging superpowers
 - Give concrete examples
@@ -270,7 +292,7 @@
 
 ---
 
-### Slide 23: The Dark Side: When NOT to Use Event Sourcing
+### Slide 25: The Dark Side: When NOT to Use Event Sourcing
 **Key Points:**
 - Be honest about limitations
 - Show when it's overkill
@@ -282,7 +304,7 @@
 
 ---
 
-### Slide 24: Real-World Trade-offs
+### Slide 26: Real-World Trade-offs
 **Key Points:**
 - Show honest trade-offs
 - Help audience make informed decisions
@@ -294,7 +316,7 @@
 
 ---
 
-### Slide 25: Key Takeaways
+### Slide 27: Key Takeaways
 **Key Points:**
 - Reinforce the main points
 - Connect back to the opening story
@@ -306,7 +328,7 @@
 
 ---
 
-### Slide 26: Thank You
+### Slide 28: Thank You
 **Key Points:**
 - Thank the audience
 - Invite questions
@@ -320,11 +342,12 @@
 ## Overall Presentation Flow:
 
 **Section Breakdown:**
-- Section 1: Opening Story (Slides 1-6): 6 minutes
-- Section 2: Core Concepts (Slides 7-11): 8 minutes
-- Section 3: Python Ecosystem (Slides 12-18): 10 minutes
-- Section 4: Real-World Patterns (Slides 19-25): 6 minutes
-- Thank You (Slide 26): 30 seconds
+- Section 1: Opening Story (Slides 1-5): 4 minutes
+- Section 2: Core Concepts (Slides 6-13): 7 minutes
+- Section 3: Python Ecosystem (Slides 14-19): 8 minutes
+- Section 4: Real-World Patterns (Slides 20-27): 5 minutes
+- Thank You (Slide 28): 1 minute
+- Total: 25 minutes
 
 **Key Speaking Tips:**
 - Use the debugging story to anchor the entire presentation
