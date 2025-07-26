@@ -7,9 +7,10 @@ header: "PyCon Athens 2025"
 footer: "Event Sourcing & CQRS with FastAPI and Celery"
 style: |
   section {
-    font-size: 1.5em;
+    font-size: 1.3em;
     background-color: #1E1E1E;
     color: #E0E0E0;
+    line-height: 1.4;
   }
   h1 {
     font-size: 1.8em;
@@ -20,7 +21,7 @@ style: |
     color: #306998;
   }
   code {
-    font-size: 0.9em;
+    font-size: 0.8em;
     background-color: #2D2D2D;
     color: #E0E0E0;
   }
@@ -52,6 +53,13 @@ style: |
   section.lead {
     text-align: center;
   }
+  /* Target the specific event-sourcing-flow image */
+  img[src*="event-sourcing-flow"] {
+    transform: scale(1.4) !important;
+    transform-origin: center !important;
+    margin: 2em 0 !important;
+    margin-left: 9em !important;
+  }
 ---
 
 # How I Learned to Stop Worrying and Love Raw Events
@@ -59,8 +67,6 @@ style: |
 ## Event Sourcing & CQRS with FastAPI and Celery
 
 **PyCon Athens 2025**
-
-*"Gentlemen, you can't fight in here! This is the War Room!"*
 
 ---
 
@@ -140,134 +146,140 @@ UserDeleted(
 
 
 
-# Core Concepts: The Building Blocks
+# Core Concepts: Events
 
-## 1. Events: Immutable Facts
+## Immutable Facts
 
-```python
-# Every change becomes an event
-UserCreated(
-    event_id=uuid4(),
-    aggregate_id="user_123",
-    version=1,
-    timestamp=datetime.now(),
-    event_type="USER_CREATED",
-    data={"name": "Sarah", "email": "sarah@example.com"}
-)
-```
+**Events are immutable facts** that represent state changes in the system.
+
+## Example:
+**User Created Event** - John Doe, john@example.com, March 15
+
+## Key characteristics:
+- **Immutable**: Once created, events never change
+- **Facts**: They represent what actually happened
+- **Complete**: Each event contains all necessary data
+- **Versioned**: Events have sequence numbers for ordering
 
 ## Key principle: **Events are immutable facts** - they never change
 
-## Events belong to ordered sequences (Event Streams):
+---
 
-```python
-# A user's complete story
-user_stream = [
-    UserCreated(...),           # Version 1
-    UserNameChanged(...),       # Version 2
-    UserEmailChanged(...),      # Version 3
-    UserStatusChanged(...),     # Version 4
-    UserDeleted(...)            # Version 5
-]
-```
+# Core Concepts: Event Streams
 
+## Ordered Sequences
+
+**Event streams are ordered sequences** of events for a specific aggregate.
+
+## Example:
 ![Event Stream Sequence](../diagrams/generated/event-stream-sequence.png)
+
+## Key characteristics:
+- **Ordered**: Events have strict chronological ordering
+- **Complete**: Contains the full history of an aggregate
+- **Replayable**: Can rebuild any point in time
+- **Source of truth**: The definitive record of what happened
 
 ## **The stream is the source of truth** - rebuild any point in time
 
 ---
 
-## 2. Commands: Intent to Change
+# Core Concepts: Commands
 
-```python
-# Commands represent the intent to change something
-CreateUserCommand(
-    name="Sarah",
-    email="sarah@example.com"
-)
+## Intent to Change
 
-ChangeUserEmailCommand(
-    user_id="user_123",
-    new_email="sarah.new@example.com"
-)
-```
+**Commands represent the intent** to change the system state.
+
+## Example:
+**"Create a new user account"**
+
+## Key characteristics:
+- **Intent**: They express what we want to happen
+- **Validation**: Can be validated before execution
+- **Idempotent**: Safe to retry if needed
+- **Entry point**: The starting point for all changes
 
 ## **Commands are the entry point** - they represent what we want to do
 
 ---
 
-## 3. Queries: Intent to Read (CQRS Separation)
+# Core Concepts: Queries
 
-```python
-# Queries represent the intent to read something
-GetUserQuery(user_id="user_123")
-GetUserHistoryQuery(user_id="user_123", from_date="2024-01-01")
-GetUsersByStatusQuery(status="active")
-```
+## Intent to Read (CQRS Separation)
+
+**Queries represent the intent** to read data from the system.
+
+## Example:
+**"Show me user John Doe's profile"**
+
+## Key characteristics:
+- **Read-only**: They never change system state
+- **Optimized**: Designed for specific read patterns
+- **Separate models**: Different from command models (CQRS)
+- **Fast**: Optimized for quick data retrieval
 
 ## **Queries are separate from commands** - different models for different purposes
 
 ---
 
-## 3. Aggregates: Domain Logic
+# Core Concepts: Aggregates
 
-```python
-class UserAggregate:
-    def create_user(self, name: str, email: str) -> UserCreated:
-        # Business logic validation
-        if not name or not email:
-            raise ValueError("Name and email required")
+## Domain Logic
 
-        # Create and return event
-        return UserCreated(
-            event_id=uuid4(),
-            aggregate_id=self.aggregate_id,
-            version=self.version + 1,
-            timestamp=datetime.now(),
-            event_type="USER_CREATED",
-            data={"name": name, "email": email}
-        )
-```
+**Aggregates contain domain logic** and apply business rules to create events.
+
+## Example:
+- User email must be unique
+- Cannot delete already deleted user
+
+## Key characteristics:
+- **Business rules**: Enforce domain-specific validation
+- **State management**: Maintain current state from events
+- **Event creation**: Generate new events based on commands
+- **Consistency**: Ensure business invariants are maintained
 
 ## **Aggregates apply business logic** and create events
 
 ---
 
-## 4. Event Store: Source of Truth
+# Core Concepts: Event Store
 
-```python
-# Event Store - append-only storage
-await event_store.append_to_stream(
-    stream_id="user_123",
-    expected_version=0,
-    events=[user_created_event]
-)
+## Source of Truth
 
-# Retrieve events for replay
-events = await event_store.get_stream("user_123")
-```
+**Event Store is the append-only storage** for all events in the system.
+
+## Example:
+**User John Doe's Event Stream**
+- **Event 1**: User Created (March 15, 2:30 PM)
+- **Event 2**: Email Changed (March 16, 10:15 AM)
+
+## Key characteristics:
+- **Append-only**: Events are never modified or deleted
+- **Immutable**: Once written, events are permanent
+- **Stream management**: Organizes events by aggregate
+- **Optimistic concurrency**: Prevents conflicting writes
 
 ## **Event Store is append-only** - events never change or delete
 
 ---
 
-## 5. Projections: Building Read Models
+# Core Concepts: Projections
 
-```python
-class UserProjection:
-    async def handle_user_created(self, event: UserCreated):
-        # Build read model from event
-        user_data = {
-            "user_id": event.aggregate_id,
-            "name": event.data["name"],
-            "email": event.data["email"],
-            "status": "active",
-            "created_at": event.timestamp
-        }
-        await self.read_model.save_user(user_data)
-```
+## Building Read Models
 
-## **Projections build optimized read models** from events
+**Projections build optimized read models** from events for fast querying.
+
+## Example:
+- Event: User Created → Action: Create user record
+- Event: Email Changed → Action: Update email field
+
+## Key characteristics:
+- **Event-driven**: Triggered by new events
+- **Read-optimized**: Designed for specific query patterns
+- **Denormalized**: Optimized for performance, not normalization
+- **Eventually consistent**: Updated asynchronously
+
+## **Projections handle business logic and update read models from events**
 
 ---
 
@@ -283,39 +295,9 @@ class UserProjection:
 
 
 
-# The Python Way: FastAPI + Celery
 
-## How we implement this in Python:
 
-![Event Flow](../diagrams/generated/event-flow.png)
 
-## Python tools:
-- **FastAPI**: API surface for commands/queries
-- **Celery**: Async task runner, scalable workers
-- **Event Store**: PostgreSQL, EventStoreDB, DynamoDB (with stream support)
-- **Event Bus**: RabbitMQ, Kafka, EventBridge, SNS
-
----
-
-# Mapping: Theory to Python Implementation
-
-## Core Entities → Python Implementation:
-
-| **Theory** | **Python Implementation** |
-|------------|---------------------------|
-| **Events** | Pydantic models with validation |
-| **Event Streams** | PostgreSQL tables with versioning |
-| **Aggregates** | Domain classes with apply() methods |
-| **Command Handlers** | FastAPI dependency injection |
-| **Event Store** | Repository pattern with async/await |
-| **Projections** | Celery tasks with event handlers |
-| **Read Models** | Optimized database views |
-
-## **Python ecosystem provides excellent tools for each concept**
-
-![System Architecture](../diagrams/generated/architecture.png)
-
----
 
 # FastAPI: The Command Interface
 
@@ -325,7 +307,7 @@ class UserProjection:
 @router.post("/users")
 async def create_user(
     user_data: dict,
-    infrastructure_factory: InfrastructureFactoryDep = None
+    handler: CreateUserCommandHandler = Depends(InfraFactory.create_user_command_handler)
 ):
     # Create command with validation
     command = CreateUserCommand(
@@ -333,13 +315,14 @@ async def create_user(
         email=user_data["email"]
     )
 
-    # Get handler and process
-    handler = infrastructure_factory.create_create_user_command_handler()
+    # Process command
     await handler.handle(command)
 
-    # Return immediately (async processing)
-    return {"status": "accepted", "user_id": command.user_id}
+    # Return immediately (event stored successfully) or catch exceptions via middleware
+    return {"user_id": command.user_id}
 ```
+
+## **FastAPI commands accept requests and return immediately after event storage**
 
 ---
 
@@ -350,46 +333,75 @@ async def create_user(
 ```python
 class CreateUserCommandHandler:
     async def handle(self, command: CreateUserCommand) -> None:
-        # Load existing aggregate from stream (if exists)
-        stream_id = command.user_id
-        events = await self.event_store.get_stream(stream_id)
-        user = UserAggregate(stream_id)
+        # Retrieve all events for this aggregate
+        events = await self.event_store.get_stream(command.user_id)
 
-        # Reconstruct state from events
+        # Create empty aggregate and replay events
+        user = UserAggregate(command.user_id)
         for event in events:
             user.apply(event)
 
-        # Call domain method (validates and creates event)
-        event = user.create_user(command.name, command.email)
+        # Call domain method and get new events
+        new_events = user.create_user(command.name, command.email)
 
-        # Append to stream with version check
-        await self.event_store.append_to_stream(stream_id, len(events), [event])
-
-        # Publish to event bus
-        await self.event_bus.publish(event)
+        # Persist and dispatch events using unit of work
+        async with self.uow:
+            await self.event_store.append_to_stream(command.user_id, new_events)
+            await self.event_handler.dispatch(new_events)
 ```
 
-## **Command Handler orchestrates: Stream-based Event Store + Event Bus**
+## **Command Handler orchestrates: Event Store + Event Handler with Unit of Work**
 
 ---
 
-# Celery: Async Task Runner & Scalable Workers
+# Event Handler: Celery Integration
 
-## Event processing tasks:
+## How events are dispatched to Celery tasks:
 
 ```python
-@app.task(name="process_user_event")
-def process_user_event_task(event_data: Dict[str, Any]) -> None:
-    """Process user event via Celery task."""
-    process_user_event_async_sync = async_to_sync(process_user_event_async)
-    process_user_event_async_sync(event_data=event_data)
+class CeleryEventHandler:
+    def __init__(self):
+        # Map event types to Celery tasks
+        self.event_handlers = {
+            "USER_CREATED": [
+                "process_user_created_task",
+                "send_welcome_email_task"
+            ],
+            # ... other event types
+        }
 
-async def process_user_event_async(event_data: Dict[str, Any]) -> None:
-    # Business logic
-    event = Event(**event_data)
-    handler = infrastructure_factory.create_user_event_handler()
-    await handler.handle(event)
+    async def dispatch(self, events: List[Event]) -> None:
+        for event in events:
+            if event.event_type in self.event_handlers:
+                for task_name in self.event_handlers[event.event_type]:
+                    # All tasks receive the same event payload structure
+                    celery_app.send_task(task_name, kwargs={"event": event.model_dump()})
 ```
+
+## **Event Handler dispatches to message queues, Celery tasks handle messages and call projections**
+
+---
+
+# Celery Tasks: Event Processing
+
+## How Celery tasks process events and call projections:
+
+```python
+@app.task(name="process_user_created_task")
+def process_user_created_task(event: Dict[str, Any]) -> None:
+    # Convert async function to sync for Celery
+    process_user_created_async_sync = async_to_sync(process_user_created_async)
+
+    # Execute the async projection
+    process_user_created_async_sync(event=event)
+
+async def process_user_created_async(event: EventDTO) -> None:
+    # Get projection and call it
+    projection = UserProjection(read_model, event_publisher)
+    await projection.handle_user_created(event)
+```
+
+## **Celery tasks are wrappers that call the appropriate projection handlers**
 
 ---
 
@@ -413,6 +425,9 @@ class UserProjection:
         await self.read_model.save_user(user_data)
 ```
 
+## **Projections build optimized read models from events for fast querying**
+
+
 ---
 
 # FastAPI: Query Interface
@@ -423,22 +438,19 @@ class UserProjection:
 @users_router.get("/{user_id}")
 async def get_user(
     user_id: str,
-    infrastructure_factory: InfrastructureFactoryDep = None
+    query_handler: GetUserQueryHandler = Depends(InfraFactory.create_get_user_query_handler)
 ) -> Dict[str, Any]:
-    # Create query handler
-    query_handler = infrastructure_factory.create_get_user_query_handler()
-    query = GetUserQuery(user_id=user_id)
-    user = await query_handler.handle(query)
-    return {"status": "success", "user": user.dict()}
+    return {"user": (await query_handler.handle(GetUserQuery(user_id=user_id))).dict()}
 
 @users_router.get("/{user_id}/history")
-async def get_user_history(user_id: str, from_date: Optional[str] = None):
-    # Get event history from event store
-    query_handler = infrastructure_factory.create_get_user_history_query_handler()
-    query = GetUserHistoryQuery(user_id=user_id, from_date=from_date)
-    events = await query_handler.handle(query)
-    return {"status": "success", "events": [event.dict() for event in events]}
+async def get_user_history(
+    user_id: str,
+    query_handler: GetUserHistoryQueryHandler = Depends(InfraFactory.create_get_user_history_query_handler)
+):
+    return {"events": [event.dict() for event in await query_handler.handle(GetUserHistoryQuery(user_id=user_id))]}
 ```
+
+## **FastAPI queries expose read models with dependency injection**
 
 ---
 
@@ -459,13 +471,7 @@ async def get_user_history(user_id: str, from_date: Optional[str] = None):
 
 ## The story: "Why isn't my data updated?"
 
-```
-User creates account → Event stored → API returns success ✅
-                    ↓
-              Event processing (async) ⏳
-                    ↓
-              Read model updated (eventually) ✅
-```
+![Eventual Consistency Flow](../diagrams/generated/eventual-consistency.png)
 
 ## The reality:
 - **User sees success immediately** - great UX
@@ -498,6 +504,26 @@ def get_user_state(user_id: str):
 ```
 
 ## **Performance is a feature you have to design for**
+
+---
+
+# Retries: The Resilience Pattern
+
+## The story: "What happens when things fail?"
+
+## The challenge:
+- **Network failures** - temporary connectivity issues
+- **Database timeouts** - high load situations
+- **Third-party service failures** - external dependencies
+- **Processing errors** - bugs in projections
+
+## The solution: Retry with backoff
+- **Immediate retry** - for transient failures
+- **Exponential backoff** - for persistent issues
+- **Dead letter queues** - for permanent failures
+- **Circuit breakers** - to prevent cascade failures
+
+## **Retries make your system resilient to real-world failures**
 
 ---
 
