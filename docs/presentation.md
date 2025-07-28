@@ -78,6 +78,18 @@ style: |
 - **Now**: Debugging real-world system chaos
 - **Philosophy**: Right architecture for each problem
 
+<!--
+Hello everybody! I'm super excited to be presenting at PyCon Athens. This is the first one, both for PyCon in Greece but also for me so it's extra important. That's why I'd like to thank the committee for having me here - it's truly an honor to be part of this inaugural event.
+
+I'm Antonis Markoulis, Senior Staff Engineer at Orfium. I've been coding in Python for over 10 years and I absolutely love it. I initially started working professionally with C++, but with Python I loved the way that I didn't have to deal with the low-level stuff and could actually focus on solving the problem rather than following a dangling pointer.
+
+My journey started in Physics, specifically computational physics and simulation software. I have worked a lot with celestial dynamics simulating chaotic trajectories. Turns out, production systems are way more chaotic than comets.
+
+I'm passionate about keeping things simple and using the right architecture for each problem. There's no one-size-fits-all solution - unless you count unicorns, but those don't exist in real architecture, do they? The same applies with event sourcing, it is not for everybody but hopefully after today's presentation it will be added as an option.
+
+When it comes to the title of the presentation, last year I discovered Stanley Kubrick's 'Dr. Strangelove: Or How I Learned to Stop Worrying and Love the Bomb' for the first time - yes, I know, I'm late to the party! But I can see the analogies. The bomb are the complex systems and I am worrying too much about production issues on them. Hopefully after the end of the presentation you will also stop worrying about debugging production systems.
+-->
+
 ---
 
 # What We'll Discuss

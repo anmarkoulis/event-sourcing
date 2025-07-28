@@ -12,15 +12,15 @@
 - Create a natural, engaging introduction
 
 **Speaking Notes:**
-"Hello everybody! I'm super excited to be presenting at PyCon Athens. This is the first one, so it's extra important to me. I'd like to thank the committee for having me here - it's truly an honor to be part of this inaugural event.
+"Hello everybody! I'm super excited to be presenting at PyCon Athens. This is the first one, both for PyCon in Greece but also for me so it's extra important. That's why I'd like to thank the committee for having me here - it's truly an honor to be part of this inaugural event.
 
-I'm Antonis Markoulis, Senior Staff Engineer at ORfium. I've been coding in Python for over 10 years and I absolutely love it - Python is like that friend who never lets you down, even at 3 AM when you're debugging production issues. I initially started working with C++, but with Python I loved the way that I didn't have to deal with the low-level stuff and could actually focus on solving the problem rather than following a dangling pointer.
+I'm Antonis Markoulis, Senior Staff Engineer at Orfium. I've been coding in Python for over 10 years and I absolutely love it. I initially started working professionally with C++, but with Python I loved the way that I didn't have to deal with the low-level stuff and could actually focus on solving the problem rather than following a dangling pointer.
 
-My journey started in Physics, specifically computational physics and simulation software. My thesis was about simulating comet chaotic trajectories - I spent months modeling celestial chaos, thinking I was doing something profound. Little did I know I'd be debugging real-world system chaos instead! Turns out, production systems are way more chaotic than comets. At least comets follow predictable patterns - our systems? Not so much.
+My journey started in Physics, specifically computational physics and simulation software. I have worked a lot with celestial dynamics simulating chaotic trajectories. Turns out, production systems are way more chaotic than comets.
 
-I'm passionate about keeping things simple and using the right architecture for each problem. There's no one-size-fits-all solution - unless you count unicorns, but those don't exist in real architecture, do they?
+I'm passionate about keeping things simple and using the right architecture for each problem. There's no one-size-fits-all solution - unless you count unicorns, but those don't exist in real architecture, do they? The same applies with event sourcing, it is not for everybody but hopefully after today's presentation it will be added as an option.
 
-Last year I discovered Stanley Kubrick's 'Dr. Strangelove' for the first time - yes, I know, I'm late to the party! But it struck me - in our world, the bomb is complex distributed systems, the worrying is debugging nightmares, and the love is embracing event sourcing's power. Today we're going to talk about something that might sound scary at first - raw events. But by the end of this talk, I hope you'll see why I've learned to stop worrying and love them."
+When it comes to the title of the presentation, last year I discovered Stanley Kubrick's 'Dr. Strangelove: Or How I Learned to Stop Worrying and Love the Bomb' for the first time - yes, I know, I'm late to the party! But I can see the analogies. The bomb are the complex systems and I am worrying too much about production issues on them. Hopefully after the end of the presentation you will also stop worrying about debugging production systems."
 
 ---
 
@@ -44,7 +44,7 @@ Last year I discovered Stanley Kubrick's 'Dr. Strangelove' for the first time - 
 - Transition from overview to concrete problem
 
 **Speaking Notes:**
-"Now, let me tell you a story that probably sounds familiar to many of you. Monday 3:47 PM - someone reports that Sarah's account is missing. Tuesday 9:15 AM - we're still trying to figure out when it was deleted, who did it, and why. With traditional systems, we can't answer any of these questions. The system has no memory of what happened. This is the nightmare we all face when debugging production issues."
+"Now, let me tell you a story that probably sounds familiar to many of you. Monday 3:47 PM - someone reports that Sarah's account is missing. Tuesday 9:15 AM - we're still trying to figure out when it was deleted, who did it, and why. With traditional systems, we can't answer any of these questions. Why is that. Usually we have one entry and we update on top of it. We usually store the updated_at or the updated_by but we lose what was the state in the past. The system has no memory of what happened. This is the nightmare we all face when debugging production issues."
 
 ---
 
@@ -57,7 +57,7 @@ Last year I discovered Stanley Kubrick's 'Dr. Strangelove' for the first time - 
 - Transition from problem to solution
 
 **Speaking Notes:**
-"Event sourcing is the solution. Instead of deleting data forever, we record what happened as an immutable event. Now we can answer everything: when it was deleted, who did it, why, and even what the user's data was before deletion. Every action becomes a permanent record. This is the fundamental shift - from systems that forget to systems that remember."
+"Event sourcing is the solution. Instead of deleting data forever, we record what happened as an immutable event. Now we can answer everything: when it was deleted, who did it, why, and even what the user's data was before deletion. Every action becomes a permanent record. Our code interprets those events. This interpretation might change as our codebase evolves. However, the raw events are always there. This is the fundamental shift - from systems that forget to systems that remember."
 
 ---
 
