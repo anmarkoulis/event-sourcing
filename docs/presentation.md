@@ -70,13 +70,13 @@ style: |
 
 ---
 
-# Who Am I?
+# My Journey: From Celestial Chaos to System Chaos
 
-- **Staff Engineer** with 10+ years in Python
-- Studied **Physics** → **Computational Physics** → **Software Engineering**
-- **Passionate about building systems** with quality
-
-## **My journey**: From "Events are too complex!" to "Events are the solution to complexity!"
+- **Senior Staff Engineer** @ Orfium
+- **10+ years** Python experience
+- **Background**: Physics → Computational Physics → Software Engineering
+- **Now**: Debugging real-world system chaos
+- **Philosophy**: Right architecture for each problem
 
 ---
 
@@ -128,7 +128,8 @@ def delete_user(user_id: int):
 UserDeleted(
     event_id=uuid4(),
     aggregate_id="user_123",
-    version=5,
+    revision=5,
+    version=1,
     timestamp=datetime.now(),
     event_type="USER_DELETED",
     data={ "deleted_by": "admin_456", "reason": "Account closure request" }
@@ -159,7 +160,8 @@ UserDeleted(
 - **Immutable**: Once created, events never change
 - **Facts**: They represent what actually happened
 - **Complete**: Each event contains all necessary data
-- **Versioned**: Events have sequence numbers for ordering
+- **Revisioned**: Events have sequence numbers for ordering
+- **Versioned**: Events have schema versions for serialization
 
 ## Key principle: **Events are immutable facts** - they never change
 
@@ -435,19 +437,20 @@ class UserProjection:
 ## How we expose read models:
 
 ```python
-@users_router.get("/{user_id}")
+@users_router.get("/{user_id}/")
 async def get_user(
     user_id: str,
     query_handler: GetUserQueryHandler = Depends(InfraFactory.create_get_user_query_handler)
 ) -> Dict[str, Any]:
     return {"user": (await query_handler.handle(GetUserQuery(user_id=user_id))).dict()}
 
-@users_router.get("/{user_id}/history")
-async def get_user_history(
+@users_router.get("/{user_id}/{timestamp}/")
+async def get_user_at_timestamp(
     user_id: str,
-    query_handler: GetUserHistoryQueryHandler = Depends(InfraFactory.create_get_user_history_query_handler)
+    timestamp: datetime = Query(..., description="ISO 8601 format: YYYY-MM-DDTHH:MM:SSZ"),
+    query_handler: GetUserAtTimestampQueryHandler = Depends(InfraFactory.create_get_user_at_timestamp_query_handler)
 ):
-    return {"events": [event.dict() for event in await query_handler.handle(GetUserHistoryQuery(user_id=user_id))]}
+    return {"user": (await query_handler.handle(GetUserAtTimestampQuery(user_id=user_id, timestamp=timestamp))).dict()}
 ```
 
 ## **FastAPI queries expose read models with dependency injection**
@@ -458,157 +461,159 @@ async def get_user_history(
 
 ## What happens when you actually build this?
 
-- **Eventual consistency**: Why it's a feature, not a bug
-- **Performance challenges**: When replaying becomes slow
+- **Eventual consistency**: How to handle the delay between write and read
+- **Error handling & retries**: Different strategies for commands vs projections
+- **Performance with snapshots**: When replaying becomes slow
 - **Debugging superpowers**: What debugging looks like in an immutable world
-- **The dark side**: When NOT to use event sourcing
 
 ## **Let's talk about the real challenges**
 
 ---
 
-# Eventual Consistency: The Feature Nobody Talks About
+# Eventual Consistency: The Real Challenge
 
-## The story: "Why isn't my data updated?"
-
-![Eventual Consistency Flow](../diagrams/generated/eventual-consistency.png)
-
-## The reality:
-- **User sees success immediately** - great UX
-- **Data appears in UI within seconds** - acceptable
-- **Processing can retry on failure** - resilient
-
-## **Eventual consistency is a feature, not a bug**
-
----
-
-# When Event Sourcing Goes Wrong
-
-## The performance nightmare:
+## The story: "Update user's first name"
 
 ```python
-# The problem: Replaying 10,000 events
-def get_user_state(user_id: str):
-    events = event_store.get_stream(user_id)  # 10,000 events!
-    return replay_events(events)  # Takes 5 seconds 😱
+# User updates first name
+POST /users/123/ {"first_name": "John"}
+# API returns success immediately
+# But read model might not be updated yet
 ```
 
-## The solution: Snapshots
+## Two approaches to handle this:
+
+### 1. Optimistic Updates (Naive)
+- Frontend updates UI immediately
+- Refresh might show old data
+- Depends on read model update time
+
+### 2. Outbox Pattern (Advanced)
+- Store events in outbox table with job status
+- Track processing status (pending, processing, completed, failed)
+- Create views of unprocessed events
+- Clear visibility into what's been processed vs pending
+
+## **Eventual consistency requires thoughtful UI design**
+
+---
+
+# Performance with Snapshots
+
+## The performance challenge:
 
 ```python
-# The fix: Start from a snapshot
-def get_user_state(user_id: str):
-    snapshot = get_latest_snapshot(user_id)  # Current state
-    recent_events = get_events_since_snapshot(user_id, snapshot.version)
-    return replay_from_snapshot(snapshot, recent_events)  # 50ms ✅
+    async def handle(self, command: CreateUserCommand) -> None:
+        events = await self.event_store.get_stream(command.user_id)  # 10,000 events!
+        user = UserAggregate(command.user_id)
+        for event in events:
+            user.apply(event)  # Takes 5 seconds 😱
+        # ... rest of command handler logic
 ```
 
-## **Performance is a feature you have to design for**
+## The solution: Snapshots in Command Handler
+
+```python
+    async def handle(self, command: CreateUserCommand) -> None:
+        try:
+            snapshot = await self.snapshot_store.get_latest_snapshot(command.user_id)
+            recent_events = await self.event_store.get_events_since_snapshot(command.user_id, snapshot.revision)
+            # Rebuild aggregate from snapshot
+            user = UserAggregate.from_snapshot(snapshot)
+            for event in recent_events:
+                user.apply(event)
+        except SnapshotNotFound:
+            # Fallback to previous code
+```
+
+## **Snapshots require aggregate changes** - rebuild state efficiently
 
 ---
 
-# Retries: The Resilience Pattern
+# Error Handling & Retries: Two Different Worlds
 
-## The story: "What happens when things fail?"
+## Commands (Synchronous) - API Failures:
 
-## The challenge:
-- **Network failures** - temporary connectivity issues
-- **Database timeouts** - high load situations
-- **Third-party service failures** - external dependencies
-- **Processing errors** - bugs in projections
+```python
+# Unit of Work ensures atomicity
+async with self.uow:
+    await self.event_store.append_to_stream(user_id, new_events)
+    await self.event_handler.dispatch(new_events)
+# Either succeeds or fails - API gets 500
+```
 
-## The solution: Retry with backoff
-- **Immediate retry** - for transient failures
-- **Exponential backoff** - for persistent issues
-- **Dead letter queues** - for permanent failures
-- **Circuit breakers** - to prevent cascade failures
+## Projections (Asynchronous) - Celery Retries:
 
-## **Retries make your system resilient to real-world failures**
+```python
+# Celery handles retries with late acknowledgment
+@app.task(bind=True, max_retries=3)
+def process_user_created_task(self, event: Dict[str, Any]) -> None:
+    try:
+        # Process event
+        projection.handle_user_created(event)
+    except Exception as exc:
+        # Celery retries automatically
+        raise self.retry(countdown=60, exc=exc)
+
+# Idempotence is critical - same message can arrive multiple times
+```
+
+## **Different strategies for different failure modes**
 
 ---
 
-# Debugging Superpowers: The Immutable World
+# Debugging Superpowers: Testing Business Logic
 
-## The story: "Something broke at 3:47 PM"
+## The story: "What was the user's state at 3:47 PM?"
 
 ![Debugging Superpowers](../diagrams/generated/debugging-superpowers.png)
 
 ```python
-# Traditional debugging: "I don't know what happened"
-def debug_issue():
-    # Check logs... maybe?
-    # Check database... current state only
-    # Ask users... unreliable
-    pass
+# Rebuild state at specific point in time
+def debug_incident(user_id: str, incident_time: datetime):
+    events = event_store.get_events_before(user_id, incident_time)
+    user = UserAggregate(user_id)
 
-# Event sourcing debugging: "I can see exactly what happened"
-def debug_issue(user_id: str, timestamp: datetime):
-    events = event_store.get_events(user_id, around=timestamp)
-
-    print(f"User {user_id} at {timestamp}:")
+    # Rebuild exact state at incident time
     for event in events:
-        print(f"  {event.timestamp}: {event.type} - {event.data}")
+        user.apply(event)
 
-    # Replay to see exact state
-    state = replay_events(events)
-    print(f"State: {state}")
+    # Apply the problematic event that caused the issue
+    user.apply(UserSuspendedEvent(user_id, reason="fraud_detected"))
 ```
 
-## **Every change is recorded - nothing is lost**
+## **Test business logic with real production data**
 
 ---
 
-# The Dark Side: When NOT to Use Event Sourcing
+# Real-World Trade-offs & Key Takeaways
 
-## Event sourcing is NOT for:
+## When NOT to use Event Sourcing:
 
-- **Simple CRUD applications** - overkill
-- **Teams new to distributed systems** - steep learning curve
-- **Systems with simple audit requirements** - traditional logging suffices
-- **Performance-critical reads** - eventual consistency overhead
+- **Simple CRUD with basic audit needs** - traditional logging suffices
+- **High-frequency trading systems** - immediate consistency required
+- **Teams without distributed systems experience** - steep learning curve
+- **Systems with simple, predictable business rules** - overkill
 
-## **Event sourcing is for systems that need to explain themselves**
+## What you gain vs what you lose:
 
----
+| ✅ **Gain** | ❌ **Lose** |
+|-------------|-------------|
+| Complete audit trail | Simplicity |
+| Time travel capabilities | Immediate consistency |
+| Debugging superpowers | Storage overhead |
+| Scalability | Learning curve |
 
-# Real-World Trade-offs
-
-## What you gain:
-- ✅ **Complete audit trail** - every change recorded
-- ✅ **Time travel** - see any point in history
-- ✅ **Debugging superpowers** - trace every decision
-- ✅ **Scalability** - separate read/write concerns
-
-## What you lose:
-- ❌ **Simplicity** - more complex than CRUD
-- ❌ **Immediate consistency** - eventual consistency
-- ❌ **Storage overhead** - events take more space
-- ❌ **Learning curve** - new patterns to master
-
-## **Event sourcing is a trade-off, not a silver bullet**
-
----
-
-# Key Takeaways
-
-## What we learned:
-
-1. **Event sourcing is about building systems that can explain themselves**
-2. **Python + FastAPI + Celery are more than capable for serious architecture**
-3. **Eventual consistency is a feature, not a bug**
-4. **Performance requires design - snapshots, indexing, caching**
-5. **Event sourcing is not for every system - know when to use it**
-
-## **The goal**: Build systems that can explain themselves 6 months from now
+## **Event sourcing + Python ecosystem solve even the most complex distributed systems challenges**
 
 ---
 
 # Thank You!
 
-## How I Learned to Stop Worrying and Love Raw Events
+## Q & A
 
-**Event Sourcing & CQRS with FastAPI and Celery**
+**Let's Connect!**
 
-**PyCon Athens 2025**
-
-Questions? Let's discuss!
+**GitHub**: github.com/anmarkoulis
+**LinkedIn**: linkedin.com/in/anmarkoulis
+**Dev.to**: dev.to/markoulis
