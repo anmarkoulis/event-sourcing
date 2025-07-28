@@ -2,23 +2,25 @@
 
 ## Section 1: Opening Story (5 minutes)
 
-### Slide 2: Who Am I?
+### Slide 2: From Celestial Chaos to System Chaos
 **Key Points:**
 - Start with warm greeting and gratitude
-- Establish credibility as a staff engineer
-- Show academic background with a joke
-- Share the personal journey with events
+- Establish credibility as senior staff engineer
+- Show academic background with humor
+- Share Python journey and philosophy
 - Connect to the movie title naturally
 - Create a natural, engaging introduction
 
 **Speaking Notes:**
 "Hello everybody! I'm super excited to be presenting at PyCon Athens. This is the first one, so it's extra important to me. I'd like to thank the committee for having me here - it's truly an honor to be part of this inaugural event.
 
-I'm a staff engineer who's been working with Python for over a decade. I studied Physics, then Computational Physics, and then made the switch to software engineering. I went from calculating planet trajectories to debugging production systems - turns out, both involve a lot of uncertainty!
+I'm Antonis Markoulis, Senior Staff Engineer at ORfium. I've been coding in Python for over 10 years and I absolutely love it - Python is like that friend who never lets you down, even at 3 AM when you're debugging production issues. I initially started working with C++, but with Python I loved the way that I didn't have to deal with the low-level stuff and could actually focus on solving the problem rather than following a dangling pointer.
 
-My journey with events started with 'Events are too complex!' and ended with 'Events are the solution to complexity!' I'm passionate about building systems with quality.
+My journey started in Physics, specifically computational physics and simulation software. My thesis was about simulating comet chaotic trajectories - I spent months modeling celestial chaos, thinking I was doing something profound. Little did I know I'd be debugging real-world system chaos instead! Turns out, production systems are way more chaotic than comets. At least comets follow predictable patterns - our systems? Not so much.
 
-Now, some of you might be wondering about this title. I just saw Stanley Kubrick's 'Dr. Strangelove' last year, and it inspired me. In our case, the bomb is complex distributed systems, the worrying is traditional debugging nightmares, and the love is embracing event sourcing's power. Today we're going to talk about something that might sound scary at first - raw events. But by the end of this talk, I hope you'll see why I've learned to love them."
+I'm passionate about keeping things simple and using the right architecture for each problem. There's no one-size-fits-all solution - unless you count unicorns, but those don't exist in real architecture, do they?
+
+Last year I discovered Stanley Kubrick's 'Dr. Strangelove' for the first time - yes, I know, I'm late to the party! But it struck me - in our world, the bomb is complex distributed systems, the worrying is debugging nightmares, and the love is embracing event sourcing's power. Today we're going to talk about something that might sound scary at first - raw events. But by the end of this talk, I hope you'll see why I've learned to stop worrying and love them."
 
 ---
 
@@ -161,7 +163,7 @@ Now, some of you might be wondering about this title. I just saw Stanley Kubrick
 - Transition from theory to implementation
 
 **Speaking Notes:**
-"Now that we understand all the building blocks, here's how everything connects in a real-world example. This diagram shows the complete flow from command to projection. Each interaction follows this pattern - from command to projection. This is the complete event sourcing and CQRS workflow in action."
+"Now that we understand all the building blocks, here's how everything connects in a real-world example. Let me walk you through the complete journey. It starts with a user making an API call to create a user. This goes to our FastAPI command endpoint, which creates a CreateUserCommand and passes it to the command handler. The command handler loads all events for this user from the event store, creates a UserAggregate, and replays all events to rebuild the current state. Then it calls the domain method create_user, which validates business rules and generates new events. These new events are stored in the event store and dispatched to the event handler. The event handler maps the event type to Celery tasks and sends them to the message queue. Celery workers pick up these tasks and call the appropriate projections. The projections update the read models with the new data. Now, when another user makes a query API call to get user data, it goes to our FastAPI query endpoint, which uses the query handler to fetch data from the read models - the same data that was just updated by the projections. This is the complete event sourcing and CQRS workflow in action - from command to event to projection to read model to query."
 
 ---
 
@@ -189,7 +191,7 @@ Now, some of you might be wondering about this title. I just saw Stanley Kubrick
 - Transition from API to business logic implementation
 
 **Speaking Notes:**
-"Behind the API, command handlers are where the business logic lives. Here's our CreateUserCommandHandler with stream-based operations. The handle method loads the existing aggregate from the stream, reconstructs the state by applying all previous events, calls the domain method to validate and create an event, applies the event to the aggregate, appends to the stream with version checking for concurrency control, and publishes it to the event bus. This gives us clean separation between business logic and infrastructure concerns."
+"Behind the API, command handlers are where the business logic lives. Here's our CreateUserCommandHandler with stream-based operations. The handle method loads the existing aggregate from the stream, reconstructs the state by applying all previous events, calls the domain method to validate and create an event, applies the event to the aggregate, appends to the stream with revision checking for concurrency control, and publishes it to the event bus. This gives us clean separation between business logic and infrastructure concerns."
 
 ---
 
@@ -296,30 +298,29 @@ Now, some of you might be wondering about this title. I just saw Stanley Kubrick
 
 ---
 
-### Slide 24: Debugging Superpowers: The Immutable World
+### Slide 24: Debugging Superpowers: Testing Business Logic
 **Key Points:**
-- Show debugging superpowers
-- Give concrete examples
-- Emphasize the value
-- Connect to real scenarios
+- Show how to test business logic with real data
+- Demonstrate aggregate testing capabilities
+- Emphasize the value of replaying real scenarios
+- Connect to real business rule testing
 - Transition from resilience to debugging benefits
 
 **Speaking Notes:**
-"Now, this is where event sourcing really shines - debugging. Traditional debugging is like 'I don't know what happened' - check logs maybe, check database current state only, ask users unreliable. Event sourcing debugging is 'I can see exactly what happened' - we get all events around a timestamp, see every change with timestamps and data, and can replay to see the exact state. Every change is recorded - nothing is lost."
+"Now, this is where event sourcing really shines - testing business logic at specific points in time. Instead of trying to recreate scenarios in test environments, we can rebuild the exact state at any moment in history. Here's how it works: we get all events before a specific incident time, rebuild the aggregate state at that exact moment, and then apply the problematic event that caused the issue - like a UserSuspendedEvent. This lets us see exactly what the business rules would do when that event is applied, and understand why certain actions were allowed or blocked. This gives us the ability to debug issues that happened hours or days ago, and test business logic against real production data at any point in time. This is debugging and testing superpowers combined."
 
 ---
 
 ### Slide 25: Real-World Trade-offs & Key Takeaways
 **Key Points:**
-- Be honest about limitations
-- Show when it's overkill
+- Be honest about limitations with specific examples
+- Show when it's overkill based on standard literature
 - Present balanced trade-offs
-- Help audience make informed decisions
-- Provide clear takeaways
+- Emphasize Python ecosystem strength
 - Transition from challenges to summary
 
 **Speaking Notes:**
-"Let's be honest about when NOT to use event sourcing. It's overkill for simple CRUD applications. It has a steep learning curve for teams new to distributed systems. Traditional logging suffices for systems with simple audit requirements. And it has overhead for performance-critical reads. Event sourcing is for systems that need to explain themselves. Here are the real trade-offs: you gain complete audit trail, time travel, debugging superpowers, and scalability, but you lose simplicity, immediate consistency, storage overhead, and learning curve. So what have we learned today? Event sourcing is about building systems that can explain themselves. Python + FastAPI + Celery are more than capable for serious architecture. Eventual consistency requires thoughtful UI design. Performance requires design - snapshots, indexing, caching. And event sourcing is not for every system - know when to use it. The goal is to build systems that can explain themselves 6 months from now."
+"Let's be honest about when NOT to use event sourcing. It's overkill for simple CRUD with basic audit needs - traditional logging suffices. High-frequency trading systems need immediate consistency, not eventual consistency. Teams without distributed systems experience will struggle with the learning curve. And systems with simple, predictable business rules don't need this complexity. Here are the real trade-offs: you gain complete audit trail, time travel, debugging superpowers, and scalability, but you lose simplicity, immediate consistency, storage overhead, and learning curve. But when you do need event sourcing, the Python ecosystem with FastAPI and Celery is more than capable of solving even the most complex distributed systems challenges. This combination gives you the tools to build systems that can explain themselves."
 
 ---
 
@@ -331,7 +332,7 @@ Now, some of you might be wondering about this title. I just saw Stanley Kubrick
 - Transition from summary to closing
 
 **Speaking Notes:**
-"Thank you all for your attention. I hope I've convinced you that raw events are worth loving. I'm happy to take questions. Let's have a great discussion!"
+"Thank you all for your attention. I hope I've convinced you that raw events are worth loving. I'm happy to take questions and discuss any aspect of event sourcing, CQRS, or the Python ecosystem. Let's have a great discussion!"
 
 ---
 

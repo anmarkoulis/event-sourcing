@@ -70,13 +70,13 @@ style: |
 
 ---
 
-# Who Am I?
+# My Journey: From Celestial Chaos to System Chaos
 
-- **Staff Engineer** with 10+ years in Python
-- Studied **Physics** → **Computational Physics** → **Software Engineering**
-- **Passionate about building systems** with quality
-
-## **My journey**: From "Events are too complex!" to "Events are the solution to complexity!"
+- **Senior Staff Engineer** @ Orfium
+- **10+ years** Python experience
+- **Background**: Physics → Computational Physics → Software Engineering
+- **Now**: Debugging real-world system chaos
+- **Philosophy**: Right architecture for each problem
 
 ---
 
@@ -128,7 +128,8 @@ def delete_user(user_id: int):
 UserDeleted(
     event_id=uuid4(),
     aggregate_id="user_123",
-    version=5,
+    revision=5,
+    version=1,
     timestamp=datetime.now(),
     event_type="USER_DELETED",
     data={ "deleted_by": "admin_456", "reason": "Account closure request" }
@@ -159,7 +160,8 @@ UserDeleted(
 - **Immutable**: Once created, events never change
 - **Facts**: They represent what actually happened
 - **Complete**: Each event contains all necessary data
-- **Versioned**: Events have sequence numbers for ordering
+- **Revisioned**: Events have sequence numbers for ordering
+- **Versioned**: Events have schema versions for serialization
 
 ## Key principle: **Events are immutable facts** - they never change
 
@@ -515,7 +517,7 @@ POST /users/123/ {"first_name": "John"}
     async def handle(self, command: CreateUserCommand) -> None:
         try:
             snapshot = await self.snapshot_store.get_latest_snapshot(command.user_id)
-            recent_events = await self.event_store.get_events_since_snapshot(command.user_id, snapshot.version)
+            recent_events = await self.event_store.get_events_since_snapshot(command.user_id, snapshot.revision)
             # Rebuild aggregate from snapshot
             user = UserAggregate.from_snapshot(snapshot)
             for event in recent_events:
@@ -560,34 +562,27 @@ def process_user_created_task(self, event: Dict[str, Any]) -> None:
 
 ---
 
-# Debugging Superpowers: The Immutable World
+# Debugging Superpowers: Testing Business Logic
 
-## The story: "Something broke at 3:47 PM"
+## The story: "What was the user's state at 3:47 PM?"
 
 ![Debugging Superpowers](../diagrams/generated/debugging-superpowers.png)
 
 ```python
-# Traditional debugging: "I don't know what happened"
-def debug_issue():
-    # Check logs... maybe?
-    # Check database... current state only
-    # Ask users... unreliable
-    pass
+# Rebuild state at specific point in time
+def debug_incident(user_id: str, incident_time: datetime):
+    events = event_store.get_events_before(user_id, incident_time)
+    user = UserAggregate(user_id)
 
-# Event sourcing debugging: "I can see exactly what happened"
-def debug_issue(user_id: str, timestamp: datetime):
-    events = event_store.get_events(user_id, around=timestamp)
-
-    print(f"User {user_id} at {timestamp}:")
+    # Rebuild exact state at incident time
     for event in events:
-        print(f"  {event.timestamp}: {event.type} - {event.data}")
+        user.apply(event)
 
-    # Replay to see exact state
-    state = replay_events(events)
-    print(f"State: {state}")
+    # Apply the problematic event that caused the issue
+    user.apply(UserSuspendedEvent(user_id, reason="fraud_detected"))
 ```
 
-## **Every change is recorded - nothing is lost**
+## **Test business logic with real production data**
 
 ---
 
@@ -595,10 +590,10 @@ def debug_issue(user_id: str, timestamp: datetime):
 
 ## When NOT to use Event Sourcing:
 
-- **Simple CRUD applications** - overkill
-- **Teams new to distributed systems** - steep learning curve
-- **Systems with simple audit requirements** - traditional logging suffices
-- **Performance-critical reads** - eventual consistency overhead
+- **Simple CRUD with basic audit needs** - traditional logging suffices
+- **High-frequency trading systems** - immediate consistency required
+- **Teams without distributed systems experience** - steep learning curve
+- **Systems with simple, predictable business rules** - overkill
 
 ## What you gain vs what you lose:
 
@@ -609,24 +604,16 @@ def debug_issue(user_id: str, timestamp: datetime):
 | Debugging superpowers | Storage overhead |
 | Scalability | Learning curve |
 
-## Key Takeaways:
-
-1. **Event sourcing is about building systems that can explain themselves**
-2. **Python + FastAPI + Celery are more than capable for serious architecture**
-3. **Eventual consistency requires thoughtful UI design**
-4. **Performance requires design - snapshots, indexing, caching**
-5. **Event sourcing is not for every system - know when to use it**
-
-## **The goal**: Build systems that can explain themselves 6 months from now
+## **Event sourcing + Python ecosystem solve even the most complex distributed systems challenges**
 
 ---
 
 # Thank You!
 
-## How I Learned to Stop Worrying and Love Raw Events
+## Q & A
 
-**Event Sourcing & CQRS with FastAPI and Celery**
+**Let's Connect!**
 
-**PyCon Athens 2025**
-
-Questions? Let's discuss!
+**GitHub**: github.com/anmarkoulis
+**LinkedIn**: linkedin.com/in/anmarkoulis
+**Dev.to**: dev.to/markoulis
