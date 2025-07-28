@@ -108,6 +108,10 @@ When it comes to the title of the presentation, last year I discovered Stanley K
 - **Performance considerations**
 - **Debugging and testing** in an immutable world
 
+<!--
+So, what are we going to cover today? We'll go through three main areas. First, the core principles of event sourcing and CQRS - how to store every change as an immutable event and separate read and write concerns. Second, how the Python ecosystem offers excellent solutions for this - FastAPI for APIs, Celery for async processing, and Pydantic for data validation. Finally, we'll look at the aftermath - real-world patterns, performance considerations, and how to debug and test in an immutable world.
+-->
+
 ---
 
 # The Nightmare: "Who Deleted My User?"
@@ -129,6 +133,10 @@ def delete_user(user_id: int):
 - ❌ **Why** was it deleted?
 
 ## **The system has no memory of what happened**
+
+<!--
+Now, let me tell you a story that probably sounds familiar to many of you. Monday 3:47 PM - someone reports that Sarah's account is missing. Tuesday 9:15 AM - we're still trying to figure out when it was deleted, who did it, and why. With traditional systems, we can't answer any of these questions. Why is that. Usually we have one entry and we update on top of it. We usually store the updated_at or the updated_by but we lose what was the state in the past. The system has no memory of what happened. This is the nightmare we all face when debugging production issues.
+-->
 
 ---
 
@@ -155,6 +163,10 @@ UserDeleted(
 
 ## **Every action becomes a permanent record**
 
+<!--
+Event sourcing is the solution. Instead of deleting data forever, we record what happened as an immutable event. Now we can answer everything: when it was deleted, who did it, why, and even what the user's data was before deletion. Every action becomes a permanent record. Our code interprets those events. This interpretation might change as our codebase evolves. However, the raw events are always there. This is the fundamental shift - from systems that forget to systems that remember.
+-->
+
 ---
 
 
@@ -177,6 +189,10 @@ UserDeleted(
 
 ## Key principle: **Events are immutable facts** - they never change
 
+<!--
+Now that we've seen the problem and the solution, let's understand the building blocks. Let's start with the first one: Events. Every change in our system becomes an immutable event. Here's what a UserCreated event looks like - it has an event_id, aggregate_id, timestamp, event_type, and the actual data. The key principle is that events are immutable facts - they never change once created. This is what gives us the audit trail we need for debugging.
+-->
+
 ---
 
 # Core Concepts: Event Streams
@@ -195,6 +211,10 @@ UserDeleted(
 - **Source of truth**: The definitive record of what happened
 
 ## **The stream is the source of truth** - rebuild any point in time
+
+<!--
+Events aren't isolated - they belong to ordered sequences called event streams. Here's a user's complete story: UserCreated, UserNameChanged, UserEmailChanged, UserStatusChanged, and finally UserDeleted. The stream is the source of truth - we can rebuild any point in time by replaying these events in order. This is how we get time travel capabilities.
+-->
 
 ---
 
@@ -215,6 +235,10 @@ UserDeleted(
 
 ## **Commands are the entry point** - they represent what we want to do
 
+<!--
+Now, how do we actually change the system? Commands represent the intent to change the system state. They express what we want to happen - like 'Create a new user account'. Commands can be validated before execution, are idempotent for safety, and serve as the entry point for all changes. This is the command side of CQRS.
+-->
+
 ---
 
 # Core Concepts: Queries
@@ -233,6 +257,10 @@ UserDeleted(
 - **Fast**: Optimized for quick data retrieval
 
 ## **Queries are separate from commands** - different models for different purposes
+
+<!--
+On the other hand, queries represent the intent to read data from the system. They're read-only, optimized for specific patterns, use separate models from commands, and are designed for fast retrieval. This is the query side of CQRS - completely separate from the command side.
+-->
 
 ---
 
@@ -253,6 +281,10 @@ UserDeleted(
 - **Consistency**: Ensure business invariants are maintained
 
 ## **Aggregates apply business logic** and create events
+
+<!--
+Now, where does the business logic live? Aggregates contain domain logic and apply business rules to create events. They enforce domain-specific validation like 'User email must be unique' and 'Cannot delete already deleted user'. When rules pass, they create events. When rules fail, they return errors. This ensures business invariants are maintained.
+-->
 
 ---
 
@@ -275,6 +307,10 @@ UserDeleted(
 
 ## **Event Store is append-only** - events never change or delete
 
+<!--
+Where do we store all these events? The Event Store is the append-only storage for all events in the system. Here's a user's event stream: UserCreated, EmailChanged, UserDeleted. Operations are simple: store new events, read in order, never modify. Events are immutable - once written, they're permanent. This gives us optimistic concurrency control.
+-->
+
 ---
 
 # Core Concepts: Projections
@@ -295,6 +331,10 @@ UserDeleted(
 
 ## **Projections handle business logic and update read models from events**
 
+<!--
+Finally, how do we build fast read models? Projections build optimized read models from events for fast querying. When a UserCreated event happens, we create a user record. When EmailChanged happens, we update the email field. This gives us event-driven read model updates that are optimized for queries and eventually consistent.
+-->
+
 ---
 
 # How Everything Works Together
@@ -304,6 +344,10 @@ UserDeleted(
 ![Event Sourcing Flow](../diagrams/generated/event-sourcing-flow.png)
 
 ## **Each interaction follows this pattern** - from command to projection
+
+<!--
+Now that we understand all the building blocks, here's how everything connects in a real-world example. Let me walk you through the complete journey. It starts with a user making an API call to create a user. This goes to our FastAPI command endpoint, which creates a CreateUserCommand and passes it to the command handler. The command handler loads all events for this user from the event store, creates a UserAggregate, and replays all events to rebuild the current state. Then it calls the domain method create_user, which validates business rules and generates new events. These new events are stored in the event store and dispatched to the event handler. The event handler maps the event type to Celery tasks and sends them to the message queue. Celery workers pick up these tasks and call the appropriate projections. The projections update the read models with the new data. Now, when another user makes a query API call to get user data, it goes to our FastAPI query endpoint, which uses the query handler to fetch data from the read models - the same data that was just updated by the projections. This is the complete event sourcing and CQRS workflow in action - from command to event to projection to read model to query.
+-->
 
 ---
 
@@ -338,6 +382,10 @@ async def create_user(
 
 ## **FastAPI commands accept requests and return immediately after event storage**
 
+<!--
+Now let's see how the Python ecosystem implements this architecture. Here's how we implement this with FastAPI. We define our endpoints to accept user data. We create commands using Pydantic models for validation. When a request comes in, we create a CreateUserCommand, get the appropriate handler from our infrastructure factory, and process the command. Notice we return immediately - we don't wait for the event to be processed. This gives us high availability and responsiveness.
+-->
+
 ---
 
 # Command Handlers: Business Logic
@@ -365,6 +413,10 @@ class CreateUserCommandHandler:
 ```
 
 ## **Command Handler orchestrates: Event Store + Event Handler with Unit of Work**
+
+<!--
+Behind the API, command handlers are where the business logic lives. Here's our CreateUserCommandHandler with stream-based operations. The handle method loads the existing aggregate from the stream, reconstructs the state by applying all previous events, calls the domain method to validate and create an event, applies the event to the aggregate, appends to the stream with revision checking for concurrency control, and publishes it to the event bus. This gives us clean separation between business logic and infrastructure concerns.
+-->
 
 ---
 
@@ -394,6 +446,10 @@ class CeleryEventHandler:
 
 ## **Event Handler dispatches to message queues, Celery tasks handle messages and call projections**
 
+<!--
+Once events are created, the Event Handler dispatches them to message queues. Here's our CeleryEventHandler that maps event types to Celery tasks. When a USER_CREATED event comes in, it triggers process_user_created_task and send_welcome_email_task. The dispatch method sends each task to Celery with the event data. This gives us scalable, async event processing.
+-->
+
 ---
 
 # Celery Tasks: Event Processing
@@ -417,6 +473,10 @@ async def process_user_created_async(event: EventDTO) -> None:
 
 ## **Celery tasks are wrappers that call the appropriate projection handlers**
 
+<!--
+On the receiving end, Celery tasks are wrappers that call the appropriate projection handlers. Here's how it works: we define a Celery task that receives an event, convert our async function to sync for Celery using async_to_sync, and then call the projection. The task is just a wrapper - the actual business logic is in the projection handlers.
+-->
+
 ---
 
 # Projections: Event-Driven Read Models
@@ -439,7 +499,11 @@ class UserProjection:
         await self.read_model.save_user(user_data)
 ```
 
-## **Projections build optimized read models from events for fast querying**
+## **Projections handle business logic and update read models from events**
+
+<!--
+Inside the Celery tasks, projections handle business logic and update read models from events. Here's our UserProjection. When a user_created event comes in, we build user data with aggregate_id, name, email, and created_at. We save this to the read model. This gives us event-driven read model updates that are optimized for queries.
+-->
 
 
 ---
@@ -467,6 +531,10 @@ async def get_user_at_timestamp(
 
 ## **FastAPI queries expose read models with dependency injection**
 
+<!--
+Finally, FastAPI queries expose read models with dependency injection. Here's how we expose read models through FastAPI. We have endpoints for getting current user data and user history. For current data, we create a GetUserQuery, get the query handler from our infrastructure factory, and execute the query. For history, we create a GetUserHistoryQuery and get events from the event store. This gives us both current state and historical data through the same API.
+-->
+
 ---
 
 # The Aftermath: Real-World Patterns & Gotchas
@@ -479,6 +547,10 @@ async def get_user_at_timestamp(
 - **Debugging superpowers**: What debugging looks like in an immutable world
 
 ## **Let's talk about the real challenges**
+
+<!--
+Now let's talk about what happens when you actually build this. This is where theory meets reality. We'll cover eventual consistency and how to handle the delay between write and read, error handling and retries with different strategies for commands vs projections, performance challenges with snapshots, and debugging superpowers. Let's talk about the real challenges.
+-->
 
 ---
 
@@ -507,6 +579,10 @@ POST /users/123/ {"first_name": "John"}
 - Clear visibility into what's been processed vs pending
 
 ## **Eventual consistency requires thoughtful UI design**
+
+<!--
+Now, let's talk about the real challenge of eventual consistency. Here's a concrete example: a user updates their first name. The API returns success immediately, but the read model might not be updated yet. This creates a real UI challenge. I've seen two approaches to handle this. The naive approach is optimistic updates - the frontend updates the UI immediately, but if the user refreshes, they might see old data. The more advanced approach is the outbox pattern - we store events in an outbox table with job status, track processing status like pending, processing, completed, or failed, and create views of unprocessed events. This gives us clear visibility into what's been processed versus what's still pending. Eventual consistency requires thoughtful UI design.
+-->
 
 ---
 
@@ -540,6 +616,10 @@ POST /users/123/ {"first_name": "John"}
 
 ## **Snapshots require aggregate changes** - rebuild state efficiently
 
+<!--
+Another concern is performance - what if you have thousands of events? Here's the problem: replaying 10,000 events takes 5 seconds. The solution is snapshots, but this requires changes to our command handlers. We try to get the latest snapshot first, and if it exists, we rebuild the aggregate from the snapshot and apply only the recent events. If no snapshot exists, we fall back to getting all events - this handles the case where snapshots haven't been created yet. This gives us the best of both worlds - performance when snapshots exist, and correctness when they don't. The key insight is that snapshots require proper error handling in the command handlers.
+-->
+
 ---
 
 # Error Handling & Retries: Two Different Worlds
@@ -572,6 +652,10 @@ def process_user_created_task(self, event: Dict[str, Any]) -> None:
 
 ## **Different strategies for different failure modes**
 
+<!--
+Now let's talk about error handling and retries, which are actually two different worlds. For commands - the synchronous API calls - we use Unit of Work to ensure atomicity. Either the event is stored and dispatched, or it fails completely and the API returns a 500. There's no retry here - it's all or nothing. For projections - the asynchronous Celery tasks - we use Celery's built-in retry mechanisms with late acknowledgment. Messages are never lost, but idempotence is critical because the same message can arrive multiple times. This actually enables powerful capabilities like backfill tasks that can reprocess all events from the event store.
+-->
+
 ---
 
 # Debugging Superpowers: Testing Business Logic
@@ -596,6 +680,10 @@ def debug_incident(user_id: str, incident_time: datetime):
 
 ## **Test business logic with real production data**
 
+<!--
+Now, this is where event sourcing really shines - testing business logic at specific points in time. Instead of trying to recreate scenarios in test environments, we can rebuild the exact state at any moment in history. Here's how it works: we get all events before a specific incident time, rebuild the aggregate state at that exact moment, and then apply the problematic event that caused the issue - like a UserSuspendedEvent. This lets us see exactly what the business rules would do when that event is applied, and understand why certain actions were allowed or blocked. This gives us the ability to debug issues that happened hours or days ago, and test business logic against real production data at any point in time. This is debugging and testing superpowers combined.
+-->
+
 ---
 
 # Real-World Trade-offs & Key Takeaways
@@ -618,6 +706,10 @@ def debug_incident(user_id: str, incident_time: datetime):
 
 ## **Event sourcing + Python ecosystem solve even the most complex distributed systems challenges**
 
+<!--
+Let's be honest about when NOT to use event sourcing. It's overkill for simple CRUD with basic audit needs - traditional logging suffices. High-frequency trading systems need immediate consistency, not eventual consistency. Teams without distributed systems experience will struggle with the learning curve. And systems with simple, predictable business rules don't need this complexity. Here are the real trade-offs: you gain complete audit trail, time travel, debugging superpowers, and scalability, but you lose simplicity, immediate consistency, storage overhead, and learning curve. But when you do need event sourcing, the Python ecosystem with FastAPI and Celery is more than capable of solving even the most complex distributed systems challenges. This combination gives you the tools to build systems that can explain themselves.
+-->
+
 ---
 
 # Thank You!
@@ -629,3 +721,7 @@ def debug_incident(user_id: str, incident_time: datetime):
 **GitHub**: github.com/anmarkoulis
 **LinkedIn**: linkedin.com/in/anmarkoulis
 **Dev.to**: dev.to/markoulis
+
+<!--
+Thank you all for your attention. I hope I've convinced you that raw events are worth loving. I'm happy to take questions and discuss any aspect of event sourcing, CQRS, or the Python ecosystem. Let's have a great discussion!
+-->

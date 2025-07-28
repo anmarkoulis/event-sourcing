@@ -130,20 +130,20 @@ generate-diagrams: create-directories ## Generate diagrams from Mermaid source f
 		echo "diagrams/source directory not found"; \
 	fi
 
-pdf: install-marp generate-diagrams ## Generate presentation PDF from markdown
-	@echo "Generating presentation PDF..."
+pdf: install-marp generate-diagrams ## Generate presentation PDF from markdown with speaker notes
+	@echo "Generating presentation PDF with speaker notes..."
 	marp docs/presentation.md --pdf --allow-local-files --output docs/presentation.pdf
-	@echo "Presentation PDF generated successfully!"
+	@echo "Presentation PDF with speaker notes generated successfully!"
 
 html: install-marp generate-diagrams ## Generate presentation HTML from markdown
 	@echo "Generating presentation HTML..."
 	marp docs/presentation.md --html --allow-local-files --output docs/presentation.html
 	@echo "Presentation HTML generated successfully!"
 
-pptx: install-marp generate-diagrams ## Generate presentation PowerPoint from markdown
-	@echo "Generating presentation PowerPoint..."
+pptx: install-marp generate-diagrams ## Generate presentation PowerPoint from markdown with speaker notes
+	@echo "Generating presentation PowerPoint with speaker notes..."
 	marp docs/presentation.md --pptx --allow-local-files --output docs/presentation.pptx
-	@echo "Presentation PowerPoint generated successfully!"
+	@echo "Presentation PowerPoint with speaker notes generated successfully!"
 
 clean: ## Clean generated files
 	@echo "Cleaning generated files..."
