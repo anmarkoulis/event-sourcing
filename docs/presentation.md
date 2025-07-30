@@ -83,33 +83,7 @@ Hello everybody! I'm super excited to be presenting at PyCon Athens. This is the
 
 I'm Antonis Markoulis, Senior Staff Engineer at Orfium. I've been coding in Python for over 10 years and I absolutely love it. I initially started working professionally with C++, but with Python I loved the way that I didn't have to deal with the low-level stuff and could actually focus on solving the problem rather than following a dangling pointer.
 
-My journey started in Physics, specifically computational physics and simulation software. I have worked a lot with celestial dynamics simulating chaotic trajectories. Turns out, production systems are way more chaotic than comets.
-
-I'm passionate about keeping things simple and using the right architecture for each problem. There's no one-size-fits-all solution - unless you count unicorns, but those don't exist in real architecture, do they? The same applies with event sourcing, it is not for everybody but hopefully after today's presentation it will be added as an option.
-
-When it comes to the title of the presentation, last year I discovered Stanley Kubrick's 'Dr. Strangelove: Or How I Learned to Stop Worrying and Love the Bomb' for the first time - yes, I know, I'm late to the party! But I can see the analogies. The bomb are the complex systems and I am worrying too much about production issues on them. Hopefully after the end of the presentation you will also stop worrying about debugging production systems.
--->
-
----
-
-# What We'll Discuss
-
-## Core Principles
-- **Event Sourcing**: Store every change as an immutable event
-- **CQRS**: Separate read and write concerns
-
-## Python Ecosystem Examples
-- **FastAPI**: API surface for commands and queries
-- **Celery**: Async event processing
-- **Pydantic**: Data validation and modeling
-
-## The Aftermath
-- **Real-world patterns** and gotchas
-- **Performance considerations**
-- **Debugging and testing** in an immutable world
-
-<!--
-So, what are we going to cover today? We'll go through three main areas. First, the core principles of event sourcing and CQRS - how to store every change as an immutable event and separate read and write concerns. Second, how the Python ecosystem offers excellent solutions for this - FastAPI for APIs, Celery for async processing, and Pydantic for data validation. Finally, we'll look at the aftermath - real-world patterns, performance considerations, and how to debug and test in an immutable world.
+My journey started in Physics, specifically computational physics and simulation software. I have worked a lot with celestial dynamics simulating chaotic trajectories. Turns out, production systems are way more chaotic than comets. People tend to add this extra chaos in our lives that we just love to tackle.
 -->
 
 ---
@@ -168,8 +142,6 @@ Event sourcing is the solution. Instead of deleting data forever, we record what
 -->
 
 ---
-
-
 
 # Core Concepts: Events
 
@@ -351,12 +323,6 @@ Now that we understand all the building blocks, here's how everything connects i
 
 ---
 
-
-
-
-
-
-
 # FastAPI: The Command Interface
 
 ## Real implementation with Pydantic:
@@ -529,27 +495,10 @@ async def get_user_at_timestamp(
     return {"user": (await query_handler.handle(GetUserAtTimestampQuery(user_id=user_id, timestamp=timestamp))).dict()}
 ```
 
-## **FastAPI queries expose read models with dependency injection**
+## **FastAPI queries expose read models**
 
 <!--
 Finally, FastAPI queries expose read models with dependency injection. Here's how we expose read models through FastAPI. We have endpoints for getting current user data and user history. For current data, we create a GetUserQuery, get the query handler from our infrastructure factory, and execute the query. For history, we create a GetUserHistoryQuery and get events from the event store. This gives us both current state and historical data through the same API.
--->
-
----
-
-# The Aftermath: Real-World Patterns & Gotchas
-
-## What happens when you actually build this?
-
-- **Eventual consistency**: How to handle the delay between write and read
-- **Error handling & retries**: Different strategies for commands vs projections
-- **Performance with snapshots**: When replaying becomes slow
-- **Debugging superpowers**: What debugging looks like in an immutable world
-
-## **Let's talk about the real challenges**
-
-<!--
-Now let's talk about what happens when you actually build this. This is where theory meets reality. We'll cover eventual consistency and how to handle the delay between write and read, error handling and retries with different strategies for commands vs projections, performance challenges with snapshots, and debugging superpowers. Let's talk about the real challenges.
 -->
 
 ---
@@ -568,15 +517,8 @@ POST /users/123/ {"first_name": "John"}
 ## Two approaches to handle this:
 
 ### 1. Optimistic Updates (Naive)
-- Frontend updates UI immediately
-- Refresh might show old data
-- Depends on read model update time
-
 ### 2. Outbox Pattern (Advanced)
-- Store events in outbox table with job status
-- Track processing status (pending, processing, completed, failed)
-- Create views of unprocessed events
-- Clear visibility into what's been processed vs pending
+
 
 ## **Eventual consistency requires thoughtful UI design**
 
@@ -596,7 +538,6 @@ Now, let's talk about the real challenge of eventual consistency. Here's a concr
         user = UserAggregate(command.user_id)
         for event in events:
             user.apply(event)  # Takes 5 seconds 😱
-        # ... rest of command handler logic
 ```
 
 ## The solution: Snapshots in Command Handler
@@ -611,7 +552,6 @@ Now, let's talk about the real challenge of eventual consistency. Here's a concr
             for event in recent_events:
                 user.apply(event)
         except SnapshotNotFound:
-            # Fallback to previous code
 ```
 
 ## **Snapshots require aggregate changes** - rebuild state efficiently
@@ -638,16 +578,9 @@ async with self.uow:
 
 ```python
 # Celery handles retries with late acknowledgment
-@app.task(bind=True, max_retries=3)
+@app.task(bind=True, max_retries=3, acks_late=True)
 def process_user_created_task(self, event: Dict[str, Any]) -> None:
-    try:
-        # Process event
-        projection.handle_user_created(event)
-    except Exception as exc:
-        # Celery retries automatically
-        raise self.retry(countdown=60, exc=exc)
-
-# Idempotence is critical - same message can arrive multiple times
+    projection.handle_user_created(event)
 ```
 
 ## **Different strategies for different failure modes**
@@ -686,28 +619,35 @@ Now, this is where event sourcing really shines - testing business logic at spec
 
 ---
 
-# Real-World Trade-offs & Key Takeaways
+# Summary: Key Takeaways
+
+## Start Simple - You don't need fancy tech from day one:
+
+- **Event Store**: PostgreSQL is sufficient for most cases
+- **Event Bus**: SQS works great for most applications
+- **Read Models**: PostgreSQL can handle most query patterns
+- **No need for**: Kurrent, Elasticsearch, MongoDB, Kafka initially
 
 ## When NOT to use Event Sourcing:
-
 - **Simple CRUD with basic audit needs** - traditional logging suffices
 - **High-frequency trading systems** - immediate consistency required
 - **Teams without distributed systems experience** - steep learning curve
-- **Systems with simple, predictable business rules** - overkill
 
-## What you gain vs what you lose:
-
-| ✅ **Gain** | ❌ **Lose** |
-|-------------|-------------|
-| Complete audit trail | Simplicity |
-| Time travel capabilities | Immediate consistency |
-| Debugging superpowers | Storage overhead |
-| Scalability | Learning curve |
+## What you gain:
+- **Complete audit trail** and time travel capabilities
+- **Debugging superpowers** with real production data
+- **Scalability** and eventual consistency patterns
 
 ## **Event sourcing + Python ecosystem solve even the most complex distributed systems challenges**
 
 <!--
-Let's be honest about when NOT to use event sourcing. It's overkill for simple CRUD with basic audit needs - traditional logging suffices. High-frequency trading systems need immediate consistency, not eventual consistency. Teams without distributed systems experience will struggle with the learning curve. And systems with simple, predictable business rules don't need this complexity. Here are the real trade-offs: you gain complete audit trail, time travel, debugging superpowers, and scalability, but you lose simplicity, immediate consistency, storage overhead, and learning curve. But when you do need event sourcing, the Python ecosystem with FastAPI and Celery is more than capable of solving even the most complex distributed systems challenges. This combination gives you the tools to build systems that can explain themselves.
+Let me end with some practical advice. Start simple - you don't need fancy technology from day one. PostgreSQL as your event store and read database is sufficient for most cases. SQS as your event bus works great for most applications. You don't need Kurrent for event store or Elasticsearch and MongoDB for read models initially. This architecture can be easily adopted with familiar tools.
+
+When NOT to use event sourcing? Simple CRUD with basic audit needs - traditional logging suffices. High-frequency trading systems need immediate consistency. Teams without distributed systems experience will struggle with the learning curve.
+
+What you gain: complete audit trail, time travel capabilities, debugging superpowers with real production data, and scalability with eventual consistency patterns.
+
+The Python ecosystem with FastAPI and Celery is more than capable of solving even the most complex distributed systems challenges. This combination gives you the tools to build systems that can explain themselves.
 -->
 
 ---
