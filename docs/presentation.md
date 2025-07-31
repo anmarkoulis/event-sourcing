@@ -81,9 +81,9 @@ style: |
 <!--
 Hello everybody! I'm super excited to be presenting at PyCon Athens. This is the first one, both for PyCon in Greece but also for me so it's extra important. That's why I'd like to thank the committee for having me here - it's truly an honor to be part of this inaugural event.
 
-I'm Antonis Markoulis, Senior Staff Engineer at Orfium. I've been coding in Python for over 10 years and I absolutely love it. I initially started working professionally with C++, but with Python I loved the way that I didn't have to deal with the low-level stuff and could actually focus on solving the problem rather than following a dangling pointer.
+I'm Antonis Markoulis, Senior Staff Engineer at Orfium. I've been coding in Python for over 10 years. I initially started working professionally with C++, but with Python I loved the way that I didn't have to deal with the low-level stuff and could actually focus on solving the problem rather than following a dangling pointer.
 
-My journey started in Physics, specifically computational physics and simulation software. I have worked a lot with celestial dynamics simulating chaotic trajectories. Turns out, production systems are way more chaotic than comets. People tend to add this extra chaos in our lives that we just love to tackle.
+My journey started in Physics, specifically computational physics and simulation software. I worked a lot in my university years with celestial dynamics simulating chaotic trajectories. Turns out, production systems are way more chaotic than comets. People tend to add this extra chaos in our lives that we just love to tackle.
 -->
 
 ---
@@ -109,7 +109,7 @@ def delete_user(user_id: int):
 ## **The system has no memory of what happened**
 
 <!--
-Now, let me tell you a story that probably sounds familiar to many of you. Monday 3:47 PM - someone reports that Sarah's account is missing. Tuesday 9:15 AM - we're still trying to figure out when it was deleted, who did it, and why. With traditional systems, we can't answer any of these questions. Why is that. Usually we have one entry and we update on top of it. We usually store the updated_at or the updated_by but we lose what was the state in the past. The system has no memory of what happened. This is the nightmare we all face when debugging production issues.
+Now, let me tell you a story that probably sounds familiar to many of you. Monday 3:47 PM - someone reports that Sarah's account is missing. Tuesday 9:15 AM - we're still trying to figure out when it was deleted, who did it, and why. With traditional systems, we can't answer any of these questions. Why is that. Usually we have one row per entity in our relational database and we update on top of it. In the case of the hard delete  we lose what was the entry. If we have soft delete then we know when it was deleted using deleted_at, maybe who using the updated_by but on most cases we miss the reason or the different states the user was. The system has no memory of what happened. This is the nightmare we all face when debugging production issues with classic arhictectures.
 -->
 
 ---
@@ -301,7 +301,7 @@ Where do we store all these events? The Event Store is the append-only storage f
 - **Denormalized**: Optimized for performance, not normalization
 - **Eventually consistent**: Updated asynchronously
 
-## **Projections handle business logic and update read models from events**
+## **Projections update read models from events**
 
 <!--
 Finally, how do we build fast read models? Projections build optimized read models from events for fast querying. When a UserCreated event happens, we create a user record. When EmailChanged happens, we update the email field. This gives us event-driven read model updates that are optimized for queries and eventually consistent.
@@ -404,10 +404,9 @@ class CeleryEventHandler:
 
     async def dispatch(self, events: List[Event]) -> None:
         for event in events:
-            if event.event_type in self.event_handlers:
-                for task_name in self.event_handlers[event.event_type]:
-                    # All tasks receive the same event payload structure
-                    celery_app.send_task(task_name, kwargs={"event": event.model_dump()})
+            for task_name in self.event_handlers[event.event_type]:
+                # All tasks receive the same event payload structure
+                celery_app.send_task(task_name, kwargs={"event": event.model_dump()})
 ```
 
 ## **Event Handler dispatches to message queues, Celery tasks handle messages and call projections**
@@ -433,8 +432,8 @@ def process_user_created_task(event: Dict[str, Any]) -> None:
 
 async def process_user_created_async(event: EventDTO) -> None:
     # Get projection and call it
-    projection = UserProjection(read_model, event_publisher)
-    await projection.handle_user_created(event)
+    projection = InfraFactory.get_user_created_projection()
+    await projection.handle(event)
 ```
 
 ## **Celery tasks are wrappers that call the appropriate projection handlers**
@@ -450,8 +449,8 @@ On the receiving end, Celery tasks are wrappers that call the appropriate projec
 ## How projections build read models:
 
 ```python
-class UserProjection:
-    async def handle_user_created(self, event: Event) -> None:
+class UserCreatedProjection:
+    async def handle(self, event: Event) -> None:
         # Build read model from event
         user_data = {
             "aggregate_id": event.aggregate_id,
@@ -462,13 +461,13 @@ class UserProjection:
         }
 
         # Save to read model
-        await self.read_model.save_user(user_data)
+        await self.db.save(user_data)
 ```
 
-## **Projections handle business logic and update read models from events**
+## **Projections update read models from events**
 
 <!--
-Inside the Celery tasks, projections handle business logic and update read models from events. Here's our UserProjection. When a user_created event comes in, we build user data with aggregate_id, name, email, and created_at. We save this to the read model. This gives us event-driven read model updates that are optimized for queries.
+Inside the Celery tasks, projections update read models from events. Here's our UserCreatedProjection. When a user_created event comes in, we build user data with aggregate_id, name, email, and created_at. We save this to the read model. This gives us event-driven read model updates that are optimized for queries.
 -->
 
 
@@ -484,7 +483,7 @@ async def get_user(
     user_id: str,
     query_handler: GetUserQueryHandler = Depends(InfraFactory.create_get_user_query_handler)
 ) -> Dict[str, Any]:
-    return {"user": (await query_handler.handle(GetUserQuery(user_id=user_id))).dict()}
+    return await query_handler.handle(GetUserQuery(user_id=user_id)).model_dump()
 
 @users_router.get("/{user_id}/{timestamp}/")
 async def get_user_at_timestamp(
@@ -492,7 +491,7 @@ async def get_user_at_timestamp(
     timestamp: datetime = Query(..., description="ISO 8601 format: YYYY-MM-DDTHH:MM:SSZ"),
     query_handler: GetUserAtTimestampQueryHandler = Depends(InfraFactory.create_get_user_at_timestamp_query_handler)
 ):
-    return {"user": (await query_handler.handle(GetUserAtTimestampQuery(user_id=user_id, timestamp=timestamp))).dict()}
+    return await query_handler.handle(GetUserAtTimestampQuery(user_id=user_id, timestamp=timestamp)).model_dump()
 ```
 
 ## **FastAPI queries expose read models**
@@ -509,7 +508,7 @@ Finally, FastAPI queries expose read models with dependency injection. Here's ho
 
 ```python
 # User updates first name
-POST /users/123/ {"first_name": "John"}
+PUT /users/123/ {"first_name": "John"}
 # API returns success immediately
 # But read model might not be updated yet
 ```
