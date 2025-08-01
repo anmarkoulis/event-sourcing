@@ -226,7 +226,6 @@ Now, how do we actually change the system? Commands represent the intent to chan
 - **Read-only**: They never change system state
 - **Optimized**: Designed for specific read patterns
 - **Separate models**: Different from command models (CQRS)
-- **Fast**: Optimized for quick data retrieval
 
 ## **Queries are separate from commands** - different models for different purposes
 
@@ -250,7 +249,6 @@ On the other hand, queries represent the intent to read data from the system. Th
 - **Business rules**: Enforce domain-specific validation
 - **State management**: Maintain current state from events
 - **Event creation**: Generate new events based on commands
-- **Consistency**: Ensure business invariants are maintained
 
 ## **Aggregates apply business logic** and create events
 
