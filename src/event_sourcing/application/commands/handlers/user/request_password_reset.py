@@ -1,5 +1,6 @@
 import logging
 
+from event_sourcing.application.commands.handlers.base import CommandHandler
 from event_sourcing.application.commands.user import (
     RequestPasswordResetCommand,
 )
@@ -10,7 +11,9 @@ from event_sourcing.infrastructure.event_store import EventStore
 logger = logging.getLogger(__name__)
 
 
-class RequestPasswordResetCommandHandler:
+class RequestPasswordResetCommandHandler(
+    CommandHandler[RequestPasswordResetCommand]
+):
     """Handler for requesting password resets"""
 
     def __init__(self, event_store: EventStore, event_handler: EventHandler):
