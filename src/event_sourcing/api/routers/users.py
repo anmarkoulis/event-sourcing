@@ -1,7 +1,7 @@
 import logging
 import uuid
 from datetime import datetime
-from typing import Any, Dict, Optional
+from typing import Optional
 
 from fastapi import APIRouter, HTTPException, Query
 
@@ -21,11 +21,20 @@ from event_sourcing.application.queries.user import (
 )
 from event_sourcing.dto.user import (
     ChangePasswordRequest,
+    ChangePasswordResponse,
     ChangeUsernameRequest,
+    ChangeUsernameResponse,
     CompletePasswordResetRequest,
+    CompletePasswordResetResponse,
     CreateUserRequest,
+    CreateUserResponse,
+    DeleteUserResponse,
+    GetUserHistoryResponse,
+    GetUserResponse,
     RequestPasswordResetRequest,
+    RequestPasswordResetResponse,
     UpdateUserRequest,
+    UpdateUserResponse,
 )
 
 logger = logging.getLogger(__name__)
@@ -33,14 +42,13 @@ logger = logging.getLogger(__name__)
 users_router = APIRouter(prefix="/users", tags=["users"])
 
 
-# Request/Response models
-
-
-@users_router.post("/", description="Create a new user")
+@users_router.post(
+    "/", description="Create a new user", response_model=CreateUserResponse
+)
 async def create_user(
     user_data: CreateUserRequest,
     infrastructure_factory: InfrastructureFactoryDep = None,
-) -> Dict[str, Any]:
+) -> CreateUserResponse:
     """Create a new user"""
     try:
         # Generate user ID
@@ -67,11 +75,11 @@ async def create_user(
         # Process command
         await command_handler.handle(command)
 
-        return {
-            "status": "success",
-            "message": "User created successfully",
-            "user_id": str(user_id),
-        }
+        return CreateUserResponse(
+            status="success",
+            message="User created successfully",
+            user_id=str(user_id),
+        )
 
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
@@ -80,12 +88,16 @@ async def create_user(
         raise HTTPException(status_code=500, detail="Internal server error")
 
 
-@users_router.put("/{user_id}/", description="Update user information")
+@users_router.put(
+    "/{user_id}/",
+    description="Update user information",
+    response_model=UpdateUserResponse,
+)
 async def update_user(
     user_id: str,
     user_data: UpdateUserRequest,
     infrastructure_factory: InfrastructureFactoryDep = None,
-) -> Dict[str, Any]:
+) -> UpdateUserResponse:
     """Update user information"""
     try:
         # Create command
@@ -104,7 +116,9 @@ async def update_user(
         # Process command
         await command_handler.handle(command)
 
-        return {"status": "success", "message": "User updated successfully"}
+        return UpdateUserResponse(
+            status="success", message="User updated successfully"
+        )
 
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
@@ -113,12 +127,16 @@ async def update_user(
         raise HTTPException(status_code=500, detail="Internal server error")
 
 
-@users_router.put("/{user_id}/username/", description="Change user's username")
+@users_router.put(
+    "/{user_id}/username/",
+    description="Change user's username",
+    response_model=ChangeUsernameResponse,
+)
 async def change_username(
     user_id: str,
     username_data: ChangeUsernameRequest,
     infrastructure_factory: InfrastructureFactoryDep = None,
-) -> Dict[str, Any]:
+) -> ChangeUsernameResponse:
     """Change user's username"""
     try:
         # Create command
@@ -134,10 +152,10 @@ async def change_username(
         # Process command
         await command_handler.handle(command)
 
-        return {
-            "status": "success",
-            "message": "Username changed successfully",
-        }
+        return ChangeUsernameResponse(
+            status="success",
+            message="Username changed successfully",
+        )
 
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
@@ -146,12 +164,16 @@ async def change_username(
         raise HTTPException(status_code=500, detail="Internal server error")
 
 
-@users_router.put("/{user_id}/password/", description="Change user's password")
+@users_router.put(
+    "/{user_id}/password/",
+    description="Change user's password",
+    response_model=ChangePasswordResponse,
+)
 async def change_password(
     user_id: str,
     password_data: ChangePasswordRequest,
     infrastructure_factory: InfrastructureFactoryDep = None,
-) -> Dict[str, Any]:
+) -> ChangePasswordResponse:
     """Change user's password"""
     try:
         # In a real app, you would verify current password and hash new password
@@ -172,10 +194,10 @@ async def change_password(
         # Process command
         await command_handler.handle(command)
 
-        return {
-            "status": "success",
-            "message": "Password changed successfully",
-        }
+        return ChangePasswordResponse(
+            status="success",
+            message="Password changed successfully",
+        )
 
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
@@ -185,12 +207,14 @@ async def change_password(
 
 
 @users_router.post(
-    "/password-reset/request/", description="Request password reset"
+    "/password-reset/request/",
+    description="Request password reset",
+    response_model=RequestPasswordResetResponse,
 )
 async def request_password_reset(
     reset_data: RequestPasswordResetRequest,
     infrastructure_factory: InfrastructureFactoryDep = None,
-) -> Dict[str, Any]:
+) -> RequestPasswordResetResponse:
     """Request password reset"""
     try:
         # In a real app, you would find user by email first
@@ -206,7 +230,9 @@ async def request_password_reset(
         # Process command
         await command_handler.handle(command)
 
-        return {"status": "success", "message": "Password reset email sent"}
+        return RequestPasswordResetResponse(
+            status="success", message="Password reset email sent"
+        )
 
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
@@ -216,12 +242,14 @@ async def request_password_reset(
 
 
 @users_router.post(
-    "/password-reset/complete/", description="Complete password reset"
+    "/password-reset/complete/",
+    description="Complete password reset",
+    response_model=CompletePasswordResetResponse,
 )
 async def complete_password_reset(
     reset_data: CompletePasswordResetRequest,
     infrastructure_factory: InfrastructureFactoryDep = None,
-) -> Dict[str, Any]:
+) -> CompletePasswordResetResponse:
     """Complete password reset"""
     try:
         # In a real app, you would validate the reset token and find user
@@ -243,10 +271,10 @@ async def complete_password_reset(
         # Process command
         await command_handler.handle(command)
 
-        return {
-            "status": "success",
-            "message": "Password reset completed successfully",
-        }
+        return CompletePasswordResetResponse(
+            status="success",
+            message="Password reset completed successfully",
+        )
 
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
@@ -255,11 +283,13 @@ async def complete_password_reset(
         raise HTTPException(status_code=500, detail="Internal server error")
 
 
-@users_router.delete("/{user_id}/", description="Delete user")
+@users_router.delete(
+    "/{user_id}/", description="Delete user", response_model=DeleteUserResponse
+)
 async def delete_user(
     user_id: str,
     infrastructure_factory: InfrastructureFactoryDep = None,
-) -> Dict[str, Any]:
+) -> DeleteUserResponse:
     """Delete user"""
     try:
         # Create command
@@ -273,7 +303,9 @@ async def delete_user(
         # Process command
         await command_handler.handle(command)
 
-        return {"status": "success", "message": "User deleted successfully"}
+        return DeleteUserResponse(
+            status="success", message="User deleted successfully"
+        )
 
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
@@ -282,11 +314,13 @@ async def delete_user(
         raise HTTPException(status_code=500, detail="Internal server error")
 
 
-@users_router.get("/{user_id}/", description="Get user by ID")
+@users_router.get(
+    "/{user_id}/", description="Get user by ID", response_model=GetUserResponse
+)
 async def get_user(
     user_id: str,
     infrastructure_factory: InfrastructureFactoryDep = None,
-) -> Dict[str, Any]:
+) -> GetUserResponse:
     """Get user by ID"""
     try:
         # Create query
@@ -301,7 +335,7 @@ async def get_user(
         if not user:
             raise HTTPException(status_code=404, detail="User not found")
 
-        return {"status": "success", "user": user}
+        return GetUserResponse(status="success", user=user)
 
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
@@ -310,7 +344,11 @@ async def get_user(
         raise HTTPException(status_code=500, detail="Internal server error")
 
 
-@users_router.get("/{user_id}/history/", description="Get user event history")
+@users_router.get(
+    "/{user_id}/history/",
+    description="Get user event history",
+    response_model=GetUserHistoryResponse,
+)
 async def get_user_history(
     user_id: str,
     from_date: Optional[str] = Query(
@@ -318,7 +356,7 @@ async def get_user_history(
     ),
     to_date: Optional[str] = Query(None, description="End date (ISO format)"),
     infrastructure_factory: InfrastructureFactoryDep = None,
-) -> Dict[str, Any]:
+) -> GetUserHistoryResponse:
     """Get event history for a specific user"""
     try:
         # Parse dates if provided
@@ -350,12 +388,12 @@ async def get_user_history(
         # Execute query
         events = await query_handler.handle(query)
 
-        return {
-            "status": "success",
-            "user_id": user_id,
-            "count": len(events),
-            "events": events,
-        }
+        return GetUserHistoryResponse(
+            status="success",
+            user_id=user_id,
+            count=len(events),
+            events=events,
+        )
 
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
