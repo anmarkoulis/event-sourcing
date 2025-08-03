@@ -1,5 +1,5 @@
 from datetime import datetime
-from typing import Optional
+from typing import Any, Dict, List, Optional
 from uuid import UUID
 
 from pydantic import BaseModel, EmailStr, Field
@@ -29,14 +29,30 @@ class CreateUserRequest(BaseModel):
     password: str  # Will be hashed before storing
 
 
+class CreateUserResponse(BaseModel):
+    status: str = Field(..., description="Operation status")
+    message: str = Field(..., description="Success message")
+    user_id: str = Field(..., description="Created user ID")
+
+
 class UpdateUserRequest(BaseModel):
     first_name: Optional[str] = None
     last_name: Optional[str] = None
     email: Optional[EmailStr] = None
 
 
+class UpdateUserResponse(BaseModel):
+    status: str = Field(..., description="Operation status")
+    message: str = Field(..., description="Success message")
+
+
 class ChangeUsernameRequest(BaseModel):
     new_username: str
+
+
+class ChangeUsernameResponse(BaseModel):
+    status: str = Field(..., description="Operation status")
+    message: str = Field(..., description="Success message")
 
 
 class ChangePasswordRequest(BaseModel):
@@ -44,13 +60,45 @@ class ChangePasswordRequest(BaseModel):
     new_password: str
 
 
+class ChangePasswordResponse(BaseModel):
+    status: str = Field(..., description="Operation status")
+    message: str = Field(..., description="Success message")
+
+
 class RequestPasswordResetRequest(BaseModel):
     email: EmailStr
+
+
+class RequestPasswordResetResponse(BaseModel):
+    status: str = Field(..., description="Operation status")
+    message: str = Field(..., description="Success message")
 
 
 class CompletePasswordResetRequest(BaseModel):
     new_password: str
     reset_token: str
+
+
+class CompletePasswordResetResponse(BaseModel):
+    status: str = Field(..., description="Operation status")
+    message: str = Field(..., description="Success message")
+
+
+class DeleteUserResponse(BaseModel):
+    status: str = Field(..., description="Operation status")
+    message: str = Field(..., description="Success message")
+
+
+class GetUserResponse(BaseModel):
+    status: str = Field(..., description="Operation status")
+    user: UserDTO = Field(..., description="User data")
+
+
+class GetUserHistoryResponse(BaseModel):
+    status: str = Field(..., description="Operation status")
+    user_id: str = Field(..., description="User ID")
+    count: int = Field(..., description="Number of events")
+    events: List[Dict[str, Any]] = Field(..., description="Event history")
 
 
 # Read Model DTOs
