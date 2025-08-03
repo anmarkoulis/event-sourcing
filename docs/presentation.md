@@ -423,23 +423,15 @@ Once events are created, the Event Handler dispatches them to message queues. He
 @app.task(name="process_user_created_task")
 def process_user_created_task(event: Dict[str, Any]) -> None:
     """Celery task for processing USER_CREATED events"""
-    try:
-        event_dto = EventDTO(**event)
+    # Get infrastructure factory
+    factory = get_infrastructure_factory()
 
-        # Get infrastructure factory
-        factory = get_infrastructure_factory()
+    # Get projection
+    projection = factory.create_user_created_projection()
 
-        # Get projection
-        projection = factory.create_user_created_projection()
-
-        # Process the event using async_to_sync
-        async_to_sync(projection.handle)(event_dto)
-
-        logger.info(f"Successfully processed USER_CREATED event for user {event_dto.aggregate_id}")
-
-    except Exception as e:
-        logger.error(f"Error processing USER_CREATED event: {e}")
-        raise
+    # Process the event using async_to_sync
+    async_to_sync(projection.handle)(EventDTO(**event))
+    logger.info(f"Successfully processed USER_CREATED event for user {EventDTO(**event).aggregate_id}")
 ```
 
 ## **Celery tasks use async_to_sync to bridge async projections with sync Celery**

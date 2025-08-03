@@ -2,7 +2,9 @@ import logging
 
 from event_sourcing.application.projections.base import Projection
 from event_sourcing.dto.event import EventDTO
+from event_sourcing.dto.user import UserReadModelData
 from event_sourcing.infrastructure.read_model import PostgreSQLReadModel
+from event_sourcing.infrastructure.unit_of_work import BaseUnitOfWork
 
 logger = logging.getLogger(__name__)
 
@@ -10,31 +12,36 @@ logger = logging.getLogger(__name__)
 class UserCreatedProjection(Projection):
     """Projection for handling USER_CREATED events"""
 
-    def __init__(self, read_model: PostgreSQLReadModel):
+    def __init__(
+        self, read_model: PostgreSQLReadModel, unit_of_work: BaseUnitOfWork
+    ):
         self.read_model = read_model
+        self.unit_of_work = unit_of_work
 
     async def handle(self, event: EventDTO) -> None:
         """Handle USER_CREATED event"""
         try:
-            # Extract user data from event
-            user_data = {
-                "aggregate_id": str(event.aggregate_id),
-                "username": event.data.get("username"),
-                "email": event.data.get("email"),
-                "first_name": event.data.get("first_name"),
-                "last_name": event.data.get("last_name"),
-                "password_hash": event.data.get("password_hash"),
-                "status": event.data.get("status"),
-                "created_at": event.timestamp,
-                "updated_at": event.timestamp,
-            }
-
-            # Save to read model
-            await self.read_model.save_user(user_data)
-
-            logger.info(
-                f"Created user read model for: {user_data['username']}"
+            # Extract user data from event and create Pydantic model
+            user_data = UserReadModelData(
+                aggregate_id=str(event.aggregate_id),
+                username=event.data.get("username"),
+                email=event.data.get("email"),
+                first_name=event.data.get("first_name"),
+                last_name=event.data.get("last_name"),
+                password_hash=event.data.get("password_hash"),
+                status=event.data.get("status"),
+                created_at=event.timestamp,
+                updated_at=event.timestamp,
             )
+
+            # Use Unit of Work for atomic operations
+            async with self.unit_of_work as uow:
+                # Create read model with session from UoW
+                read_model = PostgreSQLReadModel(uow.db)
+                # Save to read model
+                await read_model.save_user(user_data)
+
+            logger.info(f"Created user read model for: {user_data.username}")
 
         except Exception as e:
             logger.error(f"Error in UserCreatedProjection: {e}")
