@@ -10,9 +10,9 @@ from sqlalchemy.ext.asyncio import (
     create_async_engine,
 )
 
-from event_sourcing.api.depends import get_db
 from event_sourcing.config.settings import settings
-from event_sourcing.db.models.base import Base
+from event_sourcing.infrastructure.database.models.base import Base
+from event_sourcing.infrastructure.database.session import get_db
 from event_sourcing.main import app
 
 

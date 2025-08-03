@@ -4,7 +4,6 @@ from datetime import datetime
 from typing import Any, Dict, Optional
 
 from fastapi import APIRouter, HTTPException, Query
-from pydantic import BaseModel, EmailStr
 
 from event_sourcing.api.depends import InfrastructureFactoryDep
 from event_sourcing.application.commands.user import (
@@ -20,6 +19,14 @@ from event_sourcing.application.queries.user import (
     GetUserHistoryQuery,
     GetUserQuery,
 )
+from event_sourcing.dto.user import (
+    ChangePasswordRequest,
+    ChangeUsernameRequest,
+    CompletePasswordResetRequest,
+    CreateUserRequest,
+    RequestPasswordResetRequest,
+    UpdateUserRequest,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -27,36 +34,6 @@ users_router = APIRouter(prefix="/users", tags=["users"])
 
 
 # Request/Response models
-class CreateUserRequest(BaseModel):
-    username: str
-    email: EmailStr
-    first_name: str
-    last_name: str
-    password: str  # Will be hashed before storing
-
-
-class UpdateUserRequest(BaseModel):
-    first_name: Optional[str] = None
-    last_name: Optional[str] = None
-    email: Optional[EmailStr] = None
-
-
-class ChangeUsernameRequest(BaseModel):
-    new_username: str
-
-
-class ChangePasswordRequest(BaseModel):
-    current_password: str
-    new_password: str
-
-
-class RequestPasswordResetRequest(BaseModel):
-    email: EmailStr
-
-
-class CompletePasswordResetRequest(BaseModel):
-    new_password: str
-    reset_token: str
 
 
 @users_router.post("/", description="Create a new user")
@@ -69,8 +46,8 @@ async def create_user(
         # Generate user ID
         user_id = uuid.uuid4()
 
-        # In a real app, you would hash the password here
-        password_hash = f"hashed_{user_data.password}"  # Placeholder
+        # Hash password (in real app, use proper hashing)
+        password_hash = f"hashed_{user_data.password}"
 
         # Create command
         command = CreateUserCommand(
@@ -82,7 +59,7 @@ async def create_user(
             password_hash=password_hash,
         )
 
-        # Get command handler
+        # Get fully built command handler from factory
         command_handler = (
             infrastructure_factory.create_create_user_command_handler()
         )
@@ -103,7 +80,7 @@ async def create_user(
         raise HTTPException(status_code=500, detail="Internal server error")
 
 
-@users_router.put("/{user_id}", description="Update user information")
+@users_router.put("/{user_id}/", description="Update user information")
 async def update_user(
     user_id: str,
     user_data: UpdateUserRequest,
@@ -136,7 +113,7 @@ async def update_user(
         raise HTTPException(status_code=500, detail="Internal server error")
 
 
-@users_router.put("/{user_id}/username", description="Change user's username")
+@users_router.put("/{user_id}/username/", description="Change user's username")
 async def change_username(
     user_id: str,
     username_data: ChangeUsernameRequest,
@@ -169,7 +146,7 @@ async def change_username(
         raise HTTPException(status_code=500, detail="Internal server error")
 
 
-@users_router.put("/{user_id}/password", description="Change user's password")
+@users_router.put("/{user_id}/password/", description="Change user's password")
 async def change_password(
     user_id: str,
     password_data: ChangePasswordRequest,
@@ -208,7 +185,7 @@ async def change_password(
 
 
 @users_router.post(
-    "/password-reset/request", description="Request password reset"
+    "/password-reset/request/", description="Request password reset"
 )
 async def request_password_reset(
     reset_data: RequestPasswordResetRequest,
@@ -239,7 +216,7 @@ async def request_password_reset(
 
 
 @users_router.post(
-    "/password-reset/complete", description="Complete password reset"
+    "/password-reset/complete/", description="Complete password reset"
 )
 async def complete_password_reset(
     reset_data: CompletePasswordResetRequest,
@@ -278,7 +255,7 @@ async def complete_password_reset(
         raise HTTPException(status_code=500, detail="Internal server error")
 
 
-@users_router.delete("/{user_id}", description="Delete user")
+@users_router.delete("/{user_id}/", description="Delete user")
 async def delete_user(
     user_id: str,
     infrastructure_factory: InfrastructureFactoryDep = None,
@@ -305,7 +282,7 @@ async def delete_user(
         raise HTTPException(status_code=500, detail="Internal server error")
 
 
-@users_router.get("/{user_id}", description="Get user by ID")
+@users_router.get("/{user_id}/", description="Get user by ID")
 async def get_user(
     user_id: str,
     infrastructure_factory: InfrastructureFactoryDep = None,
@@ -333,7 +310,7 @@ async def get_user(
         raise HTTPException(status_code=500, detail="Internal server error")
 
 
-@users_router.get("/{user_id}/history", description="Get user event history")
+@users_router.get("/{user_id}/history/", description="Get user event history")
 async def get_user_history(
     user_id: str,
     from_date: Optional[str] = Query(
