@@ -1,15 +1,20 @@
-from .client_projection import ClientProjection
-from .projection_manager import ProjectionManager
-from .projection_manager_interface import (
-    GenericProjectionManager,
-    MockProjectionManager,
-    ProjectionManagerInterface,
+# User projections
+from .user import (
+    PasswordChangedProjection,
+    PasswordResetCompletedProjection,
+    PasswordResetRequestedProjection,
+    UserCreatedProjection,
+    UserDeletedProjection,
+    UsernameChangedProjection,
+    UserUpdatedProjection,
 )
 
 __all__ = [
-    "ClientProjection",
-    "ProjectionManager",
-    "ProjectionManagerInterface",
-    "GenericProjectionManager",
-    "MockProjectionManager",
+    "UserCreatedProjection",
+    "UserUpdatedProjection",
+    "UserDeletedProjection",
+    "UsernameChangedProjection",
+    "PasswordChangedProjection",
+    "PasswordResetRequestedProjection",
+    "PasswordResetCompletedProjection",
 ]

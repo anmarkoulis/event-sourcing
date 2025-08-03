@@ -1,13 +1,8 @@
 """Event handling module for the application layer"""
 
-from .event_handler import (
-    CeleryEventHandler,
-    EventHandlerInterface,
-    MockEventHandler,
-)
+from .handlers import CeleryEventHandler, EventHandler
 
 __all__ = [
-    "EventHandlerInterface",
+    "EventHandler",
     "CeleryEventHandler",
-    "MockEventHandler",
 ]

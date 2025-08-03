@@ -1,16 +1,12 @@
 from fastapi import APIRouter
 from fastapi.responses import RedirectResponse
 
-from .backfill import backfill_router
-from .clients import clients_router
-from .events import events_router
+from .users import users_router
 
 api_router = APIRouter()
 
 # Include sub-routers
-api_router.include_router(events_router)
-api_router.include_router(clients_router)
-api_router.include_router(backfill_router)
+api_router.include_router(users_router)
 
 
 @api_router.get("/ht/", description="Health check", tags=["health"])

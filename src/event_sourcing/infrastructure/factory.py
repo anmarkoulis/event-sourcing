@@ -4,10 +4,6 @@ from typing import Any, Dict, Optional
 from event_sourcing.infrastructure.database.session import DatabaseManager
 from event_sourcing.infrastructure.event_store import PostgreSQLEventStore
 from event_sourcing.infrastructure.messaging import EventBridgePublisher
-from event_sourcing.infrastructure.providers.base import CRMProviderFactory
-from event_sourcing.infrastructure.providers.salesforce import (
-    SalesforceProvider,
-)
 from event_sourcing.infrastructure.read_model import PostgreSQLReadModel
 
 logger = logging.getLogger(__name__)
@@ -25,9 +21,6 @@ class InfrastructureFactory:
         self._event_store: Optional[PostgreSQLEventStore] = None
         self._read_model: Optional[PostgreSQLReadModel] = None
         self._event_publisher: Optional[EventBridgePublisher] = None
-        self._projection_manager: Optional[Any] = None
-        self._salesforce_client: Optional[Any] = None
-        self._provider_factory: Optional[CRMProviderFactory] = None
         self._event_handler: Optional[Any] = None
 
     @property
@@ -47,40 +40,12 @@ class InfrastructureFactory:
         return self._read_model
 
     @property
-    def salesforce_client(self) -> Optional[Any]:
-        """Get Salesforce client (returns None if not configured)"""
-        # In a real implementation, this would create and configure a Salesforce client
-        # For now, return None to indicate it's not available
-        return self._salesforce_client
-
-    @property
-    def provider_factory(self) -> CRMProviderFactory:
-        """Get or create provider factory"""
-        if self._provider_factory is None:
-            logger.info("Creating provider factory")
-            self._provider_factory = CRMProviderFactory()
-
-            # Register available providers
-            self._provider_factory.register_provider(
-                "salesforce", SalesforceProvider
-            )
-
-            # Set up Salesforce provider with client
-            if self.salesforce_client:
-                salesforce_provider = self._provider_factory.create_provider(
-                    "salesforce", {}
-                )
-                salesforce_provider.set_client(self.salesforce_client)
-
-        return self._provider_factory
-
-    @property
     def event_handler(self) -> Any:
         """Get or create event handler"""
         if self._event_handler is None:
             logger.info("Creating event handler")
             # Dynamic import to avoid circular dependency
-            from event_sourcing.application.events.event_handler import (
+            from event_sourcing.application.events.handlers import (
                 CeleryEventHandler,
             )
 
@@ -93,61 +58,30 @@ class InfrastructureFactory:
     def _create_task_registry(self) -> Dict[str, Any]:
         """Create registry of available Celery tasks"""
         try:
-            # Dynamic import to avoid circular dependency
-            from event_sourcing.application.tasks.process_crm_event import (
-                process_crm_event_task,
-            )
-            from event_sourcing.application.tasks.process_projection import (
-                process_projection_task,
-            )
-            from event_sourcing.application.tasks.publish_snapshot import (
-                publish_snapshot_task,
-            )
-
+            # Return task names as strings instead of function objects
             return {
-                "process_crm_event": process_crm_event_task,
-                "process_projection": process_projection_task,
-                "publish_snapshot": publish_snapshot_task,
+                "USER_CREATED": ["process_user_created_task"],
+                "USER_UPDATED": ["process_user_updated_task"],
+                "USER_DELETED": ["process_user_deleted_task"],
+                "USERNAME_CHANGED": ["process_username_changed_task"],
+                "PASSWORD_CHANGED": ["process_password_changed_task"],
+                "PASSWORD_RESET_REQUESTED": [
+                    "process_password_reset_requested_task"
+                ],
+                "PASSWORD_RESET_COMPLETED": [
+                    "process_password_reset_completed_task"
+                ],
             }
         except ImportError as e:
-            logger.warning(f"Could not import Celery tasks: {e}")
+            logger.warning(f"Could not import user tasks: {e}")
             return {}
 
     @property
-    def projection_manager(self) -> Any:
-        """Get or create projection manager"""
-        if self._projection_manager is None:
-            logger.info("Creating projection manager")
-            # Dynamic import to avoid circular dependency
-            from event_sourcing.application.projections.projection_manager_interface import (
-                GenericProjectionManager,
-            )
-
-            # Create generic projection manager with event handler
-            projection_manager = GenericProjectionManager(self.event_handler)
-
-            # Register projection handlers for different event types
-            projection_manager.register_projection_handler(
-                "client.CLIENT_CREATED", "process_client_created_projection"
-            )
-            projection_manager.register_projection_handler(
-                "client.CLIENT_UPDATED", "process_client_updated_projection"
-            )
-            projection_manager.register_projection_handler(
-                "client.CLIENT_DELETED", "process_client_deleted_projection"
-            )
-
-            self._projection_manager = projection_manager
-        return self._projection_manager
-
-    @property
     def event_store(self) -> PostgreSQLEventStore:
-        """Get or create event store with projection manager"""
+        """Get or create event store"""
         if self._event_store is None:
-            logger.info("Creating event store with projection manager")
-            self._event_store = PostgreSQLEventStore(
-                self.database_manager, self.projection_manager
-            )
+            logger.info("Creating event store")
+            self._event_store = PostgreSQLEventStore(self.database_manager)
         return self._event_store
 
     @property
@@ -160,20 +94,197 @@ class InfrastructureFactory:
             )
         return self._event_publisher
 
-    # Command Handler Factory Methods
-    def create_process_crm_event_command_handler(self) -> Any:
-        """Create ProcessCRMEventCommandHandler with all dependencies"""
-        logger.info("Creating ProcessCRMEventCommandHandler")
+    # User Command Handler Factory Methods
+    def create_create_user_command_handler(self) -> Any:
+        """Create CreateUserCommandHandler with all dependencies"""
+        logger.info("Creating CreateUserCommandHandler")
         # Dynamic import to avoid circular dependency
-        from event_sourcing.application.commands.handlers.process_crm_event import (
-            ProcessCRMEventCommandHandler,
+        from event_sourcing.application.commands.handlers.user import (
+            CreateUserCommandHandler,
         )
 
-        return ProcessCRMEventCommandHandler(
+        return CreateUserCommandHandler(
             event_store=self.event_store,
-            provider_factory=self.provider_factory,
-            provider_config={},  # Empty config for now
+            event_handler=self.event_handler,
         )
+
+    def create_update_user_command_handler(self) -> Any:
+        """Create UpdateUserCommandHandler with all dependencies"""
+        logger.info("Creating UpdateUserCommandHandler")
+        # Dynamic import to avoid circular dependency
+        from event_sourcing.application.commands.handlers.user import (
+            UpdateUserCommandHandler,
+        )
+
+        return UpdateUserCommandHandler(
+            event_store=self.event_store,
+            event_handler=self.event_handler,
+        )
+
+    def create_change_username_command_handler(self) -> Any:
+        """Create ChangeUsernameCommandHandler with all dependencies"""
+        logger.info("Creating ChangeUsernameCommandHandler")
+        # Dynamic import to avoid circular dependency
+        from event_sourcing.application.commands.handlers.user import (
+            ChangeUsernameCommandHandler,
+        )
+
+        return ChangeUsernameCommandHandler(
+            event_store=self.event_store,
+            event_handler=self.event_handler,
+        )
+
+    def create_change_password_command_handler(self) -> Any:
+        """Create ChangePasswordCommandHandler with all dependencies"""
+        logger.info("Creating ChangePasswordCommandHandler")
+        # Dynamic import to avoid circular dependency
+        from event_sourcing.application.commands.handlers.user import (
+            ChangePasswordCommandHandler,
+        )
+
+        return ChangePasswordCommandHandler(
+            event_store=self.event_store,
+            event_handler=self.event_handler,
+        )
+
+    def create_request_password_reset_command_handler(self) -> Any:
+        """Create RequestPasswordResetCommandHandler with all dependencies"""
+        logger.info("Creating RequestPasswordResetCommandHandler")
+        # Dynamic import to avoid circular dependency
+        from event_sourcing.application.commands.handlers.user import (
+            RequestPasswordResetCommandHandler,
+        )
+
+        return RequestPasswordResetCommandHandler(
+            event_store=self.event_store,
+            event_handler=self.event_handler,
+        )
+
+    def create_complete_password_reset_command_handler(self) -> Any:
+        """Create CompletePasswordResetCommandHandler with all dependencies"""
+        logger.info("Creating CompletePasswordResetCommandHandler")
+        # Dynamic import to avoid circular dependency
+        from event_sourcing.application.commands.handlers.user import (
+            CompletePasswordResetCommandHandler,
+        )
+
+        return CompletePasswordResetCommandHandler(
+            event_store=self.event_store,
+            event_handler=self.event_handler,
+        )
+
+    def create_delete_user_command_handler(self) -> Any:
+        """Create DeleteUserCommandHandler with all dependencies"""
+        logger.info("Creating DeleteUserCommandHandler")
+        # Dynamic import to avoid circular dependency
+        from event_sourcing.application.commands.handlers.user import (
+            DeleteUserCommandHandler,
+        )
+
+        return DeleteUserCommandHandler(
+            event_store=self.event_store,
+            event_handler=self.event_handler,
+        )
+
+    # User Projection Factory Methods
+    def create_user_created_projection(self) -> Any:
+        """Create UserCreatedProjection with read model dependency"""
+        logger.info("Creating UserCreatedProjection")
+        # Dynamic import to avoid circular dependency
+        from event_sourcing.application.projections.user import (
+            UserCreatedProjection,
+        )
+
+        return UserCreatedProjection(read_model=self.read_model)
+
+    def create_user_updated_projection(self) -> Any:
+        """Create UserUpdatedProjection with read model dependency"""
+        logger.info("Creating UserUpdatedProjection")
+        # Dynamic import to avoid circular dependency
+        from event_sourcing.application.projections.user import (
+            UserUpdatedProjection,
+        )
+
+        return UserUpdatedProjection(read_model=self.read_model)
+
+    def create_user_deleted_projection(self) -> Any:
+        """Create UserDeletedProjection with read model dependency"""
+        logger.info("Creating UserDeletedProjection")
+        # Dynamic import to avoid circular dependency
+        from event_sourcing.application.projections.user import (
+            UserDeletedProjection,
+        )
+
+        return UserDeletedProjection(read_model=self.read_model)
+
+    def create_username_changed_projection(self) -> Any:
+        """Create UsernameChangedProjection with read model dependency"""
+        logger.info("Creating UsernameChangedProjection")
+        # Dynamic import to avoid circular dependency
+        from event_sourcing.application.projections.user import (
+            UsernameChangedProjection,
+        )
+
+        return UsernameChangedProjection(read_model=self.read_model)
+
+    def create_password_changed_projection(self) -> Any:
+        """Create PasswordChangedProjection with read model dependency"""
+        logger.info("Creating PasswordChangedProjection")
+        # Dynamic import to avoid circular dependency
+        from event_sourcing.application.projections.user import (
+            PasswordChangedProjection,
+        )
+
+        return PasswordChangedProjection(read_model=self.read_model)
+
+    def create_password_reset_requested_projection(self) -> Any:
+        """Create PasswordResetRequestedProjection with read model dependency"""
+        logger.info("Creating PasswordResetRequestedProjection")
+        # Dynamic import to avoid circular dependency
+        from event_sourcing.application.projections.user import (
+            PasswordResetRequestedProjection,
+        )
+
+        return PasswordResetRequestedProjection(read_model=self.read_model)
+
+    def create_password_reset_completed_projection(self) -> Any:
+        """Create PasswordResetCompletedProjection with read model dependency"""
+        logger.info("Creating PasswordResetCompletedProjection")
+        # Dynamic import to avoid circular dependency
+        from event_sourcing.application.projections.user import (
+            PasswordResetCompletedProjection,
+        )
+
+        return PasswordResetCompletedProjection(read_model=self.read_model)
+
+    # User Query Handler Factory Methods
+    def create_get_user_query_handler(self) -> Any:
+        """Create GetUserQueryHandler with read model dependency"""
+        logger.info("Creating GetUserQueryHandler")
+        # Dynamic import to avoid circular dependency
+        from event_sourcing.application.queries.handlers.user import (
+            GetUserQueryHandler,
+        )
+
+        return GetUserQueryHandler(read_model=self.read_model)
+
+    def create_get_user_history_query_handler(self) -> Any:
+        """Create GetUserHistoryQueryHandler with event store dependency"""
+        logger.info("Creating GetUserHistoryQueryHandler")
+        # Dynamic import to avoid circular dependency
+        from event_sourcing.application.queries.handlers.user import (
+            GetUserHistoryQueryHandler,
+        )
+
+        return GetUserHistoryQueryHandler(event_store=self.event_store)
+
+    # Legacy methods for backward compatibility
+    def create_process_crm_event_command_handler(self) -> Any:
+        """Legacy method - now redirects to user handlers"""
+        logger.warning(
+            "ProcessCRMEventCommandHandler is deprecated, use user handlers instead"
+        )
+        return self.create_create_user_command_handler()
 
     def create_backfill_entity_type_command_handler(self) -> Any:
         """Create BackfillEntityTypeCommandHandler (no dependencies needed)"""
@@ -195,36 +306,27 @@ class InfrastructureFactory:
 
         return BackfillSpecificEntityCommandHandler()
 
-    # Query Handler Factory Methods
+    # Query Handler Factory Methods (legacy - will be updated for users)
     def create_get_client_query_handler(self) -> Any:
-        """Create GetClientQueryHandler with read model dependency"""
-        logger.info("Creating GetClientQueryHandler")
-        # Dynamic import to avoid circular dependency
-        from event_sourcing.application.queries.handlers.get_client import (
-            GetClientQueryHandler,
+        """Legacy method - placeholder for user queries"""
+        logger.warning(
+            "GetClientQueryHandler is deprecated, use user queries instead"
         )
-
-        return GetClientQueryHandler(read_model=self.read_model)
+        return None
 
     def create_search_clients_query_handler(self) -> Any:
-        """Create SearchClientsQueryHandler with read model dependency"""
-        logger.info("Creating SearchClientsQueryHandler")
-        # Dynamic import to avoid circular dependency
-        from event_sourcing.application.queries.handlers.search_clients import (
-            SearchClientsQueryHandler,
+        """Legacy method - placeholder for user queries"""
+        logger.warning(
+            "SearchClientsQueryHandler is deprecated, use user queries instead"
         )
-
-        return SearchClientsQueryHandler(read_model=self.read_model)
+        return None
 
     def create_get_client_history_query_handler(self) -> Any:
-        """Create GetClientHistoryQueryHandler with event store dependency"""
-        logger.info("Creating GetClientHistoryQueryHandler")
-        # Dynamic import to avoid circular dependency
-        from event_sourcing.application.queries.handlers.get_client_history import (
-            GetClientHistoryQueryHandler,
+        """Legacy method - placeholder for user queries"""
+        logger.warning(
+            "GetClientHistoryQueryHandler is deprecated, use user queries instead"
         )
-
-        return GetClientHistoryQueryHandler(event_store=self.event_store)
+        return None
 
     def create_get_backfill_status_query_handler(self) -> Any:
         """Create GetBackfillStatusQueryHandler with read model dependency"""
@@ -247,7 +349,6 @@ class InfrastructureFactory:
         self._event_store = None
         self._read_model = None
         self._event_publisher = None
-        self._projection_manager = None
         self._event_handler = None
 
         logger.info("Infrastructure components closed")
