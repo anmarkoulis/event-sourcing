@@ -24,3 +24,9 @@ class EventType(str, Enum):
     PASSWORD_RESET_COMPLETED = (
         "PASSWORD_RESET_COMPLETED"  # pragma: allowlist secret # noqa: S105
     )
+
+
+class AggregateTypeEnum(str, Enum):
+    """Enum for aggregate types"""
+
+    USER = "User"
