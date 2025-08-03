@@ -1,6 +1,7 @@
 import logging
 from typing import Optional
 
+from event_sourcing.application.queries.handlers.base import QueryHandler
 from event_sourcing.application.queries.user import GetUserQuery
 from event_sourcing.dto.user import UserDTO
 from event_sourcing.infrastructure.read_model import PostgreSQLReadModel
@@ -8,7 +9,7 @@ from event_sourcing.infrastructure.read_model import PostgreSQLReadModel
 logger = logging.getLogger(__name__)
 
 
-class GetUserQueryHandler:
+class GetUserQueryHandler(QueryHandler[GetUserQuery, UserDTO]):
     """Handler for getting user by ID"""
 
     def __init__(self, read_model: PostgreSQLReadModel):

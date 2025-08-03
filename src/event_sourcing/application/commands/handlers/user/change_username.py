@@ -1,5 +1,6 @@
 import logging
 
+from event_sourcing.application.commands.handlers.base import CommandHandler
 from event_sourcing.application.commands.user import ChangeUsernameCommand
 from event_sourcing.application.events.handlers.base import EventHandler
 from event_sourcing.domain.aggregates.user import UserAggregate
@@ -8,7 +9,7 @@ from event_sourcing.infrastructure.event_store import EventStore
 logger = logging.getLogger(__name__)
 
 
-class ChangeUsernameCommandHandler:
+class ChangeUsernameCommandHandler(CommandHandler[ChangeUsernameCommand]):
     """Handler for changing usernames"""
 
     def __init__(self, event_store: EventStore, event_handler: EventHandler):
