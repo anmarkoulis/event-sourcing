@@ -4,26 +4,23 @@ from enum import Enum
 class EventSourceEnum(str, Enum):
     """Enum for event sources"""
 
-    SALESFORCE = "SALESFORCE"
+    API = "API"
 
 
 class EventType(str, Enum):
     """Enum for event types (ALL_CAPS for DB consistency)"""
 
     # Domain Events
-    CLIENT_CREATED = "CLIENT_CREATED"
-    CLIENT_UPDATED = "CLIENT_UPDATED"
-    CLIENT_DELETED = "CLIENT_DELETED"
-
-    # Projection Events
-    PROJECTION_CREATED = "PROJECTION_CREATED"
-    PROJECTION_UPDATED = "PROJECTION_UPDATED"
-
-    # Snapshot Events
-    SNAPSHOT_CREATED = "SNAPSHOT_CREATED"
-    SNAPSHOT_UPDATED = "SNAPSHOT_UPDATED"
-    SNAPSHOT_DELETED = "SNAPSHOT_DELETED"
-
-    # System Events
-    SYSTEM_ERROR = "SYSTEM_ERROR"
-    SYSTEM_WARNING = "SYSTEM_WARNING"
+    USER_CREATED = "USER_CREATED"
+    USER_UPDATED = "USER_UPDATED"
+    USER_DELETED = "USER_DELETED"
+    USERNAME_CHANGED = "USERNAME_CHANGED"
+    PASSWORD_CHANGED = (
+        "PASSWORD_CHANGED"  # pragma: allowlist secret # noqa: S105
+    )
+    PASSWORD_RESET_REQUESTED = (
+        "PASSWORD_RESET_REQUESTED"  # pragma: allowlist secret # noqa: S105
+    )
+    PASSWORD_RESET_COMPLETED = (
+        "PASSWORD_RESET_COMPLETED"  # pragma: allowlist secret # noqa: S105
+    )

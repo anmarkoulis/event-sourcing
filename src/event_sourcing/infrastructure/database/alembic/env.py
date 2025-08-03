@@ -11,6 +11,13 @@ from sqlalchemy.schema import SchemaItem
 from event_sourcing.config.settings import settings
 from event_sourcing.infrastructure.database.base import Base  # noqa
 
+# Import all models so Alembic can detect them
+from event_sourcing.infrastructure.database.models import (  # noqa
+    EventStream,
+    User,
+    UserEventStream,
+)
+
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.
 config = context.config

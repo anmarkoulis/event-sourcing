@@ -15,17 +15,9 @@ class EventDTO(ModelConfigBaseModel):
     event_id: uuid.UUID = Field(
         default_factory=uuid.uuid4, description="Event ID - required UUID"
     )
-    aggregate_id: Optional[uuid.UUID] = Field(
-        None,
-        description="Internal aggregate ID - UUID (can be None during creation)",
-    )
-    external_id: str = Field(
+    aggregate_id: uuid.UUID = Field(
         ...,
-        min_length=1,
-        description="External system ID (e.g., Salesforce record ID)",
-    )
-    aggregate_type: str = Field(
-        ..., min_length=1, description="Aggregate type cannot be empty"
+        description="Internal aggregate ID - UUID",
     )
     event_type: EventType = Field(
         ..., description="Event type using EventType enum"
@@ -42,7 +34,7 @@ class EventDTO(ModelConfigBaseModel):
     )
     processed_at: Optional[datetime] = None
 
-    @field_validator("external_id", "aggregate_type", "version")
+    @field_validator("version")
     @classmethod
     def validate_non_empty_strings(cls, v: str) -> str:
         """Validate that string fields are not empty"""

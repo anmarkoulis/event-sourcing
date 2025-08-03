@@ -1,10 +1,19 @@
-# Application tasks package
-from .process_crm_event import process_crm_event_task
-from .process_projection import process_projection_task
-from .publish_snapshot import publish_snapshot_task
+from .user import (
+    process_password_changed_task,
+    process_password_reset_completed_task,
+    process_password_reset_requested_task,
+    process_user_created_task,
+    process_user_deleted_task,
+    process_user_updated_task,
+    process_username_changed_task,
+)
 
 __all__ = [
-    "process_crm_event_task",
-    "process_projection_task",
-    "publish_snapshot_task",
+    "process_password_changed_task",
+    "process_password_reset_completed_task",
+    "process_password_reset_requested_task",
+    "process_user_created_task",
+    "process_user_deleted_task",
+    "process_user_updated_task",
+    "process_username_changed_task",
 ]

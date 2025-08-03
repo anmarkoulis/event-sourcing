@@ -422,22 +422,30 @@ Once events are created, the Event Handler dispatches them to message queues. He
 ```python
 @app.task(name="process_user_created_task")
 def process_user_created_task(event: Dict[str, Any]) -> None:
-    # Convert async function to sync for Celery
-    process_user_created_async_sync = async_to_sync(process_user_created_async)
+    """Celery task for processing USER_CREATED events"""
+    try:
+        event_dto = EventDTO(**event)
 
-    # Execute the async projection
-    process_user_created_async_sync(event=event)
+        # Get infrastructure factory
+        factory = get_infrastructure_factory()
 
-async def process_user_created_async(event: EventDTO) -> None:
-    # Get projection and call it
-    projection = InfraFactory.get_user_created_projection()
-    await projection.handle(event)
+        # Get projection
+        projection = factory.create_user_created_projection()
+
+        # Process the event using async_to_sync
+        async_to_sync(projection.handle)(event_dto)
+
+        logger.info(f"Successfully processed USER_CREATED event for user {event_dto.aggregate_id}")
+
+    except Exception as e:
+        logger.error(f"Error processing USER_CREATED event: {e}")
+        raise
 ```
 
-## **Celery tasks are wrappers that call the appropriate projection handlers**
+## **Celery tasks use async_to_sync to bridge async projections with sync Celery**
 
 <!--
-On the receiving end, Celery tasks are wrappers that call the appropriate projection handlers. Here's how it works: we define a Celery task that receives an event, convert our async function to sync for Celery using async_to_sync, and then call the projection. The task is just a wrapper - the actual business logic is in the projection handlers.
+On the receiving end, Celery tasks are wrappers that call the appropriate projection handlers. Here's how it works: we define a Celery task that receives an event, get the projection from the infrastructure factory, and use async_to_sync to convert the async projection.handle method to sync for Celery. The task is just a wrapper - the actual business logic is in the projection handlers, and async_to_sync bridges the gap between async projections and sync Celery tasks.
 -->
 
 ---
