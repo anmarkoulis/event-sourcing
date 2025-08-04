@@ -1,16 +1,20 @@
-from sqlalchemy import Column, DateTime, String, Text
-from sqlalchemy.dialects.postgresql import UUID
+from sqlalchemy import Column, String, Text
 
-from event_sourcing.infrastructure.database.base import TimestampedModel
+from event_sourcing.infrastructure.database.base import BaseModel
+from event_sourcing.infrastructure.database.mixins import (
+    CreatedAtMixin,
+    DeletedAtMixin,
+    UpdatedAtMixin,
+    UUIDIdMixin,
+)
 
 
-class User(TimestampedModel):
+class User(
+    UUIDIdMixin, BaseModel, CreatedAtMixin, UpdatedAtMixin, DeletedAtMixin
+):
     """Database model for user read model"""
 
-    # User identification
-    aggregate_id = Column(
-        UUID(as_uuid=True), unique=True, nullable=False, index=True
-    )
+    # User identification (id is now the aggregate_id)
     username = Column(String(100), nullable=False, index=True)
     email = Column(String(255), nullable=False, index=True)
 
@@ -20,10 +24,5 @@ class User(TimestampedModel):
     password_hash = Column(Text, nullable=False)  # Hashed password
     status = Column(String(50), nullable=False, default="active")
 
-    # Additional timestamps
-    created_at_user = Column(DateTime(timezone=True), nullable=False)
-    updated_at_user = Column(DateTime(timezone=True), nullable=False)
-    deleted_at = Column(DateTime(timezone=True), nullable=True)
-
     def __repr__(self) -> str:
-        return f"<User(aggregate_id={self.aggregate_id}, username={self.username}, email={self.email})>"
+        return f"<User(id={self.id}, username={self.username}, email={self.email})>"

@@ -1,12 +1,6 @@
 from enum import Enum
 
 
-class EventSourceEnum(str, Enum):
-    """Enum for event sources"""
-
-    API = "API"
-
-
 class EventType(str, Enum):
     """Enum for event types (ALL_CAPS for DB consistency)"""
 

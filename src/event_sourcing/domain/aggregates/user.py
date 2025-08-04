@@ -5,7 +5,7 @@ from typing import List, Optional
 
 from event_sourcing.domain.aggregates.base import Aggregate
 from event_sourcing.dto.event import EventDTO
-from event_sourcing.enums import EventSourceEnum, EventType
+from event_sourcing.enums import EventType
 
 logger = logging.getLogger(__name__)
 
@@ -29,6 +29,10 @@ class UserAggregate(Aggregate):
         self.created_at: Optional[datetime] = None
         self.updated_at: Optional[datetime] = None
         self.deleted_at: Optional[datetime] = None
+
+    def _get_next_revision(self) -> int:
+        """Get the next revision number for this aggregate"""
+        return len(self.events) + 1
 
     def create_user(
         self,
@@ -69,6 +73,7 @@ class UserAggregate(Aggregate):
             event_type=EventType.USER_CREATED,
             timestamp=datetime.utcnow(),
             version="1",
+            revision=self._get_next_revision(),
             data={
                 "username": username,
                 "email": email,
@@ -77,8 +82,6 @@ class UserAggregate(Aggregate):
                 "password_hash": password_hash,
                 "status": "active",
             },
-            event_metadata={},
-            source=EventSourceEnum.API,
         )
         logger.info(f"Event: {event}")
         # Apply the event to the aggregate
@@ -113,13 +116,12 @@ class UserAggregate(Aggregate):
             event_type=EventType.USER_UPDATED,
             timestamp=datetime.utcnow(),
             version="1",
+            revision=self._get_next_revision(),
             data={
                 "first_name": first_name,
                 "last_name": last_name,
                 "email": email,
             },
-            event_metadata={},
-            source=EventSourceEnum.API,
         )
 
         # Apply the event to the aggregate
@@ -151,9 +153,8 @@ class UserAggregate(Aggregate):
             event_type=EventType.USERNAME_CHANGED,
             timestamp=datetime.utcnow(),
             version="1",
+            revision=self._get_next_revision(),
             data={"old_username": self.username, "new_username": new_username},
-            event_metadata={},
-            source=EventSourceEnum.API,
         )
 
         # Apply the event to the aggregate
@@ -179,9 +180,8 @@ class UserAggregate(Aggregate):
             event_type=EventType.PASSWORD_CHANGED,
             timestamp=datetime.utcnow(),
             version="1",
+            revision=self._get_next_revision(),
             data={"new_password_hash": new_password_hash},
-            event_metadata={},
-            source=EventSourceEnum.API,
         )
 
         # Apply the event to the aggregate
@@ -203,14 +203,13 @@ class UserAggregate(Aggregate):
             event_type=EventType.PASSWORD_RESET_REQUESTED,
             timestamp=datetime.utcnow(),
             version="1",
+            revision=self._get_next_revision(),
             data={
                 "email": self.email,
                 "reset_token": str(
                     uuid.uuid4()
                 ),  # In real app, generate secure token
             },
-            event_metadata={},
-            source=EventSourceEnum.API,
         )
 
         # Apply the event to the aggregate
@@ -242,12 +241,11 @@ class UserAggregate(Aggregate):
             event_type=EventType.PASSWORD_RESET_COMPLETED,
             timestamp=datetime.utcnow(),
             version="1",
+            revision=self._get_next_revision(),
             data={
                 "new_password_hash": new_password_hash,
                 "reset_token": reset_token,
             },
-            event_metadata={},
-            source=EventSourceEnum.API,
         )
 
         # Apply the event to the aggregate
@@ -269,12 +267,11 @@ class UserAggregate(Aggregate):
             event_type=EventType.USER_DELETED,
             timestamp=datetime.utcnow(),
             version="1",
+            revision=self._get_next_revision(),
             data={
                 "deleted_by": "system",  # In real app, get from auth context
                 "reason": "User requested deletion",
             },
-            event_metadata={},
-            source=EventSourceEnum.API,
         )
 
         # Apply the event to the aggregate

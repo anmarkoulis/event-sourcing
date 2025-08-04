@@ -40,7 +40,7 @@ class PostgreSQLEventStore(EventStore):
             raise ValueError(f"Unsupported aggregate type: {aggregate_type}")
 
         query = select(UserEventStream).where(
-            UserEventStream.aggregate_id == aggregate_id
+            UserEventStream.id == aggregate_id
         )
 
         # Add time filters if provided
@@ -52,7 +52,7 @@ class PostgreSQLEventStore(EventStore):
             query = query.where(UserEventStream.timestamp <= end_time)
             logger.info(f"Filtering events until {end_time}")
 
-        query = query.order_by(UserEventStream.timestamp.asc())
+        query = query.order_by(UserEventStream.revision.asc())
 
         result = await self.session.execute(query)
         event_models = result.scalars().all()
@@ -62,15 +62,12 @@ class PostgreSQLEventStore(EventStore):
         for event_model in event_models:
             event_dto = EventDTO(
                 event_id=event_model.event_id,
-                aggregate_id=event_model.aggregate_id,
+                aggregate_id=event_model.id,  # id is now the aggregate_id
                 event_type=event_model.event_type,
                 timestamp=event_model.timestamp,
                 version=event_model.version,
+                revision=event_model.revision,
                 data=event_model.data,
-                event_metadata=event_model.event_metadata,
-                validation_info=event_model.validation_info,
-                source=event_model.source,
-                processed_at=event_model.processed_at,
             )
             event_dtos.append(event_dto)
 
@@ -101,15 +98,12 @@ class PostgreSQLEventStore(EventStore):
         for event in events:
             event_model = UserEventStream(
                 event_id=event.event_id,
-                aggregate_id=event.aggregate_id,
+                id=event.aggregate_id,  # Use aggregate_id as the id
                 event_type=event.event_type,
                 timestamp=event.timestamp,
                 version=event.version,
+                revision=event.revision,
                 data=event.data,
-                event_metadata=event.event_metadata,
-                validation_info=event.validation_info,
-                source=event.source,
-                processed_at=event.processed_at or datetime.utcnow(),
             )
             target_session.add(event_model)
 
@@ -152,8 +146,8 @@ class PostgreSQLEventStore(EventStore):
                 ),
             )
 
-        # Order by timestamp
-        query = query.order_by(UserEventStream.timestamp.asc())
+        # Order by revision (sequence number)
+        query = query.order_by(UserEventStream.revision.asc())
 
         result = await self.session.execute(query)
         event_models = result.scalars().all()
@@ -167,11 +161,8 @@ class PostgreSQLEventStore(EventStore):
                 event_type=event_model.event_type,
                 timestamp=event_model.timestamp,
                 version=event_model.version,
+                revision=event_model.revision,
                 data=event_model.data,
-                event_metadata=event_model.event_metadata,
-                validation_info=event_model.validation_info,
-                source=event_model.source,
-                processed_at=event_model.processed_at,
             )
             event_dtos.append(event_dto)
 

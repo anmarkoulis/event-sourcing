@@ -1,10 +1,10 @@
 import uuid
 from datetime import datetime
-from typing import Any, Dict, Optional
+from typing import Any, Dict
 
 from pydantic import Field, field_validator
 
-from event_sourcing.enums import EventSourceEnum, EventType
+from event_sourcing.enums import EventType
 
 from .base import ModelConfigBaseModel
 
@@ -24,15 +24,14 @@ class EventDTO(ModelConfigBaseModel):
     )
     timestamp: datetime
     version: str = Field(
-        ..., min_length=1, description="Version cannot be empty"
+        ..., min_length=1, description="Schema version of the event"
+    )
+    revision: int = Field(
+        ...,
+        ge=1,
+        description="Sequence number/order of the event in the aggregate stream",
     )
     data: Dict[str, Any] = Field(..., description="Event data cannot be empty")
-    event_metadata: Optional[Dict[str, Any]] = None
-    validation_info: Optional[Dict[str, Any]] = None
-    source: EventSourceEnum = Field(
-        ..., description="Event source must be a valid provider"
-    )
-    processed_at: Optional[datetime] = None
 
     @field_validator("version")
     @classmethod
