@@ -1,7 +1,7 @@
 from abc import ABC, abstractmethod
 from typing import List
 
-from event_sourcing.dto.event import EventDTO
+from event_sourcing.dto import EventDTO
 
 
 class EventHandler(ABC):

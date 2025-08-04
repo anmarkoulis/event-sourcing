@@ -1,7 +1,8 @@
 import logging
 
 from event_sourcing.application.projections.base import Projection
-from event_sourcing.dto.event import EventDTO
+from event_sourcing.dto import EventDTO
+from event_sourcing.dto.user import UserReadModelData
 from event_sourcing.infrastructure.read_model import PostgreSQLReadModel
 
 logger = logging.getLogger(__name__)
@@ -17,13 +18,13 @@ class UserUpdatedProjection(Projection):
         """Handle USER_UPDATED event"""
         try:
             # Extract user data from event
-            user_data = {
-                "aggregate_id": str(event.aggregate_id),
-                "first_name": event.data.get("first_name"),
-                "last_name": event.data.get("last_name"),
-                "email": event.data.get("email"),
-                "updated_at": event.timestamp,
-            }
+            user_data = UserReadModelData(
+                aggregate_id=str(event.aggregate_id),
+                first_name=event.data.first_name,
+                last_name=event.data.last_name,
+                email=event.data.email,
+                updated_at=event.timestamp,
+            )
 
             # Save to read model
             await self.read_model.save_user(user_data)

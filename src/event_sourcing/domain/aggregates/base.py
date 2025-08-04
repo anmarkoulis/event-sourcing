@@ -1,7 +1,7 @@
 import uuid
 from abc import ABC, abstractmethod
 
-from event_sourcing.dto.event import EventDTO
+from event_sourcing.dto import EventDTO
 
 
 class Aggregate(ABC):

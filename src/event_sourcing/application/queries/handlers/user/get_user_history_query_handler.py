@@ -3,7 +3,7 @@ from typing import List
 
 from event_sourcing.application.queries.handlers.base import QueryHandler
 from event_sourcing.application.queries.user import GetUserHistoryQuery
-from event_sourcing.dto.event import EventDTO
+from event_sourcing.dto import EventDTO
 from event_sourcing.enums import AggregateTypeEnum
 from event_sourcing.infrastructure.event_store import EventStore
 

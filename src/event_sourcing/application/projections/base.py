@@ -1,7 +1,7 @@
 from abc import ABC, abstractmethod
 from typing import Generic, TypeVar
 
-from event_sourcing.dto.event import EventDTO
+from event_sourcing.dto import EventDTO
 
 # Type variable for projections
 ProjectionType = TypeVar("ProjectionType")
