@@ -4,7 +4,7 @@ from datetime import datetime
 from typing import List, Optional
 
 from event_sourcing.domain.aggregates.base import Aggregate
-from event_sourcing.dto.event import EventDTO
+from event_sourcing.dto import EventDTO, EventFactory
 from event_sourcing.enums import EventType
 
 logger = logging.getLogger(__name__)
@@ -67,21 +67,14 @@ class UserAggregate(Aggregate):
 
         # Create the event
         logger.info(f"Creating USER_CREATED event for user: {username}")
-        event = EventDTO(
-            event_id=uuid.uuid4(),
+        event = EventFactory.create_user_created(
             aggregate_id=self.aggregate_id,
-            event_type=EventType.USER_CREATED,
-            timestamp=datetime.utcnow(),
-            version="1",
+            username=username,
+            email=email,
+            first_name=first_name,
+            last_name=last_name,
+            password_hash=password_hash,
             revision=self._get_next_revision(),
-            data={
-                "username": username,
-                "email": email,
-                "first_name": first_name,
-                "last_name": last_name,
-                "password_hash": password_hash,
-                "status": "active",
-            },
         )
         logger.info(f"Event: {event}")
         # Apply the event to the aggregate
@@ -110,18 +103,12 @@ class UserAggregate(Aggregate):
             raise ValueError("Invalid email format")
 
         # Create the event
-        event = EventDTO(
-            event_id=uuid.uuid4(),
+        event = EventFactory.create_user_updated(
             aggregate_id=self.aggregate_id,
-            event_type=EventType.USER_UPDATED,
-            timestamp=datetime.utcnow(),
-            version="1",
             revision=self._get_next_revision(),
-            data={
-                "first_name": first_name,
-                "last_name": last_name,
-                "email": email,
-            },
+            first_name=first_name,
+            last_name=last_name,
+            email=email,
         )
 
         # Apply the event to the aggregate
@@ -147,14 +134,11 @@ class UserAggregate(Aggregate):
             raise ValueError("Username must be at least 3 characters")
 
         # Create the event
-        event = EventDTO(
-            event_id=uuid.uuid4(),
+        event = EventFactory.create_username_changed(
             aggregate_id=self.aggregate_id,
-            event_type=EventType.USERNAME_CHANGED,
-            timestamp=datetime.utcnow(),
-            version="1",
+            old_username=self.username,
+            new_username=new_username,
             revision=self._get_next_revision(),
-            data={"old_username": self.username, "new_username": new_username},
         )
 
         # Apply the event to the aggregate
@@ -174,14 +158,10 @@ class UserAggregate(Aggregate):
             raise ValueError("Password is required")
 
         # Create the event
-        event = EventDTO(
-            event_id=uuid.uuid4(),
+        event = EventFactory.create_password_changed(
             aggregate_id=self.aggregate_id,
-            event_type=EventType.PASSWORD_CHANGED,
-            timestamp=datetime.utcnow(),
-            version="1",
+            password_hash=new_password_hash,
             revision=self._get_next_revision(),
-            data={"new_password_hash": new_password_hash},
         )
 
         # Apply the event to the aggregate
@@ -197,19 +177,9 @@ class UserAggregate(Aggregate):
             raise ValueError("Cannot request password reset for deleted user")
 
         # Create the event
-        event = EventDTO(
-            event_id=uuid.uuid4(),
+        event = EventFactory.create_password_reset_requested(
             aggregate_id=self.aggregate_id,
-            event_type=EventType.PASSWORD_RESET_REQUESTED,
-            timestamp=datetime.utcnow(),
-            version="1",
             revision=self._get_next_revision(),
-            data={
-                "email": self.email,
-                "reset_token": str(
-                    uuid.uuid4()
-                ),  # In real app, generate secure token
-            },
         )
 
         # Apply the event to the aggregate
@@ -235,17 +205,11 @@ class UserAggregate(Aggregate):
             raise ValueError("Reset token is required")
 
         # Create the event
-        event = EventDTO(
-            event_id=uuid.uuid4(),
+        event = EventFactory.create_password_reset_completed(
             aggregate_id=self.aggregate_id,
-            event_type=EventType.PASSWORD_RESET_COMPLETED,
-            timestamp=datetime.utcnow(),
-            version="1",
+            password_hash=new_password_hash,
+            reset_token=reset_token,
             revision=self._get_next_revision(),
-            data={
-                "new_password_hash": new_password_hash,
-                "reset_token": reset_token,
-            },
         )
 
         # Apply the event to the aggregate
@@ -261,17 +225,9 @@ class UserAggregate(Aggregate):
             raise ValueError("User is already deleted")
 
         # Create the event
-        event = EventDTO(
-            event_id=uuid.uuid4(),
+        event = EventFactory.create_user_deleted(
             aggregate_id=self.aggregate_id,
-            event_type=EventType.USER_DELETED,
-            timestamp=datetime.utcnow(),
-            version="1",
             revision=self._get_next_revision(),
-            data={
-                "deleted_by": "system",  # In real app, get from auth context
-                "reason": "User requested deletion",
-            },
         )
 
         # Apply the event to the aggregate
@@ -306,12 +262,12 @@ class UserAggregate(Aggregate):
     def _apply_created_event(self, event: EventDTO) -> None:
         """Apply user created event"""
         data = event.data
-        self.username = data.get("username")
-        self.email = data.get("email")
-        self.first_name = data.get("first_name")
-        self.last_name = data.get("last_name")
-        self.password_hash = data.get("password_hash")
-        self.status = data.get("status")
+        self.username = data.username
+        self.email = data.email
+        self.first_name = data.first_name
+        self.last_name = data.last_name
+        self.password_hash = data.password_hash
+        self.status = data.status
         self.created_at = event.timestamp
         self.updated_at = event.timestamp
 
@@ -319,24 +275,24 @@ class UserAggregate(Aggregate):
         """Apply user updated event"""
         data = event.data
         # Update only provided fields
-        if "first_name" in data:
-            self.first_name = data["first_name"]
-        if "last_name" in data:
-            self.last_name = data["last_name"]
-        if "email" in data:
-            self.email = data["email"]
+        if data.first_name is not None:
+            self.first_name = data.first_name
+        if data.last_name is not None:
+            self.last_name = data.last_name
+        if data.email is not None:
+            self.email = data.email
         self.updated_at = event.timestamp
 
     def _apply_username_changed_event(self, event: EventDTO) -> None:
         """Apply username changed event"""
         data = event.data
-        self.username = data.get("new_username")
+        self.username = data.new_username
         self.updated_at = event.timestamp
 
     def _apply_password_changed_event(self, event: EventDTO) -> None:
         """Apply password changed event"""
         data = event.data
-        self.password_hash = data.get("new_password_hash")
+        self.password_hash = data.password_hash
         self.updated_at = event.timestamp
 
     def _apply_password_reset_requested_event(self, event: EventDTO) -> None:
@@ -347,7 +303,7 @@ class UserAggregate(Aggregate):
     def _apply_password_reset_completed_event(self, event: EventDTO) -> None:
         """Apply password reset completed event"""
         data = event.data
-        self.password_hash = data.get("new_password_hash")
+        self.password_hash = data.password_hash
         self.updated_at = event.timestamp
 
     def _apply_deleted_event(self, event: EventDTO) -> None:

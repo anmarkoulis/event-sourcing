@@ -4,7 +4,9 @@ from typing import Any, Dict
 from asgiref.sync import async_to_sync
 
 from event_sourcing.config.celery_app import app
-from event_sourcing.dto.event import EventDTO
+from event_sourcing.infrastructure.event_store.deserializer import (
+    deserialize_event,
+)
 from event_sourcing.infrastructure.provider import get_infrastructure_factory
 
 logger = logging.getLogger(__name__)
@@ -14,7 +16,8 @@ logger = logging.getLogger(__name__)
 def process_password_reset_requested_task(event: Dict[str, Any]) -> None:
     """Celery task for processing PASSWORD_RESET_REQUESTED events"""
     try:
-        event_dto = EventDTO(**event)
+        # Deserialize the event from dictionary to typed event DTO
+        event_dto = deserialize_event(event)
 
         # Get infrastructure factory using the same function as FastAPI
         factory = get_infrastructure_factory()

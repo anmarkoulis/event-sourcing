@@ -2,7 +2,7 @@ import logging
 from typing import Dict, List
 
 from event_sourcing.application.events.handlers.base import EventHandler
-from event_sourcing.dto.event import EventDTO
+from event_sourcing.dto import EventDTO
 
 logger = logging.getLogger(__name__)
 

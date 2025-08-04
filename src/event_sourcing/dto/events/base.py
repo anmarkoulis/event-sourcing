@@ -1,16 +1,18 @@
 import uuid
 from datetime import datetime
-from typing import Any, Dict
+from typing import Generic, TypeVar
 
-from pydantic import Field, field_validator
+from pydantic import Field
 
+from event_sourcing.dto.base import ModelConfigBaseModel
 from event_sourcing.enums import EventType
 
-from .base import ModelConfigBaseModel
+# Type variable for event data
+T = TypeVar("T")
 
 
-class EventDTO(ModelConfigBaseModel):
-    """Single Event DTO for all event operations"""
+class EventDTO(ModelConfigBaseModel, Generic[T]):
+    """Base Event DTO with type-safe data field"""
 
     event_id: uuid.UUID = Field(
         default_factory=uuid.uuid4, description="Event ID - required UUID"
@@ -31,12 +33,14 @@ class EventDTO(ModelConfigBaseModel):
         ge=1,
         description="Sequence number/order of the event in the aggregate stream",
     )
-    data: Dict[str, Any] = Field(..., description="Event data cannot be empty")
+    data: T = Field(..., description="Type-safe event data")
 
-    @field_validator("version")
     @classmethod
-    def validate_non_empty_strings(cls, v: str) -> str:
-        """Validate that string fields are not empty"""
-        if not v or not v.strip():
-            raise ValueError(f"Field cannot be empty: {v}")
-        return v.strip()
+    def get_version(cls) -> str:
+        """Get the version for this event type"""
+        # Extract version from class name (e.g., UserCreatedV1 -> "1")
+        class_name = cls.__name__
+        if class_name.endswith("V1"):
+            return "1"
+        # Add more version patterns as needed
+        return "1"  # Default version

@@ -4,7 +4,7 @@ from abc import ABC, abstractmethod
 from datetime import datetime
 from typing import List, Optional
 
-from event_sourcing.dto.event import EventDTO
+from event_sourcing.dto import EventDTO
 from event_sourcing.enums import AggregateTypeEnum
 
 logger = logging.getLogger(__name__)

@@ -1,7 +1,7 @@
 import logging
 
 from event_sourcing.application.projections.base import Projection
-from event_sourcing.dto.event import EventDTO
+from event_sourcing.dto import EventDTO
 from event_sourcing.dto.user import UserReadModelData
 from event_sourcing.infrastructure.read_model import PostgreSQLReadModel
 from event_sourcing.infrastructure.unit_of_work import BaseUnitOfWork
@@ -24,12 +24,12 @@ class UserCreatedProjection(Projection):
             # Extract user data from event and create Pydantic model
             user_data = UserReadModelData(
                 aggregate_id=str(event.aggregate_id),
-                username=event.data.get("username"),
-                email=event.data.get("email"),
-                first_name=event.data.get("first_name"),
-                last_name=event.data.get("last_name"),
-                password_hash=event.data.get("password_hash"),
-                status=event.data.get("status"),
+                username=event.data.username,
+                email=event.data.email,
+                first_name=event.data.first_name,
+                last_name=event.data.last_name,
+                password_hash=event.data.password_hash,
+                status=event.data.status,
                 created_at=event.timestamp,
                 updated_at=event.timestamp,
             )

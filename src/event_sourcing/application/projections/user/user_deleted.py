@@ -1,7 +1,7 @@
 import logging
 
 from event_sourcing.application.projections.base import Projection
-from event_sourcing.dto.event import EventDTO
+from event_sourcing.dto import EventDTO
 from event_sourcing.infrastructure.read_model import PostgreSQLReadModel
 
 logger = logging.getLogger(__name__)

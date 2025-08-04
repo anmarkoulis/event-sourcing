@@ -1,7 +1,8 @@
 import logging
 
 from event_sourcing.application.projections.base import Projection
-from event_sourcing.dto.event import EventDTO
+from event_sourcing.dto import EventDTO
+from event_sourcing.dto.user import UserReadModelData
 from event_sourcing.infrastructure.read_model import PostgreSQLReadModel
 
 logger = logging.getLogger(__name__)
@@ -17,11 +18,11 @@ class PasswordChangedProjection(Projection):
         """Handle PASSWORD_CHANGED event"""
         try:
             # Extract user data from event
-            user_data = {
-                "aggregate_id": str(event.aggregate_id),
-                "password_hash": event.data.get("new_password_hash"),
-                "updated_at": event.timestamp,
-            }
+            user_data = UserReadModelData(
+                aggregate_id=str(event.aggregate_id),
+                password_hash=event.data.password_hash,
+                updated_at=event.timestamp,
+            )
 
             # Save to read model
             await self.read_model.save_user(user_data)

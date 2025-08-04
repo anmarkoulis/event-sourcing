@@ -6,10 +6,13 @@ from typing import List, Optional
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from event_sourcing.dto.event import EventDTO
+from event_sourcing.dto import EventDTO
 from event_sourcing.enums import AggregateTypeEnum
 from event_sourcing.infrastructure.database.models.write.user_event_stream import (
     UserEventStream,
+)
+from event_sourcing.infrastructure.event_store.deserializer import (
+    deserialize_event_data,
 )
 
 from .base import EventStore
@@ -60,6 +63,11 @@ class PostgreSQLEventStore(EventStore):
         # Convert to DTOs
         event_dtos = []
         for event_model in event_models:
+            # Deserialize the data from dictionary to typed data model
+            deserialized_data = deserialize_event_data(
+                event_model.event_type, event_model.data
+            )
+
             event_dto = EventDTO(
                 event_id=event_model.event_id,
                 aggregate_id=event_model.id,  # id is now the aggregate_id
@@ -67,7 +75,7 @@ class PostgreSQLEventStore(EventStore):
                 timestamp=event_model.timestamp,
                 version=event_model.version,
                 revision=event_model.revision,
-                data=event_model.data,
+                data=deserialized_data,
             )
             event_dtos.append(event_dto)
 
@@ -103,7 +111,7 @@ class PostgreSQLEventStore(EventStore):
                 timestamp=event.timestamp,
                 version=event.version,
                 revision=event.revision,
-                data=event.data,
+                data=event.data.model_dump(),  # Convert Pydantic model to dict
             )
             target_session.add(event_model)
 
@@ -155,14 +163,19 @@ class PostgreSQLEventStore(EventStore):
         # Convert to DTOs
         event_dtos = []
         for event_model in event_models:
+            # Deserialize the data from dictionary to typed data model
+            deserialized_data = deserialize_event_data(
+                event_model.event_type, event_model.data
+            )
+
             event_dto = EventDTO(
                 event_id=event_model.event_id,
-                aggregate_id=event_model.aggregate_id,
+                aggregate_id=event_model.id,  # id is now the aggregate_id
                 event_type=event_model.event_type,
                 timestamp=event_model.timestamp,
                 version=event_model.version,
                 revision=event_model.revision,
-                data=event_model.data,
+                data=deserialized_data,
             )
             event_dtos.append(event_dto)
 

@@ -1,5 +1,5 @@
 import logging
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Optional
 
 from sqlalchemy import select
@@ -111,7 +111,7 @@ class PostgreSQLReadModel(ReadModel):
         user = result.scalar_one_or_none()
 
         if user:
-            user.deleted_at = datetime.utcnow()
+            user.deleted_at = datetime.now(timezone.utc)
             user.status = "deleted"
             # Note: No commit here - UoW will handle it
             logger.info(f"User {user_id} marked for deletion in session")
