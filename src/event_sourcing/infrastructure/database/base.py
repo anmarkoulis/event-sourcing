@@ -1,8 +1,6 @@
 import re
-from datetime import datetime
 from typing import TYPE_CHECKING
 
-from sqlalchemy import Column, DateTime, Integer
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import DeclarativeBase, declared_attr
 
@@ -19,29 +17,13 @@ class BaseModel(Base):
 
     __abstract__ = True
 
-    id = Column(Integer, primary_key=True, index=True)
-
     # Generate __tablename__ automatically in snake_case
     @declared_attr  # type: ignore[arg-type]
     def __tablename__(cls) -> str:  # pylint: disable=no-self-argument
         # Convert CamelCase to snake_case
         name = cls.__name__
-        name = re.sub("(?!^)([A-Z][a-z]+)", r"_\1", name)
-        name = re.sub("(?!^)([A-Z]+)", r"_\1", name)
+        # First, insert underscore before any uppercase letter that follows a lowercase letter
+        name = re.sub(r"([a-z])([A-Z])", r"\1_\2", name)
+        # Then, insert underscore before any uppercase letter that follows another uppercase letter
+        name = re.sub(r"([A-Z])([A-Z][a-z])", r"\1_\2", name)
         return name.lower()
-
-
-class TimestampedModel(BaseModel):
-    """Base model with timestamp fields"""
-
-    __abstract__ = True
-
-    created_at = Column(
-        DateTime(timezone=True), default=datetime.utcnow, nullable=False
-    )
-    updated_at = Column(
-        DateTime(timezone=True),
-        default=datetime.utcnow,
-        onupdate=datetime.utcnow,
-        nullable=False,
-    )

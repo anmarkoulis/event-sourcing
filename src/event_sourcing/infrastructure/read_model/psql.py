@@ -32,9 +32,9 @@ class PostgreSQLReadModel(ReadModel):
         self, user_data: UserReadModelData
     ) -> None:
         """Save user using the session from constructor"""
-        # Check if user already exists by aggregate_id
+        # Check if user already exists by id (which is now the aggregate_id)
         result = await self.session.execute(
-            select(User).where(User.aggregate_id == user_data.aggregate_id)
+            select(User).where(User.id == user_data.aggregate_id)
         )
         existing_user = result.scalar_one_or_none()
 
@@ -52,19 +52,17 @@ class PostgreSQLReadModel(ReadModel):
                 existing_user.password_hash = user_data.password_hash
             if user_data.status is not None:
                 existing_user.status = user_data.status
-            existing_user.updated_at_user = datetime.utcnow()
+            # updated_at is handled by the UpdatedAtMixin
         else:
             # Create new user
             user_model = User(
-                aggregate_id=user_data.aggregate_id,
+                id=user_data.aggregate_id,  # Use aggregate_id as the id
                 username=user_data.username,
                 email=user_data.email,
                 first_name=user_data.first_name,
                 last_name=user_data.last_name,
                 password_hash=user_data.password_hash,
                 status=user_data.status or "active",
-                created_at_user=user_data.created_at or datetime.utcnow(),
-                updated_at_user=user_data.updated_at or datetime.utcnow(),
             )
             self.session.add(user_model)
 
@@ -75,7 +73,7 @@ class PostgreSQLReadModel(ReadModel):
         """Get a specific user by ID"""
         logger.info(f"Getting user {user_id}")
 
-        query = select(User).where(User.aggregate_id == user_id)
+        query = select(User).where(User.id == user_id)
 
         result = await self.session.execute(query)
         user_model = result.scalar_one_or_none()
@@ -85,14 +83,14 @@ class PostgreSQLReadModel(ReadModel):
             return None
 
         user_dto = UserDTO(
-            id=user_model.aggregate_id,
+            id=user_model.id,  # id is now the aggregate_id
             username=user_model.username,
             email=user_model.email,
             first_name=user_model.first_name,
             last_name=user_model.last_name,
             status=user_model.status,
-            created_at=user_model.created_at_user,
-            updated_at=user_model.updated_at_user,
+            created_at=user_model.created_at,
+            updated_at=user_model.updated_at,
         )
 
         logger.info(f"Retrieved user {user_id}")
@@ -106,9 +104,9 @@ class PostgreSQLReadModel(ReadModel):
 
     async def _delete_user_with_session(self, user_id: str) -> None:
         """Delete user using the session from constructor"""
-        # Query by aggregate_id instead of primary key
+        # Query by id (which is now the aggregate_id)
         result = await self.session.execute(
-            select(User).where(User.aggregate_id == user_id)
+            select(User).where(User.id == user_id)
         )
         user = result.scalar_one_or_none()
 
