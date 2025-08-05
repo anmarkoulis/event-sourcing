@@ -332,7 +332,7 @@ For queries, we have separate endpoints that read from optimized read models. Th
 ## How we structure command processing:
 
 ```python
-class ChangePasswordCommandHandler:
+class ChangePasswordCommandHandler(CommandHandler[ChangePasswordCommand]):
     async def handle(self, command: ChangePasswordCommand) -> None:
         # Retrieve all events for this aggregate
         events = await self.event_store.get_stream(command.user_id)
@@ -364,13 +364,17 @@ Behind the API, command handlers are where the business logic lives. Here's our 
 ## How events are dispatched to Celery tasks:
 
 ```python
-class CeleryEventHandler:
+class CeleryEventHandler(EventHandler):
     def __init__(self):
         # Map event types to Celery tasks
-        self.event_handlers = {
-            "USER_CREATED": [
+        self.event_handlers: Dict[EventType, List[str]] = {
+            EventType.USER_CREATED: [
                 "process_user_created_task",
                 "send_welcome_email_task"
+            ],
+            EventType.USER_PASSWORD_CHANGED: [
+                "process_password_changed_task",
+                "send_security_notification_task"
             ],
             # ... other event types
         }
@@ -395,8 +399,16 @@ Once events are created, the Event Handler dispatches them to message queues. He
 ## How Celery tasks process events and call projections:
 
 ```python
-@app.task(name="process_user_created_task")
-def process_user_created_task(event: Dict[str, Any]) -> None:
+@app.task(
+    name="process_user_created_task",
+    bind=True,
+    max_retries=3,
+    acks_late=True,
+    autoretry_for=(Exception,),
+    retry_backoff=True,
+    retry_jitter=True
+)
+def process_user_created_task(self, event: Dict[str, Any]) -> None:
     """Celery task for processing USER_CREATED events"""
     # Get infrastructure factory
     factory = get_infrastructure_factory()
@@ -422,8 +434,8 @@ On the receiving end, Celery tasks are wrappers that call the appropriate projec
 ## How projections build read models:
 
 ```python
-class UserCreatedProjection:
-    async def handle(self, event: Event) -> None:
+class UserCreatedProjection(Projection[UserCreatedEvent]):
+    async def handle(self, event: UserCreatedEvent) -> None:
         # Build read model from event
         user_data = {
             "aggregate_id": event.aggregate_id,
@@ -478,7 +490,7 @@ Now, let's talk about the real challenge of eventual consistency. Here's a concr
 ## The performance challenge:
 
 ```python
-    async def handle(self, command: CreateUserCommand) -> None:
+    async def handle(self, command: ChangePasswordCommand) -> None:
         events = await self.event_store.get_stream(command.user_id)  # 10,000 events!
         user = UserAggregate(command.user_id)
         for event in events:
@@ -542,8 +554,9 @@ Now let's talk about error handling and retries, which are actually two differen
 ![Debugging Superpowers](../diagrams/generated/debugging-superpowers.png)
 
 ```python
-# Rebuild state at specific point in time
-def debug_incident(user_id: str, incident_time: datetime):
+# Test business logic with real production data
+def test_incident_scenario(user_id: str, incident_time: datetime):
+    """Test what would happen if we applied a specific event at a point in time"""
     events = event_store.get_events_before(user_id, incident_time)
     user = UserAggregate(user_id)
 
@@ -551,8 +564,13 @@ def debug_incident(user_id: str, incident_time: datetime):
     for event in events:
         user.apply(event)
 
-    # Apply the problematic event that caused the issue
-    user.apply(UserSuspendedEvent(user_id, reason="fraud_detected"))
+    # Test the problematic event that caused the issue
+    result = user.apply(UserSuspendedEvent(user_id, reason="fraud_detected"))
+
+    # Assert the expected behavior
+    assert result.is_success, f"User should be suspended: {result.error}"
+    assert user.status == "suspended"
+    print(f"✅ Test passed: User {user_id} would be suspended at {incident_time}")
 ```
 
 ## **Test business logic with real production data**
