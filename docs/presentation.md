@@ -273,7 +273,6 @@ Now, where does the business logic live? Aggregates contain domain logic and app
 - **Append-only**: Events are never modified or deleted
 - **Immutable**: Once written, events are permanent
 - **Stream management**: Organizes events by aggregate
-- **Optimistic concurrency**: Prevents conflicting writes
 
 ## **Event Store is append-only** - events never change or delete
 
@@ -544,7 +543,6 @@ Now, let's talk about the real challenge of eventual consistency. Here's a concr
         try:
             snapshot = await self.snapshot_store.get_latest_snapshot(command.user_id)
             recent_events = await self.event_store.get_events_since_snapshot(command.user_id, snapshot.revision)
-            # Rebuild aggregate from snapshot
             user = UserAggregate.from_snapshot(snapshot)
             for event in recent_events:
                 user.apply(event)
@@ -618,24 +616,20 @@ Now, this is where event sourcing really shines - testing business logic at spec
 
 # Summary: Key Takeaways
 
-## Start Simple - You don't need fancy tech from day one:
+## 🚀 Start Simple
+- No fancy event stores needed initially
+- Familiar tools, powerful results
 
-- **Event Store**: PostgreSQL is sufficient for most cases
-- **Event Bus**: SQS works great for most applications
-- **Read Models**: PostgreSQL can handle most query patterns
-- **No need for**: Kurrent, Elasticsearch, MongoDB, Kafka initially
+## ⚠️ When NOT to use Event Sourcing
+- **Simple CRUD** or **high-frequency systems** (immediate consistency needed)
+- **Teams without distributed systems experience**
 
-## When NOT to use Event Sourcing:
-- **Simple CRUD with basic audit needs** - traditional logging suffices
-- **High-frequency trading systems** - immediate consistency required
-- **Teams without distributed systems experience** - steep learning curve
-
-## What you gain:
-- **Complete audit trail** and time travel capabilities
+## 🎯 What you gain
+- **Complete audit trail** & time travel
 - **Debugging superpowers** with real production data
-- **Scalability** and eventual consistency patterns
+- **Scalability** with eventual consistency
 
-## **Event sourcing + Python ecosystem solve even the most complex distributed systems challenges**
+## **Event sourcing + Python ecosystem = distributed systems superpowers**
 
 <!--
 Let me end with some practical advice. Start simple - you don't need fancy technology from day one. PostgreSQL as your event store and read database is sufficient for most cases. SQS as your event bus works great for most applications. You don't need Kurrent for event store or Elasticsearch and MongoDB for read models initially. This architecture can be easily adopted with familiar tools.
