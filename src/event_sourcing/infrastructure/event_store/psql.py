@@ -103,7 +103,20 @@ class PostgreSQLEventStore(EventStore):
         # Use provided session or the one from constructor
         target_session = session or self.session
 
+        # Track event IDs to prevent duplicates within this call
+        event_ids_in_this_call = set()
+
         for event in events:
+            if event.event_id in event_ids_in_this_call:
+                logger.warning(
+                    f"Duplicate event ID detected in same call: {event.event_id}"
+                )
+                continue
+
+            event_ids_in_this_call.add(event.event_id)
+            logger.info(
+                f"Adding event to session: ID={event.event_id}, Type={event.event_type}, Revision={event.revision}, Object ID={id(event)}"
+            )
             event_model = UserEventStream(
                 event_id=event.event_id,
                 id=event.aggregate_id,  # Use aggregate_id as the id
@@ -114,6 +127,7 @@ class PostgreSQLEventStore(EventStore):
                 data=event.data.model_dump(),  # Convert Pydantic model to dict
             )
             target_session.add(event_model)
+            logger.info(f"Event model added to session: {event_model}")
 
         logger.info(
             f"Events added to session for aggregate stream {aggregate_id}"

@@ -30,7 +30,6 @@ class CreateUserRequest(BaseModel):
 
 
 class CreateUserResponse(BaseModel):
-    status: str = Field(..., description="Operation status")
     message: str = Field(..., description="Success message")
     user_id: str = Field(..., description="Created user ID")
 
@@ -42,7 +41,6 @@ class UpdateUserRequest(BaseModel):
 
 
 class UpdateUserResponse(BaseModel):
-    status: str = Field(..., description="Operation status")
     message: str = Field(..., description="Success message")
 
 
@@ -51,7 +49,6 @@ class ChangeUsernameRequest(BaseModel):
 
 
 class ChangeUsernameResponse(BaseModel):
-    status: str = Field(..., description="Operation status")
     message: str = Field(..., description="Success message")
 
 
@@ -61,7 +58,6 @@ class ChangePasswordRequest(BaseModel):
 
 
 class ChangePasswordResponse(BaseModel):
-    status: str = Field(..., description="Operation status")
     message: str = Field(..., description="Success message")
 
 
@@ -70,7 +66,6 @@ class RequestPasswordResetRequest(BaseModel):
 
 
 class RequestPasswordResetResponse(BaseModel):
-    status: str = Field(..., description="Operation status")
     message: str = Field(..., description="Success message")
 
 
@@ -80,25 +75,30 @@ class CompletePasswordResetRequest(BaseModel):
 
 
 class CompletePasswordResetResponse(BaseModel):
-    status: str = Field(..., description="Operation status")
     message: str = Field(..., description="Success message")
 
 
 class DeleteUserResponse(BaseModel):
-    status: str = Field(..., description="Operation status")
     message: str = Field(..., description="Success message")
 
 
 class GetUserResponse(BaseModel):
-    status: str = Field(..., description="Operation status")
     user: UserDTO = Field(..., description="User data")
 
 
 class GetUserHistoryResponse(BaseModel):
-    status: str = Field(..., description="Operation status")
     user_id: str = Field(..., description="User ID")
     count: int = Field(..., description="Number of events")
     events: List[Dict[str, Any]] = Field(..., description="Event history")
+
+
+class ListUsersResponse(BaseModel):
+    next: Optional[str] = Field(None, description="Next page URL")
+    previous: Optional[str] = Field(None, description="Previous page URL")
+    count: int = Field(..., description="Total number of users")
+    page: int = Field(..., description="Current page number")
+    page_size: int = Field(..., description="Number of items per page")
+    results: List[UserDTO] = Field(..., description="List of users")
 
 
 # Read Model DTOs
