@@ -18,6 +18,7 @@ from event_sourcing.application.commands.user import (
 from event_sourcing.application.queries.user import (
     GetUserHistoryQuery,
     GetUserQuery,
+    ListUsersQuery,
 )
 from event_sourcing.dto.user import (
     ChangePasswordRequest,
@@ -31,6 +32,7 @@ from event_sourcing.dto.user import (
     DeleteUserResponse,
     GetUserHistoryResponse,
     GetUserResponse,
+    ListUsersResponse,
     RequestPasswordResetRequest,
     RequestPasswordResetResponse,
     UpdateUserRequest,
@@ -76,7 +78,6 @@ async def create_user(
         await command_handler.handle(command)
 
         return CreateUserResponse(
-            status="success",
             message="User created successfully",
             user_id=str(user_id),
         )
@@ -85,6 +86,60 @@ async def create_user(
         raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:
         logger.error(f"Error creating user: {e}")
+        raise HTTPException(status_code=500, detail="Internal server error")
+
+
+@users_router.get(
+    "/",
+    description="List users with pagination and filtering",
+    response_model=ListUsersResponse,
+)
+async def list_users(
+    page: int = Query(1, ge=1, description="Page number (1-based)"),
+    page_size: int = Query(
+        10, ge=1, le=100, description="Number of items per page"
+    ),
+    username: Optional[str] = Query(
+        None, description="Filter by username (partial match)"
+    ),
+    email: Optional[str] = Query(
+        None, description="Filter by email (partial match)"
+    ),
+    status: Optional[str] = Query(None, description="Filter by status"),
+    infrastructure_factory: InfrastructureFactoryDep = None,
+) -> ListUsersResponse:
+    """List users with pagination and filtering"""
+    try:
+        # Create query
+        query = ListUsersQuery(
+            page=page,
+            page_size=page_size,
+            username=username,
+            email=email,
+            status=status,
+        )
+
+        # Get query handler
+        query_handler = (
+            infrastructure_factory.create_list_users_query_handler()
+        )
+
+        # Execute query
+        result = await query_handler.handle(query)
+
+        return ListUsersResponse(
+            results=result["results"],
+            next=result["next"],
+            previous=result["previous"],
+            count=result["count"],
+            page=result["page"],
+            page_size=result["page_size"],
+        )
+
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        logger.error(f"Error listing users: {e}")
         raise HTTPException(status_code=500, detail="Internal server error")
 
 
@@ -116,9 +171,7 @@ async def update_user(
         # Process command
         await command_handler.handle(command)
 
-        return UpdateUserResponse(
-            status="success", message="User updated successfully"
-        )
+        return UpdateUserResponse(message="User updated successfully")
 
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
@@ -139,28 +192,34 @@ async def change_username(
 ) -> ChangeUsernameResponse:
     """Change user's username"""
     try:
+        logger.info(f"API: Starting username change for user: {user_id}")
+
         # Create command
         command = ChangeUsernameCommand(
             user_id=uuid.UUID(user_id), new_username=username_data.new_username
         )
+        logger.info(f"API: Created command for user: {user_id}")
 
         # Get command handler
         command_handler = (
             infrastructure_factory.create_change_username_command_handler()
         )
+        logger.info(f"API: Got command handler for user: {user_id}")
 
         # Process command
+        logger.info(f"API: Calling command handler for user: {user_id}")
         await command_handler.handle(command)
+        logger.info(f"API: Command handler completed for user: {user_id}")
 
         return ChangeUsernameResponse(
-            status="success",
             message="Username changed successfully",
         )
 
     except ValueError as e:
+        logger.error(f"API: ValueError in change_username: {e}")
         raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:
-        logger.error(f"Error changing username: {e}")
+        logger.error(f"API: Error changing username: {e}")
         raise HTTPException(status_code=500, detail="Internal server error")
 
 
@@ -195,7 +254,6 @@ async def change_password(
         await command_handler.handle(command)
 
         return ChangePasswordResponse(
-            status="success",
             message="Password changed successfully",
         )
 
@@ -231,7 +289,7 @@ async def request_password_reset(
         await command_handler.handle(command)
 
         return RequestPasswordResetResponse(
-            status="success", message="Password reset email sent"
+            message="Password reset email sent"
         )
 
     except ValueError as e:
@@ -272,7 +330,6 @@ async def complete_password_reset(
         await command_handler.handle(command)
 
         return CompletePasswordResetResponse(
-            status="success",
             message="Password reset completed successfully",
         )
 
@@ -303,9 +360,7 @@ async def delete_user(
         # Process command
         await command_handler.handle(command)
 
-        return DeleteUserResponse(
-            status="success", message="User deleted successfully"
-        )
+        return DeleteUserResponse(message="User deleted successfully")
 
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
@@ -335,7 +390,7 @@ async def get_user(
         if not user:
             raise HTTPException(status_code=404, detail="User not found")
 
-        return GetUserResponse(status="success", user=user)
+        return GetUserResponse(user=user)
 
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
@@ -389,7 +444,6 @@ async def get_user_history(
         events = await query_handler.handle(query)
 
         return GetUserHistoryResponse(
-            status="success",
             user_id=user_id,
             count=len(events),
             events=events,

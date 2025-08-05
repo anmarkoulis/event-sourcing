@@ -19,4 +19,18 @@ class SQLAUnitOfWork(BaseUnitOfWork):
 
     async def commit(self) -> None:
         logger.debug("Committing transaction")
-        await self.db.commit()
+        try:
+            # Log the objects in the session before commit
+            logger.info(
+                f"Session has {len(self.db.new)} new objects to insert"
+            )
+            for obj in self.db.new:
+                logger.info(
+                    f"New object in session: {type(obj).__name__} - {obj}"
+                )
+
+            await self.db.commit()
+            logger.info("Transaction committed successfully")
+        except Exception as e:
+            logger.error(f"Error during commit: {e}")
+            raise

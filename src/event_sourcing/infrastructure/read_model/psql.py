@@ -1,8 +1,8 @@
 import logging
 from datetime import datetime, timezone
-from typing import Optional
+from typing import List, Optional, Tuple
 
-from sqlalchemy import select
+from sqlalchemy import and_, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from event_sourcing.dto.user import UserDTO, UserReadModelData
@@ -117,3 +117,67 @@ class PostgreSQLReadModel(ReadModel):
             logger.info(f"User {user_id} marked for deletion in session")
         else:
             logger.warning(f"User {user_id} not found for deletion")
+
+    async def list_users(
+        self,
+        page: int = 1,
+        page_size: int = 10,
+        username: Optional[str] = None,
+        email: Optional[str] = None,
+        status: Optional[str] = None,
+    ) -> Tuple[List[UserDTO], int]:
+        """List users with pagination and filtering"""
+        logger.info(f"Listing users with page={page}, page_size={page_size}")
+
+        # Build base query
+        query = select(User)
+        count_query = select(func.count(User.id))
+
+        # Build filters
+        filters = []
+        if username:
+            filters.append(User.username.ilike(f"%{username}%"))
+        if email:
+            filters.append(User.email.ilike(f"%{email}%"))
+        if status:
+            filters.append(User.status == status)
+
+        # Apply filters to both queries
+        if filters:
+            query = query.where(and_(*filters))
+            count_query = count_query.where(and_(*filters))
+
+        # Get total count
+        count_result = await self.session.execute(count_query)
+        total_count = count_result.scalar() or 0
+
+        # Apply pagination
+        offset = (page - 1) * page_size
+        query = query.offset(offset).limit(page_size)
+
+        # Order by created_at descending
+        query = query.order_by(User.created_at.desc())
+
+        # Execute query
+        result = await self.session.execute(query)
+        user_models = result.scalars().all()
+
+        # Convert to DTOs
+        user_dtos = []
+        for user_model in user_models:
+            user_dto = UserDTO(
+                id=user_model.id,
+                username=user_model.username,
+                email=user_model.email,
+                first_name=user_model.first_name,
+                last_name=user_model.last_name,
+                status=user_model.status,
+                created_at=user_model.created_at,
+                updated_at=user_model.updated_at,
+            )
+            user_dtos.append(user_dto)
+
+        logger.info(
+            f"Retrieved {len(user_dtos)} users out of {total_count} total"
+        )
+        return user_dtos, total_count

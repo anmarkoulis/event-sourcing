@@ -53,10 +53,20 @@ class CommandHandlerWrapper:
 
     async def handle(self, command: Any) -> Any:
         """Handle the command with proper session management"""
+        logger.info(
+            f"Wrapper: Starting command handler for command: {type(command).__name__}"
+        )
         command_handler, session = await self._create_handler_with_session()
         try:
-            return await command_handler.handle(command)
+            logger.info(f"Wrapper: Calling command handler")
+            result = await command_handler.handle(command)
+            logger.info(f"Wrapper: Command handler completed successfully")
+            return result
+        except Exception as e:
+            logger.error(f"Wrapper: Error in command handler: {e}")
+            raise
         finally:
+            logger.info(f"Wrapper: Closing session")
             await session.close()
 
 
@@ -72,12 +82,21 @@ class ProjectionWrapper:
     async def _create_projection_with_session(self) -> tuple[Any, Any]:
         """Create a fresh session and projection for this operation"""
         session = await self.factory.session_manager.get_session()
-        uow = SQLAUnitOfWork(session)
         read_model = PostgreSQLReadModel(session)
-        projection = self.projection_class(
-            read_model=read_model,
-            unit_of_work=uow,
-        )
+
+        # Check if the projection class expects unit_of_work parameter
+        import inspect
+
+        sig = inspect.signature(self.projection_class.__init__)
+        if "unit_of_work" in sig.parameters:
+            uow = SQLAUnitOfWork(session)
+            projection = self.projection_class(
+                read_model=read_model,
+                unit_of_work=uow,
+            )
+        else:
+            projection = self.projection_class(read_model=read_model)
+
         return projection, session
 
     async def handle(self, event: Any) -> Any:
@@ -352,6 +371,39 @@ class InfrastructureFactory:
                 query_handler = GetUserHistoryQueryHandler(
                     event_store=event_store
                 )
+                return query_handler, session
+
+            async def handle(self, query: Any) -> Any:
+                """Handle the query with proper session management"""
+                (
+                    query_handler,
+                    session,
+                ) = await self._create_handler_with_session()
+                try:
+                    return await query_handler.handle(query)
+                finally:
+                    await session.close()
+
+        return QueryHandlerWrapper(self)
+
+    def create_list_users_query_handler(self) -> Any:
+        """Create ListUsersQueryHandler with read model dependency"""
+        logger.info("Creating ListUsersQueryHandler")
+        # Dynamic import to avoid circular dependency
+        from event_sourcing.application.queries.handlers.user import (
+            ListUsersQueryHandler,
+        )
+
+        # Create a wrapper that manages session creation
+        class QueryHandlerWrapper:
+            def __init__(self, factory: InfrastructureFactory) -> None:
+                self.factory = factory
+
+            async def _create_handler_with_session(self) -> tuple[Any, Any]:
+                """Create a fresh session and handler for this operation"""
+                session = await self.factory.session_manager.get_session()
+                read_model = PostgreSQLReadModel(session)
+                query_handler = ListUsersQueryHandler(read_model=read_model)
                 return query_handler, session
 
             async def handle(self, query: Any) -> Any:
