@@ -130,16 +130,6 @@ generate-diagrams: create-directories ## Generate diagrams from Mermaid source f
 		echo "diagrams/source directory not found"; \
 	fi
 
-pdf: install-marp generate-diagrams ## Generate presentation PDF from markdown with speaker notes
-	@echo "Generating presentation PDF with speaker notes..."
-	marp docs/presentation.md --pdf --allow-local-files --output docs/presentation.pdf
-	@echo "Presentation PDF with speaker notes generated successfully!"
-
-html: install-marp generate-diagrams ## Generate presentation HTML from markdown
-	@echo "Generating presentation HTML..."
-	marp docs/presentation.md --html --allow-local-files --output docs/presentation.html
-	@echo "Presentation HTML generated successfully!"
-
 pptx: install-marp generate-diagrams ## Generate presentation PowerPoint from markdown with speaker notes
 	@echo "Generating presentation PowerPoint with speaker notes..."
 	marp docs/presentation.md --pptx --allow-local-files --output docs/presentation.pptx
@@ -147,13 +137,13 @@ pptx: install-marp generate-diagrams ## Generate presentation PowerPoint from ma
 
 clean: ## Clean generated files
 	@echo "Cleaning generated files..."
-	rm -f docs/presentation.pdf docs/presentation.html docs/presentation.pptx
+	rm -f docs/presentation.pptx
 	rm -rf diagrams/generated/*
 	@echo "Cleanup completed!"
 
 setup: install-marp install-mermaid-cli create-directories ## Complete setup for presentation development
 	@echo "Setup completed! You can now:"
-	@echo "  - Run 'make pdf' to generate PDF"
+	@echo "  - Run 'make pptx' to generate PowerPoint"
 	@echo "  - Add Mermaid diagrams to diagrams/source/"
 
 .PHONY: $(shell grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | cut -d ':' -f 1)
