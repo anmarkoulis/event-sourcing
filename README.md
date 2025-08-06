@@ -2,6 +2,19 @@
 
 This is an example Event Sourcing project
 
+## Documentation
+
+This project contains comprehensive documentation organized in two main areas:
+
+### 📊 [Presentation Documentation](docs/presentation/)
+- **Presentation slides**: `docs/presentation/presentation.md` - Main presentation with speaker notes
+- **Generated files**: PowerPoint presentations and diagrams
+- **Diagrams**: Mermaid source files and generated images
+
+### 📚 [Code Documentation](docs/code/)
+- **[Event Sourcing Guide](docs/code/event-sourcing.md)** - Complete API documentation, architecture overview, and business rules
+- **[Infrastructure Guide](docs/code/infrastructure.md)** - Database models, infrastructure components, and technical implementation details
+
 ## Prerequisites
 
 In order to be able to run Event Sourcing locally the following are required:
@@ -14,13 +27,13 @@ In order to be able to run Event Sourcing locally the following are required:
 1. Clone the repository:
 
 ```bash
-git clone git@github.com:anmarkoulis/pycon-gr.git
+git clone git@github.com:anmarkoulis/event-sourcing.git
 ```
 
 2. Navigate to the project directory:
 
 ```bash
-cd pycon-gr
+cd event-sourcing
 ```
 
 3. Build the Docker image:
@@ -55,7 +68,7 @@ The following make commands are available for development and interaction with t
 * `make down`:  Stops the running containers
 * `make down-volumes`: Stops the running containers and deletes the volumes.
 * `make restart`:  Stops, restarts the containers and shows the logs of the application.
-* `aws-vault exec [aws-role] -- make full-restart`: Stops the running containers and removes their volumes, builds and restarts the containers and shows the logs of the application.
+* `make full-restart`: Stops the running containers and removes their volumes, builds and restarts the containers and shows the logs of the application.
 * `make logs`:  Shows the logs of the application.
 * `make install-pre-commit`: Install pre-commit via docker.
 * `make pre-commit args="<args>"`: Runs precommits based on the provided args.
@@ -76,5 +89,5 @@ The following make commands are available for development and interaction with t
 
 ## Versioning
 
-We use [SemVer](http://semver.org/) for versioning. For the versions available, see the [releases on this repository](https://github.com/anmarkoulis/pycon-gr/releases).
+We use [SemVer](http://semver.org/) for versioning. For the versions available, see the [releases on this repository](https://github.com/anmarkoulis/event-sourcing/releases).
 A new version is automatically released if new code is merged in the main branch.
