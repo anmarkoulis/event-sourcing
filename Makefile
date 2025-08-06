@@ -100,50 +100,50 @@ install-mermaid-cli: ## Install mermaid-cli globally
 
 create-directories: ## Create necessary directories for diagrams
 	@echo "Creating directories..."
-	mkdir -p diagrams/source
-	mkdir -p diagrams/generated
+	mkdir -p docs/presentation/diagrams/source
+	mkdir -p docs/presentation/diagrams/generated
 	@echo "Directories created successfully!"
 
 generate-diagrams: create-directories ## Generate diagrams from Mermaid source files
 	@echo "Generating diagrams..."
-	@if [ -d "diagrams/source" ]; then \
-		echo "Found diagrams/source directory"; \
-		file_count=$$(find diagrams/source -name "*.mmd" | wc -l); \
+	@if [ -d "docs/presentation/diagrams/source" ]; then \
+		echo "Found docs/presentation/diagrams/source directory"; \
+		file_count=$$(find docs/presentation/diagrams/source -name "*.mmd" | wc -l); \
 		echo "Found $$file_count .mmd files"; \
 		if [ $$file_count -gt 0 ]; then \
-			for file in diagrams/source/*.mmd; do \
+			for file in docs/presentation/diagrams/source/*.mmd; do \
 				if [ -f "$$file" ]; then \
 					filename=$$(basename $$file .mmd); \
 					echo "Generating $$filename.png from $$file"; \
-					npx --yes @mermaid-js/mermaid-cli -i $$file -o diagrams/generated/$$filename.png; \
+					npx --yes @mermaid-js/mermaid-cli -i $$file -o docs/presentation/diagrams/generated/$$filename.png; \
 				fi; \
 			done; \
 			echo "Diagrams generated successfully!"; \
 		else \
-			echo "No .mmd files found in diagrams/source/"; \
+			echo "No .mmd files found in docs/presentation/diagrams/source/"; \
 			echo "Creating example diagram..."; \
-			echo 'graph TD\n    A[Client Request] --> B[FastAPI]\n    B --> C[Event Store]\n    B --> D[Event Bus]\n    D --> E[Celery Workers]\n    E --> F[Read Model]\n    F --> G[Client Response]' > diagrams/source/architecture.mmd; \
-			npx --yes @mermaid-js/mermaid-cli -i diagrams/source/architecture.mmd -o diagrams/generated/architecture.png; \
+			echo 'graph TD\n    A[Client Request] --> B[FastAPI]\n    B --> C[Event Store]\n    B --> D[Event Bus]\n    D --> E[Celery Workers]\n    E --> F[Read Model]\n    F --> G[Client Response]' > docs/presentation/diagrams/source/architecture.mmd; \
+			npx --yes @mermaid-js/mermaid-cli -i docs/presentation/diagrams/source/architecture.mmd -o docs/presentation/diagrams/generated/architecture.png; \
 			echo "Example architecture diagram created!"; \
 		fi; \
 	else \
-		echo "diagrams/source directory not found"; \
+		echo "docs/presentation/diagrams/source directory not found"; \
 	fi
 
 pptx: install-marp generate-diagrams ## Generate presentation PowerPoint from markdown with speaker notes
 	@echo "Generating presentation PowerPoint with speaker notes..."
-	marp docs/presentation.md --pptx --allow-local-files --output docs/presentation.pptx
+	marp docs/presentation/presentation.md --pptx --allow-local-files --output docs/presentation/presentation.pptx
 	@echo "Presentation PowerPoint with speaker notes generated successfully!"
 
 clean: ## Clean generated files
 	@echo "Cleaning generated files..."
-	rm -f docs/presentation.pptx
-	rm -rf diagrams/generated/*
+	rm -f docs/presentation/presentation.pptx
+	rm -rf docs/presentation/diagrams/generated/*
 	@echo "Cleanup completed!"
 
 setup: install-marp install-mermaid-cli create-directories ## Complete setup for presentation development
 	@echo "Setup completed! You can now:"
 	@echo "  - Run 'make pptx' to generate PowerPoint"
-	@echo "  - Add Mermaid diagrams to diagrams/source/"
+	@echo "  - Add Mermaid diagrams to docs/presentation/diagrams/source/"
 
 .PHONY: $(shell grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | cut -d ':' -f 1)
