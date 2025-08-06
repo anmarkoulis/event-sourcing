@@ -462,32 +462,40 @@ Inside the Celery tasks, projections update read models from events. Here's our 
 
 # Eventual Consistency: The Real Challenge
 
-## The story: "Update user's first name"
+## The story: "Sarah's name change confusion"
 
+**Monday 3:47 PM**: Sarah updates her name from "Sarah" to "Sara"
 ```python
-# User updates first name
-PUT /users/123/ {"first_name": "John"}
-# API returns success immediately
-# But read model might not be updated yet
+PUT /users/123/ {"first_name": "Sara"}
 ```
+
+**Monday 3:48 PM**: Sarah submits the form
+- **Frontend calls backend, still shows**: "Sarah"
+- **Sarah thinks**: "Did it work? 🤔"
 
 ## Two approaches to handle this:
 
 ### 1. Optimistic Updates (Naive)
 ### 2. Outbox Pattern (Advanced)
 
-
 ## **Eventual consistency requires thoughtful UI design**
 
 <!--
-Now, let's talk about the real challenge of eventual consistency. Here's a concrete example: a user updates their first name. The API returns success immediately, but the read model might not be updated yet. This creates a real UI challenge. I've seen two approaches to handle this. The naive approach is optimistic updates - the frontend updates the UI immediately, but if the user refreshes, they might see old data. The more advanced approach is the outbox pattern - we store events in an outbox table with job status, track processing status like pending, processing, completed, or failed, and create views of unprocessed events. This gives us clear visibility into what's been processed versus what's still pending. Eventual consistency requires thoughtful UI design.
+This is a real story that happened to us. Sarah updated her name from "Sarah" to "Sara", the API returned success immediately, but when the frontend called the backend to get the updated data, it still showed "Sarah". This is the reality of eventual consistency - your API says "success" but the read model might not be updated yet.
+
+I've seen two approaches to handle this. The naive approach is optimistic updates - the frontend updates the UI immediately, but if the user refreshes or calls the backend, they might see old data. This creates confusion and support tickets.
+
+The more advanced approach is the outbox pattern - we store events in an outbox table with job status, track processing status like pending, processing, completed, or failed, and create views of unprocessed events. This gives us clear visibility into what's been processed versus what's still pending.
+
+The key insight is that eventual consistency isn't just a technical challenge - it's a UX challenge. Users expect immediate feedback, but they also expect consistency. You need to design your UI to handle this gracefully.
 -->
 
 ---
 
 # Performance with Snapshots
 
-## The performance challenge:
+## The story: "The slow password change"
+
 
 ```python
     async def handle(self, command: ChangePasswordCommand) -> None:
@@ -497,15 +505,15 @@ Now, let's talk about the real challenge of eventual consistency. Here's a concr
             user.apply(event)  # Takes 5 seconds 😱
 ```
 
-## The solution: Snapshots in Command Handler
+## The solution: "Time travel with snapshots"
 
 ```python
-    async def handle(self, command: CreateUserCommand) -> None:
+    async def handle(self, command: ChangePasswordCommand) -> None:
         try:
             snapshot = await self.snapshot_store.get_latest_snapshot(command.user_id)
-            recent_events = await self.event_store.get_events_since_snapshot(command.user_id, snapshot.revision)
+            events = await self.event_store.get_stream(command.user_id, start_revision=snapshot.revision)
             user = UserAggregate.from_snapshot(snapshot)
-            for event in recent_events:
+            for event in events:  # Only 50 events instead of 10,000!
                 user.apply(event)
         except SnapshotNotFound:
 ```
@@ -513,7 +521,13 @@ Now, let's talk about the real challenge of eventual consistency. Here's a concr
 ## **Snapshots require aggregate changes** - rebuild state efficiently
 
 <!--
-Another concern is performance - what if you have thousands of events? Here's the problem: replaying 10,000 events takes 5 seconds. The solution is snapshots, but this requires changes to our command handlers. We try to get the latest snapshot first, and if it exists, we rebuild the aggregate from the snapshot and apply only the recent events. If no snapshot exists, we fall back to getting all events - this handles the case where snapshots haven't been created yet. This gives us the best of both worlds - performance when snapshots exist, and correctness when they don't. The key insight is that snapshots require proper error handling in the command handlers.
+This is a real story that happened to us. John has been using our system for 2 years and has 10,000+ events. When he tried to change his password, it took 5 seconds. He was frustrated and asked "Why is this so slow?" This is the performance challenge of event sourcing - replaying thousands of events takes time.
+
+The solution is snapshots - we save state every 1,000 events. Instead of replaying 10,000 events, we only replay the recent 50 events since the last snapshot. This reduces the password change time from 5 seconds to 0.5 seconds.
+
+We try to get the latest snapshot first, and if it exists, we rebuild the aggregate from the snapshot and apply only the recent events. If no snapshot exists, we fall back to getting all events - this handles the case where snapshots haven't been created yet. This gives us the best of both worlds - performance when snapshots exist, and correctness when they don't.
+
+The key insight is that snapshots require proper error handling in the command handlers, but the performance improvement is dramatic.
 -->
 
 ---
@@ -542,7 +556,13 @@ def process_user_created_task(self, event: Dict[str, Any]) -> None:
 ## **Different strategies for different failure modes**
 
 <!--
-Now let's talk about error handling and retries, which are actually two different worlds. For commands - the synchronous API calls - we use Unit of Work to ensure atomicity. Either the event is stored and dispatched, or it fails completely and the API returns a 500. There's no retry here - it's all or nothing. For projections - the asynchronous Celery tasks - we use Celery's built-in retry mechanisms with late acknowledgment. Messages are never lost, but idempotence is critical because the same message can arrive multiple times. This actually enables powerful capabilities like backfill tasks that can reprocess all events from the event store.
+This is a real story that happened to us. Sarah changed her password, the command succeeded and the API returned 200, but the projection failed due to a database connection timeout. When Sarah tried to log in with her new password, it failed because the read model wasn't updated. She panicked and asked "Did my password change work?" This is the reality of distributed systems - different parts can fail independently.
+
+For commands - the synchronous API calls - we use Unit of Work to ensure atomicity. Either the event is stored and dispatched, or it fails completely and the API returns a 500. There's no retry here - it's all or nothing.
+
+For projections - the asynchronous Celery tasks - we use Celery's built-in retry mechanisms with late acknowledgment. Messages are never lost, but idempotence is critical because the same message can arrive multiple times. This actually enables powerful capabilities like backfill tasks that can reprocess all events from the event store.
+
+The key insight is that you need different strategies for different failure modes - commands need immediate consistency, projections need eventual consistency with retries.
 -->
 
 ---
@@ -554,29 +574,31 @@ Now let's talk about error handling and retries, which are actually two differen
 ![Debugging Superpowers](../diagrams/generated/debugging-superpowers.png)
 
 ```python
-# Test business logic with real production data
-def test_incident_scenario(user_id: str, incident_time: datetime):
-    """Test what would happen if we applied a specific event at a point in time"""
-    events = event_store.get_events_before(user_id, incident_time)
-    user = UserAggregate(user_id)
+class TestUserAggregate(AsyncIOIsolatedTestCase):
+    async def test_user_suspended(self):
+        # Arrange - Apply real production events
+        user = UserAggregate()
+        user.apply(UserCreatedEvent("user_123", name="John", email="john@example.com"))
+        user.apply(UserLoginEvent("user_123", ip="192.168.1.1"))
+        user.apply(UserProfileUpdatedEvent("user_123", field="email", value="john.doe@example.com"))
 
-    # Rebuild exact state at incident time
-    for event in events:
-        user.apply(event)
+        # Act - Test the problematic suspension event
+        result = user.apply(UserSuspendedEvent("user_123", reason="fraud_detected"))
 
-    # Test the problematic event that caused the issue
-    result = user.apply(UserSuspendedEvent(user_id, reason="fraud_detected"))
-
-    # Assert the expected behavior
-    assert result.is_success, f"User should be suspended: {result.error}"
-    assert user.status == "suspended"
-    print(f"✅ Test passed: User {user_id} would be suspended at {incident_time}")
+        # Assert
+        self.assertTrue(result.is_success)
+        self.assertEqual(user.status, "suspended")
+        print(f"✅ Test passed: User would be suspended with fraud_detected reason")
 ```
 
 ## **Test business logic with real production data**
 
 <!--
-Now, this is where event sourcing really shines - testing business logic at specific points in time. Instead of trying to recreate scenarios in test environments, we can rebuild the exact state at any moment in history. Here's how it works: we get all events before a specific incident time, rebuild the aggregate state at that exact moment, and then apply the problematic event that caused the issue - like a UserSuspendedEvent. This lets us see exactly what the business rules would do when that event is applied, and understand why certain actions were allowed or blocked. This gives us the ability to debug issues that happened hours or days ago, and test business logic against real production data at any point in time. This is debugging and testing superpowers combined.
+This is a real story that happened to us. John submitted a support ticket: "Why was my account suspended yesterday at 3:47 PM? I was just logging in normally! This is affecting my work!" With traditional systems, we would have said "Sorry, we can't see what happened." But with event sourcing, we can replay exactly what happened.
+
+Instead of trying to recreate scenarios in test environments, we can rebuild the exact state at any moment in history. Here's how it works: we get all events before a specific incident time, rebuild the aggregate state at that exact moment, and then apply the problematic event that caused the issue - like a UserSuspendedEvent. This lets us see exactly what the business rules would do when that event is applied, and understand why certain actions were allowed or blocked.
+
+This gives us the ability to debug issues that happened hours or days ago, and test business logic against real production data at any point in time. This is debugging and testing superpowers combined - we can answer "What was the user's state at 3:47 PM?" with complete certainty.
 -->
 
 ---
@@ -620,6 +642,12 @@ The Python ecosystem with FastAPI and Celery is more than capable of solving eve
 **LinkedIn**: linkedin.com/in/anmarkoulis
 **Dev.to**: dev.to/markoulis
 
+**📚 Full Implementation**: github.com/anmarkoulis/event-sourcing-fastapi-celery
+
 <!--
-Thank you all for your attention. I hope I've convinced you that raw events are worth loving. I'm happy to take questions and discuss any aspect of event sourcing, CQRS, or the Python ecosystem. Let's have a great discussion!
+Thank you all for your attention. I hope I've convinced you that raw events are worth loving.
+
+I've shared the complete implementation on GitHub - you can see all the patterns we discussed in action: the command handlers, event handlers, projections, and the full FastAPI + Celery integration. Feel free to explore the code, run it locally, and adapt it to your own projects.
+
+I'm happy to take questions and discuss any aspect of event sourcing, CQRS, or the Python ecosystem. Let's have a great discussion!
 -->
