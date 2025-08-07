@@ -1,7 +1,9 @@
 import logging
 
 from event_sourcing.application.commands.handlers.base import CommandHandler
-from event_sourcing.application.commands.user import UpdateUserCommand
+from event_sourcing.application.commands.user.update_user import (
+    UpdateUserCommand,
+)
 from event_sourcing.application.events.handlers.base import EventHandler
 from event_sourcing.domain.aggregates.user import UserAggregate
 from event_sourcing.enums import AggregateTypeEnum
@@ -27,24 +29,23 @@ class UpdateUserCommandHandler(CommandHandler[UpdateUserCommand]):
     async def handle(self, command: UpdateUserCommand) -> None:
         logger.info(f"Updating user: {command.user_id}")
 
-        # Get all events for this aggregate
+        # Get existing events for the user
         events = await self.event_store.get_stream(
             command.user_id, AggregateTypeEnum.USER
         )
 
-        # Create aggregate and replay events
+        # Reconstruct the aggregate from events
         user = UserAggregate(command.user_id)
         for event in events:
             user.apply(event)
 
-        # Call domain method and get new events
+        # Update the user with only the fields that are available
         new_events = user.update_user(
+            email=command.email,
             first_name=command.first_name,
             last_name=command.last_name,
-            email=command.email,
         )
 
-        # Use Unit of Work for atomic operations
         async with self.unit_of_work as uow:
             await self.event_store.append_to_stream(
                 command.user_id,

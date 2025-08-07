@@ -21,7 +21,7 @@ class UserCreatedProjection(Projection):
     async def handle(self, event: EventDTO) -> None:
         """Handle USER_CREATED event"""
         try:
-            # Extract user data from event and create Pydantic model
+            # Extract user data from event
             user_data = UserReadModelData(
                 aggregate_id=str(event.aggregate_id),
                 username=event.data.username,
@@ -29,19 +29,16 @@ class UserCreatedProjection(Projection):
                 first_name=event.data.first_name,
                 last_name=event.data.last_name,
                 password_hash=event.data.password_hash,
-                status=event.data.status,
                 created_at=event.timestamp,
-                updated_at=event.timestamp,
             )
 
-            # Use Unit of Work for atomic operations
-            async with self.unit_of_work as uow:
-                # Create read model with session from UoW
-                read_model = PostgreSQLReadModel(uow.db)
+            # Use Unit of Work for transaction management
+            async with self.unit_of_work:
                 # Save to read model
-                await read_model.save_user(user_data)
+                await self.read_model.save_user(user_data)
+                # UoW will handle commit/rollback
 
-            logger.info(f"Created user read model for: {user_data.username}")
+            logger.info(f"Created user read model for: {event.aggregate_id}")
 
         except Exception as e:
             logger.error(f"Error in UserCreatedProjection: {e}")

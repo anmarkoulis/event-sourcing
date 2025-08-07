@@ -44,7 +44,6 @@ class EventFactory:
             first_name=first_name,
             last_name=last_name,
             password_hash=password_hash,
-            status="active",
         )
 
         return UserCreatedV1(
@@ -57,17 +56,19 @@ class EventFactory:
     @staticmethod
     def create_user_updated(
         aggregate_id: uuid.UUID,
-        revision: int,
+        username: Optional[str] = None,
+        email: Optional[str] = None,
         first_name: Optional[str] = None,
         last_name: Optional[str] = None,
-        email: Optional[str] = None,
+        revision: int = 1,
         timestamp: Optional[datetime] = None,
     ) -> UserUpdatedV1:
         """Create a USER_UPDATED event"""
         data = UserUpdatedDataV1(
+            username=username,
+            email=email,
             first_name=first_name,
             last_name=last_name,
-            email=email,
         )
 
         return UserUpdatedV1(

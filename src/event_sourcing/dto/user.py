@@ -1,5 +1,5 @@
 from datetime import datetime
-from typing import Any, Dict, List, Optional
+from typing import List, Optional
 from uuid import UUID
 
 from pydantic import BaseModel, EmailStr, Field
@@ -15,7 +15,6 @@ class UserDTO(ModelConfigBaseModel):
     email: str = Field(..., description="Email address")
     first_name: Optional[str] = Field(None, description="First name")
     last_name: Optional[str] = Field(None, description="Last name")
-    status: str = Field(..., description="User status")
     created_at: datetime = Field(..., description="Creation timestamp")
     updated_at: datetime = Field(..., description="Last update timestamp")
 
@@ -88,8 +87,10 @@ class GetUserResponse(BaseModel):
 
 class GetUserHistoryResponse(BaseModel):
     user_id: str = Field(..., description="User ID")
-    count: int = Field(..., description="Number of events")
-    events: List[Dict[str, Any]] = Field(..., description="Event history")
+    timestamp: datetime = Field(..., description="Point in time for the state")
+    user: Optional[UserDTO] = Field(
+        None, description="User state at the specified time"
+    )
 
 
 class ListUsersResponse(BaseModel):
@@ -111,6 +112,5 @@ class UserReadModelData(BaseModel):
     first_name: Optional[str] = None
     last_name: Optional[str] = None
     password_hash: Optional[str] = None
-    status: Optional[str] = None
     created_at: Optional[datetime] = None
     updated_at: Optional[datetime] = None

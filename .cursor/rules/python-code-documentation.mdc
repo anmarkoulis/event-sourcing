@@ -1,0 +1,183 @@
+---
+description: Python code documentation standards
+globs: ["*.py", "**/*.py"]
+alwaysApply: true
+---
+
+## No inline comments
+
+- Replace inline comments with private methods/functions
+- Private methods should be named descriptively to explain their purpose
+- Use `_` prefix for private methods
+- Example:
+
+```python
+# Instead of:
+def process_data(data):
+    # Validate input data
+    if not data:
+        raise ValueError("Data cannot be empty")
+
+    # Transform data
+    transformed = [x * 2 for x in data]
+
+    # Save results
+    save_to_database(transformed)
+
+# Use:
+def process_data(data):
+    self._validate_input_data(data)
+    transformed = self._transform_data(data)
+    self._save_results(transformed)
+
+def _validate_input_data(self, data):
+    """Validate input data."""
+    if not data:
+        raise ValueError("Data cannot be empty")
+
+def _transform_data(self, data):
+    """Transform input data."""
+    return [x * 2 for x in data]
+
+def _save_results(self, data):
+    """Save transformed data to database."""
+    save_to_database(data)
+```
+
+## Docstring Format
+
+### reStructuredText Format
+
+- Use reStructuredText format for all docstrings
+- Include type hints in docstrings
+- Example:
+
+```python
+def process_data(data: List[int]) -> List[int]:
+    """Process input data and return transformed results.
+
+    This function takes a list of integers, validates them, transforms them,
+    and returns the processed results.
+
+    :param data: List of integers to process.
+    :return: List of processed integers.
+    :raises ValueError: If input data is empty.
+    :raises TypeError: If input contains non-integer values.
+
+    Example:
+        >>> process_data([1, 2, 3])
+        [2, 4, 6]
+    """
+    self._validate_input_data(data)
+    return self._transform_data(data)
+```
+
+### Class Docstrings
+
+- Include class-level docstring
+- Document public attributes
+- Document inheritance
+- Example:
+
+```python
+class DataProcessor:
+    """Process and transform data according to specified rules.
+
+    This class provides methods for processing and transforming data
+    according to business rules. It handles validation, transformation,
+    and storage of processed data.
+
+    :ivar max_size: Maximum size of input data (default: 1000).
+    :ivar transform_factor: Factor to multiply data by (default: 2).
+    """
+
+    def __init__(self, max_size: int = 1000, transform_factor: int = 2):
+        """Initialize DataProcessor.
+
+        :param max_size: Maximum size of input data.
+        :param transform_factor: Factor to multiply data by.
+        """
+        self.max_size = max_size
+        self.transform_factor = transform_factor
+```
+
+### Method Docstrings
+
+- Document all public methods
+- Include parameters, return values, and exceptions
+- Provide examples when appropriate
+- Document side effects
+- Example:
+
+```python
+def transform_data(self, data: List[int]) -> List[int]:
+    """Transform input data by applying transformation rules.
+
+    This method applies the transformation factor to each element
+    in the input data list. It also validates the input and handles
+    any potential errors.
+
+    :param data: List of integers to transform.
+    :return: List of transformed integers.
+    :raises ValueError: If input data exceeds max_size.
+    :raises TypeError: If input contains non-integer values.
+
+    Example:
+        >>> processor = DataProcessor(transform_factor=3)
+        >>> processor.transform_data([1, 2, 3])
+        [3, 6, 9]
+    """
+    self._validate_size(data)
+    return [x * self.transform_factor for x in data]
+```
+
+### Private Method Docstrings
+
+- Include brief docstrings for private methods
+- Focus on implementation details
+- Example:
+
+```python
+def _validate_size(self, data: List[int]) -> None:
+    """Validate that data size is within limits.
+
+    :param data: List to validate.
+    :raises ValueError: If data length exceeds max_size.
+    """
+    if len(data) > self.max_size:
+        raise ValueError(f"Data size {len(data)} exceeds maximum {self.max_size}")
+```
+
+## Documentation Best Practices
+
+### General Rules
+
+- Keep docstrings up to date with code changes
+- Use clear, concise language
+- Include examples for complex functionality
+- Document all public interfaces
+- Maintain consistent formatting
+- Use proper reStructuredText syntax
+
+### Required Sections
+
+1. Brief description
+2. Detailed description (if needed)
+3. Parameters (using :param:)
+4. Return values (using :return:)
+5. Exceptions (using :raises:)
+6. Examples (using Example:)
+7. Notes (if applicable)
+8. References (if applicable)
+
+### Formatting Guidelines
+
+- Use proper indentation
+- Maintain consistent line length (79 characters)
+- Use proper reStructuredText syntax for:
+  - Code blocks
+  - Lists
+  - Tables
+  - Links
+  - Emphasis
+  - References

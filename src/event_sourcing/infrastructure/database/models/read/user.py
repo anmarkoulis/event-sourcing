@@ -22,7 +22,6 @@ class User(
     first_name = Column(String(100), nullable=True)
     last_name = Column(String(100), nullable=True)
     password_hash = Column(Text, nullable=False)  # Hashed password
-    status = Column(String(50), nullable=False, default="active")
 
     def __repr__(self) -> str:
         return f"<User(id={self.id}, username={self.username}, email={self.email})>"

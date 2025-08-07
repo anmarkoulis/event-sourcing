@@ -16,4 +16,3 @@ class ListUsersQuery(BaseModel):
     email: Optional[str] = Field(
         None, description="Filter by email (partial match)"
     )
-    status: Optional[str] = Field(None, description="Filter by status")

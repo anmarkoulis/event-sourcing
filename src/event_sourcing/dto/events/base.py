@@ -14,7 +14,7 @@ T = TypeVar("T")
 class EventDTO(ModelConfigBaseModel, Generic[T]):
     """Base Event DTO with type-safe data field"""
 
-    event_id: uuid.UUID = Field(
+    id: uuid.UUID = Field(
         default_factory=uuid.uuid4, description="Event ID - required UUID"
     )
     aggregate_id: uuid.UUID = Field(

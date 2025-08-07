@@ -1,0 +1,38 @@
+---
+description: Anti-hallucination rules when working with external libraries, SDKs, packages, etc.
+globs: ["**/*"]
+alwaysApply: true
+---
+
+- AI is allowed to say "I don't know".
+- AI must cite quotes and sources for each of its claims. It must also verify each claim by finding a supporting quote after it generates a response. If it can’t find a quote, it must retract the claim.
+
+Verification steps:
+
+1. Check official documentation for the exact syntax, either on the official documentation page, github, PyPi, etc.
+2. Verify method signatures and parameters
+3. Confirm return types and error handling patterns
+4. Review version compatibility and deprecation notices
+5. Check for breaking changes in recent versions
+
+Never suggest code patterns based on:
+
+- Memory or assumptions about library APIs
+- Similar patterns from other libraries
+- Outdated or unverified information
+- Guesswork about method names or signatures
+
+Always include:
+
+- Direct links to official documentation
+- Version numbers being referenced
+- Alternative approaches if primary method is deprecated
+- Clear indication when syntax is verified vs. estimated
+
+Documentation sources to check:
+
+- Official library documentation
+- GitHub repository README and examples
+- Package manager registry pages
+- Release notes and changelogs
+- Official tutorials and guides

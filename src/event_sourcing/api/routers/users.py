@@ -30,13 +30,13 @@ from event_sourcing.dto.user import (
     CreateUserRequest,
     CreateUserResponse,
     DeleteUserResponse,
-    GetUserHistoryResponse,
     GetUserResponse,
     ListUsersResponse,
     RequestPasswordResetRequest,
     RequestPasswordResetResponse,
     UpdateUserRequest,
     UpdateUserResponse,
+    UserDTO,
 )
 
 logger = logging.getLogger(__name__)
@@ -105,7 +105,6 @@ async def list_users(
     email: Optional[str] = Query(
         None, description="Filter by email (partial match)"
     ),
-    status: Optional[str] = Query(None, description="Filter by status"),
     infrastructure_factory: InfrastructureFactoryDep = None,
 ) -> ListUsersResponse:
     """List users with pagination and filtering"""
@@ -116,7 +115,6 @@ async def list_users(
             page_size=page_size,
             username=username,
             email=email,
-            status=status,
         )
 
         # Get query handler
@@ -401,38 +399,27 @@ async def get_user(
 
 @users_router.get(
     "/{user_id}/history/",
-    description="Get user event history",
-    response_model=GetUserHistoryResponse,
+    description="Get user state at a specific point in time",
+    response_model=UserDTO,
 )
 async def get_user_history(
     user_id: str,
-    from_date: Optional[str] = Query(
-        None, description="Start date (ISO format)"
+    timestamp: str = Query(
+        ..., description="Point in time (ISO format) - required"
     ),
-    to_date: Optional[str] = Query(None, description="End date (ISO format)"),
     infrastructure_factory: InfrastructureFactoryDep = None,
-) -> GetUserHistoryResponse:
-    """Get event history for a specific user"""
+) -> UserDTO:
+    """Get user state at a specific point in time"""
     try:
-        # Parse dates if provided
-        from_date_parsed = None
-        to_date_parsed = None
-
-        if from_date:
-            from_date_parsed = datetime.fromisoformat(
-                from_date.replace("Z", "+00:00")
-            )
-
-        if to_date:
-            to_date_parsed = datetime.fromisoformat(
-                to_date.replace("Z", "+00:00")
-            )
+        # Parse the required timestamp
+        timestamp_parsed = datetime.fromisoformat(
+            timestamp.replace("Z", "+00:00")
+        )
 
         # Create query
         query = GetUserHistoryQuery(
             user_id=uuid.UUID(user_id),
-            from_date=from_date_parsed,
-            to_date=to_date_parsed,
+            timestamp=timestamp_parsed,
         )
 
         # Get query handler
@@ -441,16 +428,17 @@ async def get_user_history(
         )
 
         # Execute query
-        events = await query_handler.handle(query)
+        user = await query_handler.handle(query)
 
-        return GetUserHistoryResponse(
-            user_id=user_id,
-            count=len(events),
-            events=events,
-        )
+        if not user:
+            raise HTTPException(
+                status_code=404, detail="User not found at specified time"
+            )
+
+        return user
 
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:
-        logger.error(f"Error getting user history: {e}")
+        logger.error(f"Error getting user state at {timestamp}: {e}")
         raise HTTPException(status_code=500, detail="Internal server error")
