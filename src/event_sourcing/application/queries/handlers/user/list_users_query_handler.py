@@ -4,7 +4,7 @@ from typing import Any, Dict
 
 from event_sourcing.application.queries.handlers.base import QueryHandler
 from event_sourcing.application.queries.user import ListUsersQuery
-from event_sourcing.infrastructure.read_model import PostgreSQLReadModel
+from event_sourcing.infrastructure.read_model import ReadModel
 
 logger = logging.getLogger(__name__)
 
@@ -12,7 +12,7 @@ logger = logging.getLogger(__name__)
 class ListUsersQueryHandler(QueryHandler[ListUsersQuery, Dict[str, Any]]):
     """Handler for listing users with pagination"""
 
-    def __init__(self, read_model: PostgreSQLReadModel):
+    def __init__(self, read_model: ReadModel):
         self.read_model = read_model
 
     async def handle(self, query: ListUsersQuery) -> Dict[str, Any]:
@@ -24,7 +24,6 @@ class ListUsersQueryHandler(QueryHandler[ListUsersQuery, Dict[str, Any]]):
                 page_size=query.page_size,
                 username=query.username,
                 email=query.email,
-                status=query.status,
             )
 
             # Calculate pagination info
@@ -44,8 +43,6 @@ class ListUsersQueryHandler(QueryHandler[ListUsersQuery, Dict[str, Any]]):
                     next_url += f"&username={query.username}"
                 if query.email:
                     next_url += f"&email={query.email}"
-                if query.status:
-                    next_url += f"&status={query.status}"
 
             if query.page > 1:
                 previous_url = f"/users/?page={query.page - 1}&page_size={query.page_size}"
@@ -53,8 +50,6 @@ class ListUsersQueryHandler(QueryHandler[ListUsersQuery, Dict[str, Any]]):
                     previous_url += f"&username={query.username}"
                 if query.email:
                     previous_url += f"&email={query.email}"
-                if query.status:
-                    previous_url += f"&status={query.status}"
 
             return {
                 "results": users,

@@ -1,7 +1,7 @@
 import logging
 
 from event_sourcing.application.commands.handlers.base import CommandHandler
-from event_sourcing.application.commands.user import (
+from event_sourcing.application.commands.user.complete_password_reset import (
     CompletePasswordResetCommand,
 )
 from event_sourcing.application.events.handlers.base import EventHandler
@@ -31,23 +31,21 @@ class CompletePasswordResetCommandHandler(
     async def handle(self, command: CompletePasswordResetCommand) -> None:
         logger.info(f"Completing password reset for user: {command.user_id}")
 
-        # Get all events for this aggregate
+        # Get existing events for the user
         events = await self.event_store.get_stream(
             command.user_id, AggregateTypeEnum.USER
         )
 
-        # Create aggregate and replay events
+        # Reconstruct the aggregate from events
         user = UserAggregate(command.user_id)
         for event in events:
             user.apply(event)
 
-        # Call domain method and get new events
+        # Complete password reset
         new_events = user.complete_password_reset(
-            new_password_hash=command.new_password_hash,
-            reset_token=command.reset_token,
+            command.new_password_hash, command.reset_token
         )
 
-        # Use Unit of Work for atomic operations
         async with self.unit_of_work as uow:
             await self.event_store.append_to_stream(
                 command.user_id,

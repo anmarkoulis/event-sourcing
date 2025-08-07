@@ -1,7 +1,9 @@
 import logging
 
 from event_sourcing.application.commands.handlers.base import CommandHandler
-from event_sourcing.application.commands.user import DeleteUserCommand
+from event_sourcing.application.commands.user.delete_user import (
+    DeleteUserCommand,
+)
 from event_sourcing.application.events.handlers.base import EventHandler
 from event_sourcing.domain.aggregates.user import UserAggregate
 from event_sourcing.enums import AggregateTypeEnum
@@ -27,20 +29,19 @@ class DeleteUserCommandHandler(CommandHandler[DeleteUserCommand]):
     async def handle(self, command: DeleteUserCommand) -> None:
         logger.info(f"Deleting user: {command.user_id}")
 
-        # Get all events for this aggregate
+        # Get existing events for the user
         events = await self.event_store.get_stream(
             command.user_id, AggregateTypeEnum.USER
         )
 
-        # Create aggregate and replay events
+        # Reconstruct the aggregate from events
         user = UserAggregate(command.user_id)
         for event in events:
             user.apply(event)
 
-        # Call domain method and get new events
+        # Delete the user
         new_events = user.delete_user()
 
-        # Use Unit of Work for atomic operations
         async with self.unit_of_work as uow:
             await self.event_store.append_to_stream(
                 command.user_id,

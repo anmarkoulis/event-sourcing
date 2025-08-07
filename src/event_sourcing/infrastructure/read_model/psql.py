@@ -50,8 +50,6 @@ class PostgreSQLReadModel(ReadModel):
                 existing_user.last_name = user_data.last_name
             if user_data.password_hash is not None:
                 existing_user.password_hash = user_data.password_hash
-            if user_data.status is not None:
-                existing_user.status = user_data.status
             # updated_at is handled by the UpdatedAtMixin
         else:
             # Create new user
@@ -62,7 +60,6 @@ class PostgreSQLReadModel(ReadModel):
                 first_name=user_data.first_name,
                 last_name=user_data.last_name,
                 password_hash=user_data.password_hash,
-                status=user_data.status or "active",
             )
             self.session.add(user_model)
 
@@ -88,7 +85,6 @@ class PostgreSQLReadModel(ReadModel):
             email=user_model.email,
             first_name=user_model.first_name,
             last_name=user_model.last_name,
-            status=user_model.status,
             created_at=user_model.created_at,
             updated_at=user_model.updated_at,
         )
@@ -112,7 +108,6 @@ class PostgreSQLReadModel(ReadModel):
 
         if user:
             user.deleted_at = datetime.now(timezone.utc)
-            user.status = "deleted"
             # Note: No commit here - UoW will handle it
             logger.info(f"User {user_id} marked for deletion in session")
         else:
@@ -124,7 +119,6 @@ class PostgreSQLReadModel(ReadModel):
         page_size: int = 10,
         username: Optional[str] = None,
         email: Optional[str] = None,
-        status: Optional[str] = None,
     ) -> Tuple[List[UserDTO], int]:
         """List users with pagination and filtering"""
         logger.info(f"Listing users with page={page}, page_size={page_size}")
@@ -139,8 +133,6 @@ class PostgreSQLReadModel(ReadModel):
             filters.append(User.username.ilike(f"%{username}%"))
         if email:
             filters.append(User.email.ilike(f"%{email}%"))
-        if status:
-            filters.append(User.status == status)
 
         # Apply filters to both queries
         if filters:
@@ -171,7 +163,6 @@ class PostgreSQLReadModel(ReadModel):
                 email=user_model.email,
                 first_name=user_model.first_name,
                 last_name=user_model.last_name,
-                status=user_model.status,
                 created_at=user_model.created_at,
                 updated_at=user_model.updated_at,
             )

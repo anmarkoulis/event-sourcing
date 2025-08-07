@@ -1,4 +1,13 @@
-from sqlalchemy import Column, DateTime, Integer, String, UniqueConstraint
+from typing import Any, Type
+
+from sqlalchemy import (
+    Column,
+    DateTime,
+    Index,
+    Integer,
+    String,
+    UniqueConstraint,
+)
 from sqlalchemy import Enum as SQLEnum
 from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.orm import Mapped, mapped_column
@@ -17,27 +26,34 @@ class EventStream(BaseModel, UUIDIdMixin, CreatedAtMixin, UpdatedAtMixin):
 
     __abstract__ = True
 
-    # Event identification
-    event_id = Column(
-        UUID(as_uuid=True), unique=True, nullable=False, index=True
-    )
-    # Note: aggregate_id is now the same as the model's id field
+    # Aggregate identification
+    aggregate_id = Column(UUID(as_uuid=True), nullable=False, index=True)
+    # Event type
     event_type: Mapped[EventType] = mapped_column(
-        SQLEnum(EventType), nullable=False, index=True
+        SQLEnum(EventType), nullable=False
     )
 
     # Event data and metadata
-    timestamp = Column(DateTime(timezone=True), nullable=False, index=True)
+    timestamp = Column(DateTime(timezone=True), nullable=False)
     version = Column(String(50), nullable=False)  # Schema version
-    revision = Column(Integer, nullable=False, index=True)  # Sequence number
+    revision = Column(Integer, nullable=False)  # Sequence number
     data = Column(JSONB, nullable=False)  # Event payload
 
-    # Unique constraint to ensure event ordering consistency
-    __table_args__ = (
-        UniqueConstraint(
-            "id", "revision", name="uq_event_stream_aggregate_revision"
-        ),
-    )
+    def __init_subclass__(cls: Type["EventStream"], **kwargs: Any) -> None:
+        """Set up unique constraint name for each subclass"""
+        super().__init_subclass__(**kwargs)
+
+        # Create unique constraint name based on table name
+        table_name = cls.__tablename__
+        constraint_name = f"uq_{table_name}_aggregate_revision"
+
+        # Add composite index for aggregate_id + timestamp queries
+        index_name = f"idx_{table_name}_aggregate_timestamp"
+
+        cls.__table_args__ = (
+            UniqueConstraint("aggregate_id", "revision", name=constraint_name),
+            Index(index_name, "aggregate_id", "timestamp"),
+        )
 
     def __repr__(self) -> str:
-        return f"<EventStream(id={self.id}, event_id={self.event_id}, event_type={self.event_type})>"
+        return f"<{self.__class__.__name__}(id={self.id}, aggregate_id={self.aggregate_id}, event_type={self.event_type})>"

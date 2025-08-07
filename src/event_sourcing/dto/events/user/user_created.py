@@ -13,7 +13,6 @@ class UserCreatedDataV1(ModelConfigBaseModel):
     first_name: str = Field(..., description="First name")
     last_name: str = Field(..., description="Last name")
     password_hash: str = Field(..., description="Hashed password")
-    status: str = Field(default="active", description="User status")
 
 
 class UserCreatedV1(EventDTO[UserCreatedDataV1]):

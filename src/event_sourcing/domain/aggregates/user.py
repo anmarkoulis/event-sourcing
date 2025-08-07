@@ -25,7 +25,6 @@ class UserAggregate(Aggregate):
         self.first_name: Optional[str] = None
         self.last_name: Optional[str] = None
         self.password_hash: Optional[str] = None
-        self.status: Optional[str] = None
         self.created_at: Optional[datetime] = None
         self.updated_at: Optional[datetime] = None
         self.deleted_at: Optional[datetime] = None
@@ -267,7 +266,6 @@ class UserAggregate(Aggregate):
         self.first_name = data.first_name
         self.last_name = data.last_name
         self.password_hash = data.password_hash
-        self.status = data.status
         self.created_at = event.timestamp
         self.updated_at = event.timestamp
 
@@ -309,5 +307,4 @@ class UserAggregate(Aggregate):
     def _apply_deleted_event(self, event: EventDTO) -> None:
         """Apply user deleted event"""
         self.deleted_at = event.timestamp
-        self.status = "deleted"
         self.updated_at = event.timestamp

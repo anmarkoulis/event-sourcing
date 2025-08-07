@@ -1,34 +1,30 @@
+import logging
 from typing import Any, Dict
 
 from event_sourcing.dto.events.user import (
-    PasswordChangedV1,
-    PasswordResetCompletedV1,
-    PasswordResetRequestedV1,
-    UserCreatedV1,
-    UserDeletedV1,
-    UsernameChangedV1,
-    UserUpdatedV1,
-)
-from event_sourcing.dto.events.user.password_changed import (
     PasswordChangedDataV1,
-)
-from event_sourcing.dto.events.user.password_reset_completed import (
+    PasswordChangedV1,
     PasswordResetCompletedDataV1,
-)
-from event_sourcing.dto.events.user.password_reset_requested import (
+    PasswordResetCompletedV1,
     PasswordResetRequestedDataV1,
-)
-from event_sourcing.dto.events.user.user_created import UserCreatedDataV1
-from event_sourcing.dto.events.user.user_deleted import UserDeletedDataV1
-from event_sourcing.dto.events.user.user_updated import UserUpdatedDataV1
-from event_sourcing.dto.events.user.username_changed import (
+    PasswordResetRequestedV1,
+    UserCreatedDataV1,
+    UserCreatedV1,
+    UserDeletedDataV1,
+    UserDeletedV1,
     UsernameChangedDataV1,
+    UsernameChangedV1,
+    UserUpdatedDataV1,
+    UserUpdatedV1,
 )
 from event_sourcing.enums import EventType
 
+logger = logging.getLogger(__name__)
+
 
 def deserialize_event_data(event_type: EventType, data: Dict[str, Any]) -> Any:
-    """Deserialize event data from database dictionary to typed data model"""
+    """Deserialize event data based on event type"""
+    logger.debug(f"Deserializing event data for type: {event_type}")
 
     if event_type == EventType.USER_CREATED:
         return UserCreatedDataV1(**data)
@@ -45,19 +41,18 @@ def deserialize_event_data(event_type: EventType, data: Dict[str, Any]) -> Any:
     elif event_type == EventType.PASSWORD_RESET_COMPLETED:
         return PasswordResetCompletedDataV1(**data)
     else:
-        # Fallback to dictionary for unknown event types
+        logger.warning(f"Unknown event type: {event_type}, returning raw data")
         return data
 
 
 def deserialize_event(event_dict: Dict[str, Any]) -> Any:
-    """Deserialize complete event from dictionary to typed event DTO"""
-
+    """Deserialize a complete event from dictionary"""
     event_type = EventType(event_dict["event_type"])
 
     if event_type == EventType.USER_CREATED:
         data = UserCreatedDataV1(**event_dict["data"])
         return UserCreatedV1(
-            event_id=event_dict["event_id"],
+            id=event_dict["id"],
             aggregate_id=event_dict["aggregate_id"],
             timestamp=event_dict["timestamp"],
             version=event_dict["version"],
@@ -67,7 +62,7 @@ def deserialize_event(event_dict: Dict[str, Any]) -> Any:
     elif event_type == EventType.USER_UPDATED:
         data = UserUpdatedDataV1(**event_dict["data"])
         return UserUpdatedV1(
-            event_id=event_dict["event_id"],
+            id=event_dict["id"],
             aggregate_id=event_dict["aggregate_id"],
             timestamp=event_dict["timestamp"],
             version=event_dict["version"],
@@ -77,7 +72,7 @@ def deserialize_event(event_dict: Dict[str, Any]) -> Any:
     elif event_type == EventType.USER_DELETED:
         data = UserDeletedDataV1(**event_dict["data"])
         return UserDeletedV1(
-            event_id=event_dict["event_id"],
+            id=event_dict["id"],
             aggregate_id=event_dict["aggregate_id"],
             timestamp=event_dict["timestamp"],
             version=event_dict["version"],
@@ -87,7 +82,7 @@ def deserialize_event(event_dict: Dict[str, Any]) -> Any:
     elif event_type == EventType.USERNAME_CHANGED:
         data = UsernameChangedDataV1(**event_dict["data"])
         return UsernameChangedV1(
-            event_id=event_dict["event_id"],
+            id=event_dict["id"],
             aggregate_id=event_dict["aggregate_id"],
             timestamp=event_dict["timestamp"],
             version=event_dict["version"],
@@ -97,7 +92,7 @@ def deserialize_event(event_dict: Dict[str, Any]) -> Any:
     elif event_type == EventType.PASSWORD_CHANGED:
         data = PasswordChangedDataV1(**event_dict["data"])
         return PasswordChangedV1(
-            event_id=event_dict["event_id"],
+            id=event_dict["id"],
             aggregate_id=event_dict["aggregate_id"],
             timestamp=event_dict["timestamp"],
             version=event_dict["version"],
@@ -107,7 +102,7 @@ def deserialize_event(event_dict: Dict[str, Any]) -> Any:
     elif event_type == EventType.PASSWORD_RESET_REQUESTED:
         data = PasswordResetRequestedDataV1(**event_dict["data"])
         return PasswordResetRequestedV1(
-            event_id=event_dict["event_id"],
+            id=event_dict["id"],
             aggregate_id=event_dict["aggregate_id"],
             timestamp=event_dict["timestamp"],
             version=event_dict["version"],
@@ -117,7 +112,7 @@ def deserialize_event(event_dict: Dict[str, Any]) -> Any:
     elif event_type == EventType.PASSWORD_RESET_COMPLETED:
         data = PasswordResetCompletedDataV1(**event_dict["data"])
         return PasswordResetCompletedV1(
-            event_id=event_dict["event_id"],
+            id=event_dict["id"],
             aggregate_id=event_dict["aggregate_id"],
             timestamp=event_dict["timestamp"],
             version=event_dict["version"],

@@ -1,0 +1,184 @@
+---
+description:
+globs:
+alwaysApply: true
+---
+# Python Development Rules
+
+## Python Version
+- Python 3.13 required
+- No support for other Python versions
+
+## Code Style
+
+## Classes
+- Use 1 class per module
+
+## Imports
+- use local imports when importing adjacent packages only using single .
+- do not use local imports for non adjacent with more than one .
+- Use __init__.py to expose internal to more top levels
+
+### Line Length
+- Maximum line length: 79 characters
+- Exceptions:
+  - URLs in comments
+  - Long import statements
+  - Long string literals
+
+### Naming Conventions
+- Functions: `[a-z_][a-z0-9_]{2,30}$`
+- Variables: `[a-z_][a-z0-9_]{2,30}$`
+- Constants: `([A-Z_][A-Z0-9_]*)|(__.*__)$`
+- Classes: `[A-Z_][a-zA-Z0-9]+$`
+- Modules: `([a-z_][a-z0-9_]*)|([A-Z][a-zA-Z0-9]+)$`
+- Methods: `[a-z_][a-z0-9_]{2,30}$`
+- Arguments: `[a-z_][a-z0-9_]{2,30}$`
+
+### Good Names
+- Allowed: `i`, `j`, `k`, `ex`, `Run`, `_`
+- Forbidden: `foo`, `bar`, `baz`, `toto`, `tutu`, `tata`
+
+## Type Checking (mypy)
+
+### Strict Settings
+- `warn_redundant_casts = true`
+- `warn_unused_ignores = true`
+- `warn_return_any = true`
+- `disallow_untyped_defs = true`
+- `check_untyped_defs = true`
+- `no_implicit_optional = true`
+- `strict_optional = true`
+
+### Relaxed Settings
+- `disallow_untyped_calls = false`
+- `disallow_any_explicit = false`
+- `disallow_subclassing_any = false`
+- `ignore_missing_imports = true`
+
+## Import Rules
+
+### Organization
+- Use absolute imports
+- Group imports:
+  1. Standard library
+  2. Third-party packages
+  3. Local application
+- Maximum line length: 79 characters
+- Include trailing commas
+- Combine as imports when possible
+
+### Forbidden Imports
+- `regsub`
+- `TERMIOS`
+- `Bastion`
+- `rexec`
+
+## Code Complexity
+
+### Function Limits
+- Maximum arguments: 5
+- Maximum local variables: 15
+- Maximum returns: 6
+- Maximum branches: 12
+- Maximum statements: 50
+- Maximum boolean expressions: 5
+
+### Class Limits
+- Maximum parents: 7
+- Maximum attributes: 7
+- Minimum public methods: 2
+- Maximum public methods: 20
+
+## Documentation
+
+### Docstrings
+- Required for all public methods and classes
+- Minimum length: -1 (no minimum)
+- Exceptions:
+  - Methods matching `^_` pattern
+  - Private methods
+
+## Error Handling
+
+### Exception Rules
+- Avoid broad except clauses
+- Use specific exceptions
+- Don't catch non-exception classes
+- Don't raise non-exception classes
+- Maximum nested blocks: 5
+
+## Testing
+
+### Coverage
+- Omit test files from coverage
+- Include only `/app/src/*`
+- Report precision: 2 decimal places
+- Concurrency: greenlet, thread
+
+### Pytest Configuration
+- Test file patterns:
+  - `tests.py`
+  - `test_*.py`
+  - `conftest.py`
+- Asyncio mode: auto
+
+## Linting Rules
+
+### Enabled Rules
+- Import errors
+- Reimported modules
+- Deprecated modules
+- Unpacking non-sequences
+- Used before assignment
+- Global variable undefined
+- Undefined loop variables
+- Global at module level
+- Bad open modes
+- Redundant unittest asserts
+- Boolean datetime
+- Deprecated methods
+- And many more...
+
+### Disabled Rules
+- All rules disabled by default
+- Only specific rules enabled (see pyproject.toml)
+
+## Formatting
+
+### Black Configuration
+- Line length: 79
+- Include: `\.pyi?$`
+- Exclude:
+  - `.git`
+  - `.hg`
+  - `.mypy_cache`
+  - `.tox`
+  - `.venv`
+  - `_build`
+  - `buck-out`
+  - `build`
+  - `dist`
+
+### isort Configuration
+- Line length: 79
+- Known local folder: `event_sourcing`
+- Source paths: `src`
+- Multi-line output: 3
+- Include trailing comma: true
+- Known first party: `lumi`
+- Combine as imports: true
+
+## Security
+
+### Bandit Configuration
+- Exclude directories:
+  - `.venv`
+  - `venv`
+
+## Build Configuration
+
+### Package Structure
+- Source directory: `src/media_downloader`
+- Include in sdist and wheel builds
+- Package name: `media_downloader`

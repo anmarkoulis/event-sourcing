@@ -43,7 +43,7 @@ class PostgreSQLEventStore(EventStore):
             raise ValueError(f"Unsupported aggregate type: {aggregate_type}")
 
         query = select(UserEventStream).where(
-            UserEventStream.id == aggregate_id
+            UserEventStream.aggregate_id == aggregate_id
         )
 
         # Add time filters if provided
@@ -69,8 +69,8 @@ class PostgreSQLEventStore(EventStore):
             )
 
             event_dto = EventDTO(
-                event_id=event_model.event_id,
-                aggregate_id=event_model.id,  # id is now the aggregate_id
+                id=event_model.id,  # id is now the event_id
+                aggregate_id=event_model.aggregate_id,
                 event_type=event_model.event_type,
                 timestamp=event_model.timestamp,
                 version=event_model.version,
@@ -107,19 +107,19 @@ class PostgreSQLEventStore(EventStore):
         event_ids_in_this_call = set()
 
         for event in events:
-            if event.event_id in event_ids_in_this_call:
+            if event.id in event_ids_in_this_call:
                 logger.warning(
-                    f"Duplicate event ID detected in same call: {event.event_id}"
+                    f"Duplicate event ID detected in same call: {event.id}"
                 )
                 continue
 
-            event_ids_in_this_call.add(event.event_id)
+            event_ids_in_this_call.add(event.id)
             logger.info(
-                f"Adding event to session: ID={event.event_id}, Type={event.event_type}, Revision={event.revision}, Object ID={id(event)}"
+                f"Adding event to session: ID={event.id}, Type={event.event_type}, Revision={event.revision}, Object ID={id(event)}"
             )
             event_model = UserEventStream(
-                event_id=event.event_id,
-                id=event.aggregate_id,  # Use aggregate_id as the id
+                id=event.id,  # event.id is the event_id
+                aggregate_id=event.aggregate_id,
                 event_type=event.event_type,
                 timestamp=event.timestamp,
                 version=event.version,
@@ -147,29 +147,51 @@ class PostgreSQLEventStore(EventStore):
         if aggregate_type != AggregateTypeEnum.USER:
             raise ValueError(f"Unsupported aggregate type: {aggregate_type}")
 
+        # Build query based on parameters
         query = select(UserEventStream)
 
-        # Add filters based on query parameters
-        if "username" in query_params:
-            # Search for USER_CREATED events with specific username
+        # Add filters based on query_params
+        if "start_time" in query_params:
             query = query.where(
-                UserEventStream.event_type == "USER_CREATED",
-                UserEventStream.data.contains(
-                    {"username": query_params["username"]}
-                ),
+                UserEventStream.timestamp >= query_params["start_time"]
             )
+
+        if "end_time" in query_params:
+            query = query.where(
+                UserEventStream.timestamp <= query_params["end_time"]
+            )
+
+        if "event_type" in query_params:
+            query = query.where(
+                UserEventStream.event_type == query_params["event_type"]
+            )
+
+        if "aggregate_id" in query_params:
+            query = query.where(
+                UserEventStream.aggregate_id == query_params["aggregate_id"]
+            )
+
+        # Add filters for username and email by searching in the JSON data field
+        if "username" in query_params:
+            username = query_params["username"]
+            # Search for USER_CREATED events with this username
+            query = query.where(
+                UserEventStream.event_type == "USER_CREATED"
+            ).where(UserEventStream.data["username"].astext == username)
 
         if "email" in query_params:
-            # Search for USER_CREATED events with specific email
+            email = query_params["email"]
+            # Search for USER_CREATED events with this email
             query = query.where(
-                UserEventStream.event_type == "USER_CREATED",
-                UserEventStream.data.contains(
-                    {"email": query_params["email"]}
-                ),
-            )
+                UserEventStream.event_type == "USER_CREATED"
+            ).where(UserEventStream.data["email"].astext == email)
 
-        # Order by revision (sequence number)
-        query = query.order_by(UserEventStream.revision.asc())
+        # Add ordering
+        query = query.order_by(UserEventStream.timestamp.desc())
+
+        # Add limit if specified
+        if "limit" in query_params:
+            query = query.limit(query_params["limit"])
 
         result = await self.session.execute(query)
         event_models = result.scalars().all()
@@ -183,8 +205,8 @@ class PostgreSQLEventStore(EventStore):
             )
 
             event_dto = EventDTO(
-                event_id=event_model.event_id,
-                aggregate_id=event_model.id,  # id is now the aggregate_id
+                id=event_model.id,  # id is now the event_id
+                aggregate_id=event_model.aggregate_id,
                 event_type=event_model.event_type,
                 timestamp=event_model.timestamp,
                 version=event_model.version,
@@ -193,5 +215,6 @@ class PostgreSQLEventStore(EventStore):
             )
             event_dtos.append(event_dto)
 
+        logger.info(f"Event DTOs: {event_dtos}")
         logger.info(f"Found {len(event_dtos)} events matching search criteria")
         return event_dtos

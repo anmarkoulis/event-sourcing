@@ -1,44 +1,63 @@
 import logging
-from typing import Dict, List
+from typing import List
 
 from event_sourcing.application.events.handlers.base import EventHandler
+from event_sourcing.config.celery_app import app
 from event_sourcing.dto import EventDTO
+from event_sourcing.enums import EventType
 
 logger = logging.getLogger(__name__)
 
 
 class CeleryEventHandler(EventHandler):
-    """Celery implementation of event handler"""
-
-    def __init__(self, task_registry: Dict[str, List[str]]):
-        self.task_registry = task_registry
+    """Celery-based event handler for async event processing"""
 
     async def dispatch(self, events: List[EventDTO]) -> None:
         """Dispatch events to Celery tasks"""
+        logger.info(f"Dispatching {len(events)} events to Celery tasks")
+
         for event in events:
-            event_type = event.event_type.value
+            try:
+                # Get task names for this event type
+                task_names = self._get_task_names(event.event_type)
 
-            if event_type in self.task_registry:
-                task_names = self.task_registry[event_type]
+                # Convert event to dict for Celery
+                event_dict = event.model_dump()
 
+                # Send to all tasks for this event type
                 for task_name in task_names:
-                    try:
-                        # Use send_task to avoid imports and make it more flexible
-                        from event_sourcing.config.celery_app import app
+                    logger.info(
+                        f"Dispatching event {event.id} to task {task_name}"
+                    )
 
-                        app.send_task(
-                            task_name, kwargs={"event": event.model_dump()}
-                        )
+                    # Send task to Celery
+                    app.send_task(
+                        task_name,
+                        args=[event_dict],
+                    )
 
-                        logger.info(
-                            f"Dispatching event {event.event_id} to task {task_name}"
-                        )
+                    logger.info(
+                        f"Successfully dispatched event {event.id} to task {task_name}"
+                    )
 
-                    except Exception as e:
-                        logger.error(
-                            f"Error dispatching event {event.event_id} to task {task_name}: {e}"
-                        )
-            else:
-                logger.warning(
-                    f"No tasks registered for event type: {event_type}"
-                )
+            except Exception as e:
+                logger.error(f"Error dispatching event {event.id}: {e}")
+                raise
+
+    def _get_task_names(self, event_type: EventType) -> List[str]:
+        """Map event type to list of Celery task names"""
+        task_mappings = {
+            EventType.USER_CREATED: ["process_user_created_task"],
+            EventType.USER_UPDATED: ["process_user_updated_task"],
+            EventType.USER_DELETED: ["process_user_deleted_task"],
+            EventType.USERNAME_CHANGED: ["process_username_changed_task"],
+            EventType.PASSWORD_CHANGED: ["process_password_changed_task"],
+            EventType.PASSWORD_RESET_REQUESTED: [
+                "process_password_reset_requested_task"
+            ],
+            EventType.PASSWORD_RESET_COMPLETED: [
+                "process_password_reset_completed_task"
+            ],
+        }
+
+        return task_mappings.get(event_type, ["default_event_handler"])

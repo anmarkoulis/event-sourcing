@@ -1,7 +1,9 @@
 import logging
 
 from event_sourcing.application.commands.handlers.base import CommandHandler
-from event_sourcing.application.commands.user import CreateUserCommand
+from event_sourcing.application.commands.user.create_user import (
+    CreateUserCommand,
+)
 from event_sourcing.application.events.handlers.base import EventHandler
 from event_sourcing.domain.aggregates.user import UserAggregate
 from event_sourcing.enums import AggregateTypeEnum

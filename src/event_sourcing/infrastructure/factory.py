@@ -1,5 +1,5 @@
 import logging
-from typing import Any, Dict, Optional, Type
+from typing import Any, Optional, Type
 
 from event_sourcing.infrastructure.database.session import DatabaseManager
 from event_sourcing.infrastructure.event_store import PostgreSQLEventStore
@@ -103,8 +103,10 @@ class ProjectionWrapper:
         """Handle the event with proper session management"""
         projection, session = await self._create_projection_with_session()
         try:
+            # The projection will handle its own transaction via Unit of Work
             return await projection.handle(event)
         finally:
+            # Session is managed by the Unit of Work, just close it
             await session.close()
 
 
@@ -146,32 +148,8 @@ class InfrastructureFactory:
                 CeleryEventHandler,
             )
 
-            # Create task registry with available Celery tasks
-            task_registry = self._create_task_registry()
-
-            self._event_handler = CeleryEventHandler(task_registry)
+            self._event_handler = CeleryEventHandler()
         return self._event_handler
-
-    def _create_task_registry(self) -> Dict[str, Any]:
-        """Create registry of available Celery tasks"""
-        try:
-            # Return task names as strings instead of function objects
-            return {
-                "USER_CREATED": ["process_user_created_task"],
-                "USER_UPDATED": ["process_user_updated_task"],
-                "USER_DELETED": ["process_user_deleted_task"],
-                "USERNAME_CHANGED": ["process_username_changed_task"],
-                "PASSWORD_CHANGED": ["process_password_changed_task"],
-                "PASSWORD_RESET_REQUESTED": [
-                    "process_password_reset_requested_task"
-                ],
-                "PASSWORD_RESET_COMPLETED": [
-                    "process_password_reset_completed_task"
-                ],
-            }
-        except ImportError as e:
-            logger.warning(f"Could not import user tasks: {e}")
-            return {}
 
     @property
     def event_publisher(self) -> EventBridgePublisher:

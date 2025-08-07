@@ -17,25 +17,24 @@ def process_username_changed_task(event: Dict[str, Any]) -> None:
     """Celery task for processing USERNAME_CHANGED events"""
     try:
         logger.info(
-            f"Starting Celery task for USERNAME_CHANGED event: {event.get('event_id', 'unknown')}"
+            f"Starting Celery task for USERNAME_CHANGED event: {event.get('id', 'unknown')}"
         )
 
         # Deserialize the event from dictionary to typed event DTO
         event_dto = deserialize_event(event)
         logger.info(
-            f"Deserialized event: ID={event_dto.event_id}, Type={event_dto.event_type}"
+            f"Deserialized event: ID={event_dto.id}, Type={event_dto.event_type}"
         )
 
         # Get infrastructure factory using the same function as FastAPI
         factory = get_infrastructure_factory()
-        logger.info("Got infrastructure factory")
 
         # Get projection
         projection = factory.create_username_changed_projection()
-        logger.info("Created username changed projection")
 
         # Process the event
         async_to_sync(projection.handle)(event_dto)
+
         logger.info(
             f"Successfully processed USERNAME_CHANGED event for user {event_dto.aggregate_id}"
         )
