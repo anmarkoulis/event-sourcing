@@ -3,6 +3,7 @@ from .user import (
     PasswordChangedProjection,
     PasswordResetCompletedProjection,
     PasswordResetRequestedProjection,
+    UserCreatedEmailProjection,
     UserCreatedProjection,
     UserDeletedProjection,
     UsernameChangedProjection,
@@ -11,6 +12,7 @@ from .user import (
 
 __all__ = [
     "UserCreatedProjection",
+    "UserCreatedEmailProjection",
     "UserUpdatedProjection",
     "UserDeletedProjection",
     "UsernameChangedProjection",
