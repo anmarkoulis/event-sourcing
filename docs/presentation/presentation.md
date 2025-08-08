@@ -72,9 +72,9 @@ style: |
 <!--
 Hello everybody! I'm super excited to be presenting at PyCon Athens. This is the first PyCon in Greece, so it's truly an honor to be part of this inaugural event.
 
-I'm Antonis Markoulis, Senior Staff Engineer at Orfium, where I work with multiple teams and am responsible for technical growth and software quality across the organization. I've been coding in Python for over 10 years, and I love solving complex distributed systems problems.
+I'm Antonis Markoulis, and I am a Senior Staff Engineer at Orfium. Fun fact is that I don;t have daily routine but in principle what I am trying to do is to push the tech standards of both the organization and the engineers. I've been coding in Python professionally for over 10 years, and I absolutely love it.
 
-Today I want to share with you how we solved a real production nightmare using event sourcing and CQRS with familiar Python tools like FastAPI and Celery. Let me start with the problem that led us to this solution.
+Today, I want to share you with how it is possible to solve read complex problems using event sourcing and CQRS with familiar Python tools like FastAPI and Celery. Let me start with the problem that led us to this solution.
 -->
 
 
@@ -106,7 +106,7 @@ This is a story that probably sounds familiar to many of you. Monday 3:47 PM - s
 
 Why is that? Usually we have one row per entity in our relational database and we update on top of it. In the case of hard delete, we lose the entry completely. If we have soft delete, we know when it was deleted using deleted_at, maybe who using updated_by, but in most cases we miss the reason or the different states the user was in. The system has no memory of what happened. This is the nightmare we all face when debugging production issues with classic architectures.
 
-This is exactly the problem that event sourcing solves - by storing every change as an immutable event, we can answer all these questions.
+This is exactly the problem that event sourcing solves.
 -->
 
 
@@ -119,15 +119,20 @@ This is exactly the problem that event sourcing solves - by storing every change
 
 **Events are immutable facts** that represent state changes in the system.
 
-## Example:
-**User Created Event** - John Doe, john@example.com, March 15
+## Event Structure:
+```
+id: 550e8400-e29b-41d4-a716-446655440000
+aggregate_id: 123e4567-e89b-12d3-a456-426614174000
+event_type: USER_DELETED
+version: 1
+timestamp: 2024-03-15T16:47:23Z
+revision: 5
 
-## Key characteristics:
-- **Immutable**: Once created, events never change
-- **Facts**: They represent what actually happened
-- **Complete**: Each event contains all necessary data
-- **Revisioned**: Events have sequence numbers for ordering
-- **Versioned**: Events have schema versions for serialization
+data:
+  deleted_by: admin@company.com
+  reason: User requested account deletion
+  deleted_at: 2024-03-15T16:47:23Z
+```
 
 ## Key principle: **Events are immutable facts** - they never change
 
@@ -515,40 +520,7 @@ We try to get the latest snapshot first, and if it exists, we rebuild the aggreg
 The key insight is that snapshots require proper error handling in the command handlers, but the performance improvement is dramatic.
 -->
 
----
 
-# Error Handling & Retries: Two Different Worlds
-
-## Commands (Synchronous) - API Failures:
-
-```python
-# Unit of Work ensures atomicity
-async with self.uow:
-    await self.event_store.append_to_stream(user_id, new_events)
-    await self.event_handler.dispatch(new_events)
-# Either succeeds or fails - API gets 500
-```
-
-## Projections (Asynchronous) - Celery Retries:
-
-```python
-# Celery handles retries with late acknowledgment
-@app.task(bind=True, max_retries=3, acks_late=True)
-def process_user_created_task(self, event: Dict[str, Any]) -> None:
-    projection.handle_user_created(event)
-```
-
-## **Different strategies for different failure modes**
-
-<!--
-This is a real story that happened to us. Sarah changed her password, the command succeeded and the API returned 200, but the projection failed due to a database connection timeout. When Sarah tried to log in with her new password, it failed because the read model wasn't updated. She panicked and asked "Did my password change work?" This is the reality of distributed systems - different parts can fail independently.
-
-For commands - the synchronous API calls - we use Unit of Work to ensure atomicity. Either the event is stored and dispatched, or it fails completely and the API returns a 500. There's no retry here - it's all or nothing.
-
-For projections - the asynchronous Celery tasks - we use Celery's built-in retry mechanisms with late acknowledgment. Messages are never lost, but idempotence is critical because the same message can arrive multiple times. This actually enables powerful capabilities like backfill tasks that can reprocess all events from the event store.
-
-The key insight is that you need different strategies for different failure modes - commands need immediate consistency, projections need eventual consistency with retries.
--->
 
 ---
 
