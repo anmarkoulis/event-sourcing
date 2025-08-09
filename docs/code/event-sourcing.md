@@ -7,15 +7,12 @@ A simple user management system built with Event Sourcing and CQRS patterns usin
 ### User Management
 - **Create User**: POST `/users/` - Create a new user account
 - **Update User**: PUT `/users/{user_id}` - Update user information (first name, last name, email)
-- **Change Username**: PUT `/users/{user_id}/username` - Change user's username
 - **Change Password**: PUT `/users/{user_id}/password` - Change user's password
 - **Delete User**: DELETE `/users/{user_id}` - Delete user account
 - **Get User**: GET `/users/{user_id}` - Get user information
 - **Get User History**: GET `/users/{user_id}/history` - Get user event history
 
-### Password Reset Flow
-- **Request Password Reset**: POST `/users/password-reset/request` - Request password reset email
-- **Complete Password Reset**: POST `/users/password-reset/complete` - Complete password reset with token
+<!-- Password reset flow removed in simplified example -->
 
 ## Architecture
 
@@ -29,10 +26,7 @@ A simple user management system built with Event Sourcing and CQRS patterns usin
 2. **Commands** (`application/commands/user.py`)
    - `CreateUserCommand`
    - `UpdateUserCommand`
-   - `ChangeUsernameCommand`
    - `ChangePasswordCommand`
-   - `RequestPasswordResetCommand`
-   - `CompletePasswordResetCommand`
    - `DeleteUserCommand`
 
 3. **Command Handlers** (`application/commands/handlers/user_handlers.py`)
@@ -44,10 +38,7 @@ A simple user management system built with Event Sourcing and CQRS patterns usin
    - `USER_CREATED`
    - `USER_UPDATED`
    - `USER_DELETED`
-   - `USERNAME_CHANGED`
    - `PASSWORD_CHANGED`
-   - `PASSWORD_RESET_REQUESTED`
-   - `PASSWORD_RESET_COMPLETED`
 
 5. **Projections** (`application/projections/user_projection.py`)
    - Update read models from events
@@ -84,14 +75,7 @@ curl -X PUT "http://localhost:8000/users/{user_id}" \
   }'
 ```
 
-### Change Username
-```bash
-curl -X PUT "http://localhost:8000/users/{user_id}/username" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "new_username": "johnny_smith"
-  }'
-```
+<!-- Username change endpoint removed in simplified example -->
 
 ### Change Password
 ```bash
@@ -103,24 +87,7 @@ curl -X PUT "http://localhost:8000/users/{user_id}/password" \
   }'
 ```
 
-### Request Password Reset
-```bash
-curl -X POST "http://localhost:8000/users/password-reset/request" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "email": "john@example.com"
-  }'
-```
-
-### Complete Password Reset
-```bash
-curl -X POST "http://localhost:8000/users/password-reset/complete" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "new_password": "new_secure_password",
-    "reset_token": "reset_token_from_email"
-  }'
-```
+<!-- Password reset endpoints removed in simplified example -->
 
 ### Delete User
 ```bash
@@ -140,19 +107,11 @@ curl -X DELETE "http://localhost:8000/users/{user_id}"
 - Must provide at least one field to update
 - Email must be valid if provided
 
-### Username Changes
-- Cannot change username for deleted user
-- New username must be different from current
-- Username must be at least 3 characters
-
 ### Password Changes
 - Cannot change password for deleted user
 - Password is required
 
-### Password Reset
-- Cannot request reset for deleted user
-- Reset token is required for completion
-- Password is required for completion
+<!-- Password reset rules removed in simplified example -->
 
 ### User Deletion
 - Cannot delete already deleted user

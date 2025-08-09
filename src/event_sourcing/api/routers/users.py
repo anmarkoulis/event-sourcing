@@ -8,11 +8,8 @@ from fastapi import APIRouter, HTTPException, Query
 from event_sourcing.api.depends import InfrastructureFactoryDep
 from event_sourcing.application.commands.user import (
     ChangePasswordCommand,
-    ChangeUsernameCommand,
-    CompletePasswordResetCommand,
     CreateUserCommand,
     DeleteUserCommand,
-    RequestPasswordResetCommand,
     UpdateUserCommand,
 )
 from event_sourcing.application.queries.user import (
@@ -23,17 +20,11 @@ from event_sourcing.application.queries.user import (
 from event_sourcing.dto.user import (
     ChangePasswordRequest,
     ChangePasswordResponse,
-    ChangeUsernameRequest,
-    ChangeUsernameResponse,
-    CompletePasswordResetRequest,
-    CompletePasswordResetResponse,
     CreateUserRequest,
     CreateUserResponse,
     DeleteUserResponse,
     GetUserResponse,
     ListUsersResponse,
-    RequestPasswordResetRequest,
-    RequestPasswordResetResponse,
     UpdateUserRequest,
     UpdateUserResponse,
     UserDTO,
@@ -179,49 +170,6 @@ async def update_user(
 
 
 @users_router.put(
-    "/{user_id}/username/",
-    description="Change user's username",
-    response_model=ChangeUsernameResponse,
-)
-async def change_username(
-    user_id: str,
-    username_data: ChangeUsernameRequest,
-    infrastructure_factory: InfrastructureFactoryDep = None,
-) -> ChangeUsernameResponse:
-    """Change user's username"""
-    try:
-        logger.info(f"API: Starting username change for user: {user_id}")
-
-        # Create command
-        command = ChangeUsernameCommand(
-            user_id=uuid.UUID(user_id), new_username=username_data.new_username
-        )
-        logger.info(f"API: Created command for user: {user_id}")
-
-        # Get command handler
-        command_handler = (
-            infrastructure_factory.create_change_username_command_handler()
-        )
-        logger.info(f"API: Got command handler for user: {user_id}")
-
-        # Process command
-        logger.info(f"API: Calling command handler for user: {user_id}")
-        await command_handler.handle(command)
-        logger.info(f"API: Command handler completed for user: {user_id}")
-
-        return ChangeUsernameResponse(
-            message="Username changed successfully",
-        )
-
-    except ValueError as e:
-        logger.error(f"API: ValueError in change_username: {e}")
-        raise HTTPException(status_code=400, detail=str(e))
-    except Exception as e:
-        logger.error(f"API: Error changing username: {e}")
-        raise HTTPException(status_code=500, detail="Internal server error")
-
-
-@users_router.put(
     "/{user_id}/password/",
     description="Change user's password",
     response_model=ChangePasswordResponse,
@@ -262,82 +210,11 @@ async def change_password(
         raise HTTPException(status_code=500, detail="Internal server error")
 
 
-@users_router.post(
-    "/password-reset/request/",
-    description="Request password reset",
-    response_model=RequestPasswordResetResponse,
+@users_router.put(
+    "/{user_id}/password/",
+    description="Change user's password",
+    response_model=ChangePasswordResponse,
 )
-async def request_password_reset(
-    reset_data: RequestPasswordResetRequest,
-    infrastructure_factory: InfrastructureFactoryDep = None,
-) -> RequestPasswordResetResponse:
-    """Request password reset"""
-    try:
-        # In a real app, you would find user by email first
-        # For now, we'll assume we have the user_id
-        user_id = uuid.uuid4()  # Placeholder - should find by email
-
-        # Create command
-        command = RequestPasswordResetCommand(user_id=user_id)
-
-        # Get command handler
-        command_handler = infrastructure_factory.create_request_password_reset_command_handler()
-
-        # Process command
-        await command_handler.handle(command)
-
-        return RequestPasswordResetResponse(
-            message="Password reset email sent"
-        )
-
-    except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e))
-    except Exception as e:
-        logger.error(f"Error requesting password reset: {e}")
-        raise HTTPException(status_code=500, detail="Internal server error")
-
-
-@users_router.post(
-    "/password-reset/complete/",
-    description="Complete password reset",
-    response_model=CompletePasswordResetResponse,
-)
-async def complete_password_reset(
-    reset_data: CompletePasswordResetRequest,
-    infrastructure_factory: InfrastructureFactoryDep = None,
-) -> CompletePasswordResetResponse:
-    """Complete password reset"""
-    try:
-        # In a real app, you would validate the reset token and find user
-        user_id = uuid.uuid4()  # Placeholder - should find by token
-
-        # Hash the new password
-        new_password_hash = f"hashed_{reset_data.new_password}"  # Placeholder
-
-        # Create command
-        command = CompletePasswordResetCommand(
-            user_id=user_id,
-            new_password_hash=new_password_hash,
-            reset_token=reset_data.reset_token,
-        )
-
-        # Get command handler
-        command_handler = infrastructure_factory.create_complete_password_reset_command_handler()
-
-        # Process command
-        await command_handler.handle(command)
-
-        return CompletePasswordResetResponse(
-            message="Password reset completed successfully",
-        )
-
-    except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e))
-    except Exception as e:
-        logger.error(f"Error completing password reset: {e}")
-        raise HTTPException(status_code=500, detail="Internal server error")
-
-
 @users_router.delete(
     "/{user_id}/", description="Delete user", response_model=DeleteUserResponse
 )

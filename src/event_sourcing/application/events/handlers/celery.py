@@ -53,14 +53,7 @@ class CeleryEventHandler(EventHandler):
             ],
             EventType.USER_UPDATED: ["process_user_updated_task"],
             EventType.USER_DELETED: ["process_user_deleted_task"],
-            EventType.USERNAME_CHANGED: ["process_username_changed_task"],
             EventType.PASSWORD_CHANGED: ["process_password_changed_task"],
-            EventType.PASSWORD_RESET_REQUESTED: [
-                "process_password_reset_requested_task"
-            ],
-            EventType.PASSWORD_RESET_COMPLETED: [
-                "process_password_reset_completed_task"
-            ],
         }
 
         return task_mappings.get(event_type, ["default_event_handler"])

@@ -8,16 +8,10 @@ class EventType(str, Enum):
     USER_CREATED = "USER_CREATED"
     USER_UPDATED = "USER_UPDATED"
     USER_DELETED = "USER_DELETED"
-    USERNAME_CHANGED = "USERNAME_CHANGED"
     PASSWORD_CHANGED = (
         "PASSWORD_CHANGED"  # pragma: allowlist secret # noqa: S105
     )
-    PASSWORD_RESET_REQUESTED = (
-        "PASSWORD_RESET_REQUESTED"  # pragma: allowlist secret # noqa: S105
-    )
-    PASSWORD_RESET_COMPLETED = (
-        "PASSWORD_RESET_COMPLETED"  # pragma: allowlist secret # noqa: S105
-    )
+    # Removed USERNAME_CHANGED, PASSWORD_RESET_* in simplified model
 
 
 class AggregateTypeEnum(str, Enum):
