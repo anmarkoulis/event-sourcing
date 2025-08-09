@@ -203,14 +203,7 @@ class InfrastructureFactory:
 
         return CommandHandlerWrapper(self, UpdateUserCommandHandler)
 
-    def create_change_username_command_handler(self) -> Any:
-        """Create ChangeUsernameCommandHandler with all dependencies"""
-        logger.info("Creating ChangeUsernameCommandHandler")
-        from event_sourcing.application.commands.handlers.user import (
-            ChangeUsernameCommandHandler,
-        )
-
-        return CommandHandlerWrapper(self, ChangeUsernameCommandHandler)
+    # Removed: create_change_username_command_handler
 
     def create_change_password_command_handler(self) -> Any:
         """Create ChangePasswordCommandHandler with all dependencies"""
@@ -230,23 +223,9 @@ class InfrastructureFactory:
 
         return CommandHandlerWrapper(self, DeleteUserCommandHandler)
 
-    def create_request_password_reset_command_handler(self) -> Any:
-        """Create RequestPasswordResetCommandHandler with all dependencies"""
-        logger.info("Creating RequestPasswordResetCommandHandler")
-        from event_sourcing.application.commands.handlers.user import (
-            RequestPasswordResetCommandHandler,
-        )
+    # Removed: create_request_password_reset_command_handler
 
-        return CommandHandlerWrapper(self, RequestPasswordResetCommandHandler)
-
-    def create_complete_password_reset_command_handler(self) -> Any:
-        """Create CompletePasswordResetCommandHandler with all dependencies"""
-        logger.info("Creating CompletePasswordResetCommandHandler")
-        from event_sourcing.application.commands.handlers.user import (
-            CompletePasswordResetCommandHandler,
-        )
-
-        return CommandHandlerWrapper(self, CompletePasswordResetCommandHandler)
+    # Removed: create_complete_password_reset_command_handler
 
     # User Projection Factory Methods
     def create_user_created_projection(self) -> Any:
@@ -279,15 +258,7 @@ class InfrastructureFactory:
 
         return ProjectionWrapper(self, UserDeletedProjection)
 
-    def create_username_changed_projection(self) -> Any:
-        """Create UsernameChangedProjection with read model dependency"""
-        logger.info("Creating UsernameChangedProjection")
-        # Dynamic import to avoid circular dependency
-        from event_sourcing.application.projections.user import (
-            UsernameChangedProjection,
-        )
-
-        return ProjectionWrapper(self, UsernameChangedProjection)
+    # Removed: create_username_changed_projection
 
     def create_password_changed_projection(self) -> Any:
         """Create PasswordChangedProjection with read model dependency"""
@@ -299,25 +270,9 @@ class InfrastructureFactory:
 
         return ProjectionWrapper(self, PasswordChangedProjection)
 
-    def create_password_reset_requested_projection(self) -> Any:
-        """Create PasswordResetRequestedProjection with read model dependency"""
-        logger.info("Creating PasswordResetRequestedProjection")
-        # Dynamic import to avoid circular dependency
-        from event_sourcing.application.projections.user import (
-            PasswordResetRequestedProjection,
-        )
+    # Removed: create_password_reset_requested_projection
 
-        return ProjectionWrapper(self, PasswordResetRequestedProjection)
-
-    def create_password_reset_completed_projection(self) -> Any:
-        """Create PasswordResetCompletedProjection with read model dependency"""
-        logger.info("Creating PasswordResetCompletedProjection")
-        # Dynamic import to avoid circular dependency
-        from event_sourcing.application.projections.user import (
-            PasswordResetCompletedProjection,
-        )
-
-        return ProjectionWrapper(self, PasswordResetCompletedProjection)
+    # Removed: create_password_reset_completed_projection
 
     def create_user_created_email_projection(self) -> Any:
         """Create UserCreatedEmailProjection with email provider dependency"""

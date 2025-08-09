@@ -120,35 +120,7 @@ class UserAggregate(Aggregate):
         logger.info(f"Updated user: {self.username}")
         return [event]
 
-    def change_username(self, new_username: str) -> List[EventDTO]:
-        """Change user's username"""
-        # Business rule: Cannot change username if user is deleted
-        if self.deleted_at is not None:
-            raise ValueError("Cannot change username for deleted user")
-
-        # Business rule: Username must be different
-        if new_username == self.username:
-            raise ValueError(
-                "New username must be different from current username"
-            )
-
-        # Business rule: Username must be valid
-        if not new_username or len(new_username) < 3:
-            raise ValueError("Username must be at least 3 characters")
-
-        # Create the event
-        event = EventFactory.create_username_changed(
-            aggregate_id=self.aggregate_id,
-            old_username=self.username,
-            new_username=new_username,
-            revision=self._get_next_revision(),
-        )
-
-        # Apply the event to the aggregate
-        self.apply(event)
-
-        logger.info(f"Changed username from {self.username} to {new_username}")
-        return [event]
+    # Removed: change_username (username is immutable in this simplified model)
 
     def change_password(self, new_password_hash: str) -> List[EventDTO]:
         """Change user's password"""
@@ -173,53 +145,9 @@ class UserAggregate(Aggregate):
         logger.info(f"Changed password for user: {self.username}")
         return [event]
 
-    def request_password_reset(self) -> List[EventDTO]:
-        """Request password reset"""
-        # Business rule: Cannot request reset if user is deleted
-        if self.deleted_at is not None:
-            raise ValueError("Cannot request password reset for deleted user")
+    # Removed: request_password_reset
 
-        # Create the event
-        event = EventFactory.create_password_reset_requested(
-            aggregate_id=self.aggregate_id,
-            revision=self._get_next_revision(),
-        )
-
-        # Apply the event to the aggregate
-        self.apply(event)
-
-        logger.info(f"Requested password reset for user: {self.username}")
-        return [event]
-
-    def complete_password_reset(
-        self, new_password_hash: str, reset_token: str
-    ) -> List[EventDTO]:
-        """Complete password reset"""
-        # Business rule: Cannot reset if user is deleted
-        if self.deleted_at is not None:
-            raise ValueError("Cannot reset password for deleted user")
-
-        # Business rule: Password must be provided
-        if not new_password_hash:
-            raise ValueError("Password is required")
-
-        # Business rule: Reset token must be provided
-        if not reset_token:
-            raise ValueError("Reset token is required")
-
-        # Create the event
-        event = EventFactory.create_password_reset_completed(
-            aggregate_id=self.aggregate_id,
-            password_hash=new_password_hash,
-            reset_token=reset_token,
-            revision=self._get_next_revision(),
-        )
-
-        # Apply the event to the aggregate
-        self.apply(event)
-
-        logger.info(f"Completed password reset for user: {self.username}")
-        return [event]
+    # Removed: complete_password_reset
 
     def delete_user(self) -> List[EventDTO]:
         """Delete user"""
@@ -254,14 +182,8 @@ class UserAggregate(Aggregate):
             self._apply_created_event(event)
         elif event.event_type == EventType.USER_UPDATED:
             self._apply_updated_event(event)
-        elif event.event_type == EventType.USERNAME_CHANGED:
-            self._apply_username_changed_event(event)
         elif event.event_type == EventType.PASSWORD_CHANGED:
             self._apply_password_changed_event(event)
-        elif event.event_type == EventType.PASSWORD_RESET_REQUESTED:
-            self._apply_password_reset_requested_event(event)
-        elif event.event_type == EventType.PASSWORD_RESET_COMPLETED:
-            self._apply_password_reset_completed_event(event)
         elif event.event_type == EventType.USER_DELETED:
             self._apply_deleted_event(event)
         else:
@@ -290,11 +212,7 @@ class UserAggregate(Aggregate):
             self.email = data.email
         self.updated_at = event.timestamp
 
-    def _apply_username_changed_event(self, event: EventDTO) -> None:
-        """Apply username changed event"""
-        data = event.data
-        self.username = data.new_username
-        self.updated_at = event.timestamp
+    # Removed: _apply_username_changed_event
 
     def _apply_password_changed_event(self, event: EventDTO) -> None:
         """Apply password changed event"""
@@ -302,16 +220,9 @@ class UserAggregate(Aggregate):
         self.password_hash = data.password_hash
         self.updated_at = event.timestamp
 
-    def _apply_password_reset_requested_event(self, event: EventDTO) -> None:
-        """Apply password reset requested event"""
-        # In real app, you might store the reset token temporarily
-        self.updated_at = event.timestamp
+    # Removed: _apply_password_reset_requested_event
 
-    def _apply_password_reset_completed_event(self, event: EventDTO) -> None:
-        """Apply password reset completed event"""
-        data = event.data
-        self.password_hash = data.password_hash
-        self.updated_at = event.timestamp
+    # Removed: _apply_password_reset_completed_event
 
     def _apply_deleted_event(self, event: EventDTO) -> None:
         """Apply user deleted event"""

@@ -6,16 +6,10 @@ from event_sourcing.dto.events.base import EventDTO
 from event_sourcing.dto.events.user import (
     PasswordChangedDataV1,
     PasswordChangedV1,
-    PasswordResetCompletedDataV1,
-    PasswordResetCompletedV1,
-    PasswordResetRequestedDataV1,
-    PasswordResetRequestedV1,
     UserCreatedDataV1,
     UserCreatedV1,
     UserDeletedDataV1,
     UserDeletedV1,
-    UsernameChangedDataV1,
-    UsernameChangedV1,
     UserUpdatedDataV1,
     UserUpdatedV1,
 )
@@ -94,26 +88,7 @@ class EventFactory:
             data=data,
         )
 
-    @staticmethod
-    def create_username_changed(
-        aggregate_id: uuid.UUID,
-        old_username: str,
-        new_username: str,
-        revision: int,
-        timestamp: Optional[datetime] = None,
-    ) -> UsernameChangedV1:
-        """Create a USERNAME_CHANGED event"""
-        data = UsernameChangedDataV1(
-            old_username=old_username,
-            new_username=new_username,
-        )
-
-        return UsernameChangedV1(
-            aggregate_id=aggregate_id,
-            timestamp=timestamp or datetime.now(timezone.utc),
-            revision=revision,
-            data=data,
-        )
+    # Username change removed in simplified model
 
     @staticmethod
     def create_password_changed(
@@ -134,39 +109,6 @@ class EventFactory:
             data=data,
         )
 
-    @staticmethod
-    def create_password_reset_requested(
-        aggregate_id: uuid.UUID,
-        revision: int,
-        timestamp: Optional[datetime] = None,
-    ) -> PasswordResetRequestedV1:
-        """Create a PASSWORD_RESET_REQUESTED event"""
-        data = PasswordResetRequestedDataV1()
+    # Password reset request removed in simplified model
 
-        return PasswordResetRequestedV1(
-            aggregate_id=aggregate_id,
-            timestamp=timestamp or datetime.now(timezone.utc),
-            revision=revision,
-            data=data,
-        )
-
-    @staticmethod
-    def create_password_reset_completed(
-        aggregate_id: uuid.UUID,
-        password_hash: str,
-        reset_token: str,
-        revision: int,
-        timestamp: Optional[datetime] = None,
-    ) -> PasswordResetCompletedV1:
-        """Create a PASSWORD_RESET_COMPLETED event"""
-        data = PasswordResetCompletedDataV1(
-            password_hash=password_hash,
-            reset_token=reset_token,
-        )
-
-        return PasswordResetCompletedV1(
-            aggregate_id=aggregate_id,
-            timestamp=timestamp or datetime.now(timezone.utc),
-            revision=revision,
-            data=data,
-        )
+    # Password reset completion removed in simplified model

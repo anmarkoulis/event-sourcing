@@ -43,37 +43,12 @@ class UpdateUserResponse(BaseModel):
     message: str = Field(..., description="Success message")
 
 
-class ChangeUsernameRequest(BaseModel):
-    new_username: str
-
-
-class ChangeUsernameResponse(BaseModel):
-    message: str = Field(..., description="Success message")
-
-
 class ChangePasswordRequest(BaseModel):
     current_password: str
     new_password: str
 
 
 class ChangePasswordResponse(BaseModel):
-    message: str = Field(..., description="Success message")
-
-
-class RequestPasswordResetRequest(BaseModel):
-    email: EmailStr
-
-
-class RequestPasswordResetResponse(BaseModel):
-    message: str = Field(..., description="Success message")
-
-
-class CompletePasswordResetRequest(BaseModel):
-    new_password: str
-    reset_token: str
-
-
-class CompletePasswordResetResponse(BaseModel):
     message: str = Field(..., description="Success message")
 
 

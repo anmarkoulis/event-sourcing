@@ -4,16 +4,10 @@ from typing import Any, Dict
 from event_sourcing.dto.events.user import (
     PasswordChangedDataV1,
     PasswordChangedV1,
-    PasswordResetCompletedDataV1,
-    PasswordResetCompletedV1,
-    PasswordResetRequestedDataV1,
-    PasswordResetRequestedV1,
     UserCreatedDataV1,
     UserCreatedV1,
     UserDeletedDataV1,
     UserDeletedV1,
-    UsernameChangedDataV1,
-    UsernameChangedV1,
     UserUpdatedDataV1,
     UserUpdatedV1,
 )
@@ -32,14 +26,8 @@ def deserialize_event_data(event_type: EventType, data: Dict[str, Any]) -> Any:
         return UserUpdatedDataV1(**data)
     elif event_type == EventType.USER_DELETED:
         return UserDeletedDataV1(**data)
-    elif event_type == EventType.USERNAME_CHANGED:
-        return UsernameChangedDataV1(**data)
     elif event_type == EventType.PASSWORD_CHANGED:
         return PasswordChangedDataV1(**data)
-    elif event_type == EventType.PASSWORD_RESET_REQUESTED:
-        return PasswordResetRequestedDataV1(**data)
-    elif event_type == EventType.PASSWORD_RESET_COMPLETED:
-        return PasswordResetCompletedDataV1(**data)
     else:
         logger.warning(f"Unknown event type: {event_type}, returning raw data")
         return data
@@ -79,39 +67,9 @@ def deserialize_event(event_dict: Dict[str, Any]) -> Any:
             revision=event_dict["revision"],
             data=data,
         )
-    elif event_type == EventType.USERNAME_CHANGED:
-        data = UsernameChangedDataV1(**event_dict["data"])
-        return UsernameChangedV1(
-            id=event_dict["id"],
-            aggregate_id=event_dict["aggregate_id"],
-            timestamp=event_dict["timestamp"],
-            version=event_dict["version"],
-            revision=event_dict["revision"],
-            data=data,
-        )
     elif event_type == EventType.PASSWORD_CHANGED:
         data = PasswordChangedDataV1(**event_dict["data"])
         return PasswordChangedV1(
-            id=event_dict["id"],
-            aggregate_id=event_dict["aggregate_id"],
-            timestamp=event_dict["timestamp"],
-            version=event_dict["version"],
-            revision=event_dict["revision"],
-            data=data,
-        )
-    elif event_type == EventType.PASSWORD_RESET_REQUESTED:
-        data = PasswordResetRequestedDataV1(**event_dict["data"])
-        return PasswordResetRequestedV1(
-            id=event_dict["id"],
-            aggregate_id=event_dict["aggregate_id"],
-            timestamp=event_dict["timestamp"],
-            version=event_dict["version"],
-            revision=event_dict["revision"],
-            data=data,
-        )
-    elif event_type == EventType.PASSWORD_RESET_COMPLETED:
-        data = PasswordResetCompletedDataV1(**event_dict["data"])
-        return PasswordResetCompletedV1(
             id=event_dict["id"],
             aggregate_id=event_dict["aggregate_id"],
             timestamp=event_dict["timestamp"],
