@@ -22,11 +22,8 @@ async def configure_lifespan(_: FastAPI) -> AsyncIterator[None]:
 
     # Initialize infrastructure factory
     database_url = settings.DATABASE_URL
-    eventbridge_region = getattr(settings, "EVENTBRIDGE_REGION", "us-east-1")
 
-    infrastructure_factory = InfrastructureFactory(
-        database_url, eventbridge_region
-    )
+    infrastructure_factory = InfrastructureFactory(database_url)
     lifespan_context["infrastructure_factory"] = infrastructure_factory
 
     logger.info("Infrastructure factory initialized")
