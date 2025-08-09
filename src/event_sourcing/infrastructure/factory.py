@@ -3,7 +3,6 @@ from typing import Any, Dict, Optional, Type
 
 from event_sourcing.infrastructure.database.session import DatabaseManager
 from event_sourcing.infrastructure.event_store import PostgreSQLEventStore
-from event_sourcing.infrastructure.messaging import EventBridgePublisher
 from event_sourcing.infrastructure.providers.email import (
     EmailProviderFactory,
     LoggingEmailProvider,
@@ -117,13 +116,9 @@ class ProjectionWrapper:
 class InfrastructureFactory:
     """Factory for creating infrastructure components, command handlers, and query handlers"""
 
-    def __init__(
-        self, database_url: str, eventbridge_region: str = "us-east-1"
-    ):
+    def __init__(self, database_url: str):
         self.database_url = database_url
-        self.eventbridge_region = eventbridge_region
         self._database_manager: Optional[DatabaseManager] = None
-        self._event_publisher: Optional[EventBridgePublisher] = None
         self._event_handler: Optional[Any] = None
         self._session_manager: Optional[SessionManager] = None
 
@@ -157,16 +152,6 @@ class InfrastructureFactory:
 
             self._event_handler = CeleryEventHandler()
         return self._event_handler
-
-    @property
-    def event_publisher(self) -> EventBridgePublisher:
-        """Get or create event publisher"""
-        if self._event_publisher is None:
-            logger.info("Creating event publisher")
-            self._event_publisher = EventBridgePublisher(
-                self.eventbridge_region
-            )
-        return self._event_publisher
 
     def _initialize_email_providers(self) -> None:
         """Initialize email providers by registering them with the factory"""
@@ -497,8 +482,6 @@ class InfrastructureFactory:
         if self._database_manager:
             await self._database_manager.close()
             self._database_manager = None
-
-        self._event_publisher = None
         self._event_handler = None
         self._session_manager = None
 
