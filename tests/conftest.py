@@ -1,4 +1,5 @@
 from typing import Any, AsyncGenerator
+from unittest.mock import AsyncMock, MagicMock
 
 import asyncpg
 import httpx
@@ -10,8 +11,11 @@ from sqlalchemy.ext.asyncio import (
     create_async_engine,
 )
 
+from event_sourcing.application.events.handlers.base import EventHandler
 from event_sourcing.config.settings import settings
 from event_sourcing.infrastructure.database.base import Base
+from event_sourcing.infrastructure.event_store import EventStore
+from event_sourcing.infrastructure.unit_of_work.base import BaseUnitOfWork
 
 # No get_db function exists in this codebase - using infrastructure factory pattern instead
 from event_sourcing.main import app
@@ -81,8 +85,48 @@ async def app_with_test_db(db: AsyncSession) -> Any:
 
 
 @pytest.fixture
-async def async_client() -> AsyncGenerator:
+async def async_client() -> AsyncGenerator[httpx.AsyncClient, None]:
     async with httpx.AsyncClient(
         transport=httpx.ASGITransport(app=app), base_url="http://test"
     ) as client:
         yield client
+
+
+# Common unit-test fixtures for command handlers
+
+
+@pytest.fixture
+def event_store_mock() -> MagicMock:
+    """Bare EventStore double; tests configure awaited methods as needed."""
+    return MagicMock(spec_set=EventStore)
+
+
+@pytest.fixture
+def event_handler_mock() -> MagicMock:
+    """Bare EventHandler double; tests configure async methods as needed."""
+    return MagicMock(spec_set=EventHandler)
+
+
+@pytest.fixture
+def unit_of_work() -> MagicMock:
+    """Minimal async UoW double with context manager semantics."""
+    uow = MagicMock(spec_set=BaseUnitOfWork)
+    uow.commit = AsyncMock()
+    uow.rollback = AsyncMock()
+
+    async def _aenter() -> MagicMock:
+        return uow
+
+    async def _aexit(
+        exc_type: Any, exc: BaseException | None, tb: Any
+    ) -> None:
+        if exc:
+            await uow.rollback()
+        else:
+            await uow.commit()
+        return None
+
+    uow.__aenter__ = AsyncMock(side_effect=_aenter)
+    uow.__aexit__ = AsyncMock(side_effect=_aexit)
+
+    return uow
