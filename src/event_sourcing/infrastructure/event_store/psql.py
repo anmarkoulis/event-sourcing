@@ -89,7 +89,6 @@ class PostgreSQLEventStore(EventStore):
         aggregate_id: uuid.UUID,
         aggregate_type: AggregateTypeEnum,
         events: List[EventDTO],
-        session: Optional[AsyncSession] = None,
     ) -> None:
         """Append events to the stream for an aggregate (no commit - handled by UoW)"""
         logger.info(
@@ -99,9 +98,6 @@ class PostgreSQLEventStore(EventStore):
         # For now, we only support User aggregate type
         if aggregate_type != AggregateTypeEnum.USER:
             raise ValueError(f"Unsupported aggregate type: {aggregate_type}")
-
-        # Use provided session or the one from constructor
-        target_session = session or self.session
 
         # Track event IDs to prevent duplicates within this call
         event_ids_in_this_call = set()
@@ -126,7 +122,7 @@ class PostgreSQLEventStore(EventStore):
                 revision=event.revision,
                 data=event.data.model_dump(),  # Convert Pydantic model to dict
             )
-            target_session.add(event_model)
+            self.session.add(event_model)
             logger.info(f"Event model added to session: {event_model}")
 
         logger.info(
