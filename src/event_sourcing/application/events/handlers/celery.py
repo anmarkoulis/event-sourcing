@@ -47,7 +47,10 @@ class CeleryEventHandler(EventHandler):
     def _get_task_names(self, event_type: EventType) -> List[str]:
         """Map event type to list of Celery task names"""
         task_mappings = {
-            EventType.USER_CREATED: ["process_user_created_task"],
+            EventType.USER_CREATED: [
+                "process_user_created_task",
+                "process_user_created_email_task",
+            ],
             EventType.USER_UPDATED: ["process_user_updated_task"],
             EventType.USER_DELETED: ["process_user_deleted_task"],
             EventType.USERNAME_CHANGED: ["process_username_changed_task"],

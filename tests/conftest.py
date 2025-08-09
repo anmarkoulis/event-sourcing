@@ -11,8 +11,9 @@ from sqlalchemy.ext.asyncio import (
 )
 
 from event_sourcing.config.settings import settings
-from event_sourcing.infrastructure.database.models.base import Base
-from event_sourcing.infrastructure.database.session import get_db
+from event_sourcing.infrastructure.database.base import Base
+
+# No get_db function exists in this codebase - using infrastructure factory pattern instead
 from event_sourcing.main import app
 
 
@@ -74,15 +75,9 @@ def anyio_backend() -> str:
 async def app_with_test_db(db: AsyncSession) -> Any:
     """
     Override the app fixture to use an in-memory test database
+    Note: This fixture is not currently used as the app uses infrastructure factory pattern
     """
-
-    def override_get_db() -> AsyncSession:
-        return db
-
-    app.dependency_overrides[get_db] = override_get_db
     yield app
-
-    app.dependency_overrides.clear()
 
 
 @pytest.fixture

@@ -44,12 +44,11 @@ class RequestPasswordResetCommandHandler(
         # Request password reset
         new_events = user.request_password_reset()
 
-        async with self.unit_of_work as uow:
+        async with self.unit_of_work:
             await self.event_store.append_to_stream(
                 command.user_id,
                 AggregateTypeEnum.USER,
                 new_events,
-                session=uow.db,
             )
             await self.event_handler.dispatch(new_events)
 

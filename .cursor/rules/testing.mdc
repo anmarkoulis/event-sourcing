@@ -1,0 +1,95 @@
+
+# Testing
+
+## File Structure
+
+Tests are organized into 3 directories:
+
+* `system` - System-level tests
+* `unit` - Unit tests
+* `integration` - Integration tests
+
+## File Organization
+
+### General Rules
+
+* Use 1 class per module
+* Tests should mirror src layout
+* Test files should have the same name as the original files
+
+### Examples
+
+* Unit test for `src/foo/service.py` → `tests/unit/foo/test_service.py`
+* Unit test for `src/event_sourcing/application/projections/user/user_created_email.py` → `tests/unit/application/projections/user/test_user_created_email.py`
+* Unit test for `src/event_sourcing/infrastructure/providers/email/logging_email_provider.py` → `tests/unit/infrastructure/providers/email_providers/test_logging_email_provider.py`
+
+## Testing Guidelines
+
+### Coverage Goals
+
+* Coverage goal: 100%
+* Partial coverage goal: 100%
+* Only test public methods, not private
+
+### Test Structure
+
+* Use descriptive test method names
+* Follow AAA pattern (Arrange, Act, Assert)
+* Use proper docstrings for test methods
+* Group related tests in test classes
+
+## Test Layers
+
+### Unit Tests
+
+* Inject mock objects or patch (preferably the first one)
+* Mock all external entities and all internal public methods
+* Test only the unit under test
+* Use fixtures for common setup
+
+### Integration Tests
+
+* We need integration tests when testing repositories
+* For those tests external entities are again mocked
+* Repositories are being tested
+* Test the interaction between components
+
+### System Tests
+
+* Nothing is mocked
+* We only write tests for entrypoints like:
+  * API endpoints
+  * Celery tasks
+  * Typer commands
+* Actual external services are not mocked but substituted by other services such as:
+  * Mockserver
+  * Localstack
+
+## Best Practices
+
+### Mocking Guidelines
+
+* Prefer dependency injection over patching
+* Use `unittest.mock.MagicMock` for complex mocks
+* Use `unittest.mock.AsyncMock` for async methods
+* Use `unittest.mock.patch` for module-level mocking
+
+### Test Naming
+
+* Test class names: `Test{ClassName}`
+* Test method names: `test_{method_name}_{scenario}`
+* Use descriptive names that explain the test case
+
+### Fixtures
+
+* Use pytest fixtures for common setup
+* Keep fixtures focused and reusable
+* Use proper typing for fixture return values
+* Document complex fixtures with docstrings
+
+### Assertions
+
+* Use specific assertions (e.g., `assert_called_once()` vs `assert_called()`)
+* Include meaningful error messages
+* Test both positive and negative cases
+* Verify side effects when relevant

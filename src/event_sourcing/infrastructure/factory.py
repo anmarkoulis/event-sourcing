@@ -1,9 +1,13 @@
 import logging
-from typing import Any, Optional, Type
+from typing import Any, Dict, Optional, Type
 
 from event_sourcing.infrastructure.database.session import DatabaseManager
 from event_sourcing.infrastructure.event_store import PostgreSQLEventStore
 from event_sourcing.infrastructure.messaging import EventBridgePublisher
+from event_sourcing.infrastructure.providers.email import (
+    EmailProviderFactory,
+    LoggingEmailProvider,
+)
 from event_sourcing.infrastructure.read_model import PostgreSQLReadModel
 from event_sourcing.infrastructure.unit_of_work import SQLAUnitOfWork
 
@@ -123,6 +127,9 @@ class InfrastructureFactory:
         self._event_handler: Optional[Any] = None
         self._session_manager: Optional[SessionManager] = None
 
+        # Initialize email providers
+        self._initialize_email_providers()
+
     @property
     def database_manager(self) -> DatabaseManager:
         """Get or create database manager"""
@@ -160,6 +167,27 @@ class InfrastructureFactory:
                 self.eventbridge_region
             )
         return self._event_publisher
+
+    def _initialize_email_providers(self) -> None:
+        """Initialize email providers by registering them with the factory"""
+        logger.info("Initializing email providers")
+        EmailProviderFactory.register_provider("logging", LoggingEmailProvider)
+
+    def create_email_provider(
+        self,
+        provider_name: str = "logging",
+        config: Optional[Dict[str, Any]] = None,
+    ) -> Any:
+        """Create an email provider instance.
+
+        :param provider_name: Name of the email provider to create.
+        :param config: Optional configuration for the provider.
+        :return: Email provider instance.
+        """
+        logger.info(f"Creating email provider: {provider_name}")
+        return EmailProviderFactory.create_provider(
+            provider_name, config or {}
+        )
 
     def create_create_user_command_handler(self) -> Any:
         """Create CreateUserCommandHandler with all dependencies"""
@@ -294,6 +322,21 @@ class InfrastructureFactory:
         )
 
         return ProjectionWrapper(self, PasswordResetCompletedProjection)
+
+    def create_user_created_email_projection(self) -> Any:
+        """Create UserCreatedEmailProjection with email provider dependency"""
+        logger.info("Creating UserCreatedEmailProjection")
+        # Dynamic import to avoid circular dependency
+        from event_sourcing.application.projections.user import (
+            UserCreatedEmailProjection,
+        )
+
+        # Create email provider
+        email_provider = self.create_email_provider()
+
+        # Create projection with email provider
+        projection = UserCreatedEmailProjection(email_provider=email_provider)
+        return projection
 
     # User Query Handler Factory Methods
     def create_get_user_query_handler(self) -> Any:
