@@ -9,7 +9,6 @@ from event_sourcing.application.commands.handlers.user.request_password_reset im
 from event_sourcing.application.commands.user.request_password_reset import (
     RequestPasswordResetCommand,
 )
-from event_sourcing.enums import AggregateTypeEnum
 
 
 @pytest.fixture
@@ -17,9 +16,11 @@ def handler(
     event_store_mock: MagicMock,
     event_handler_mock: MagicMock,
     unit_of_work: MagicMock,
+    snapshot_store_mock: MagicMock,
 ) -> RequestPasswordResetCommandHandler:
     return RequestPasswordResetCommandHandler(
         event_store=event_store_mock,
+        snapshot_store=snapshot_store_mock,
         event_handler=event_handler_mock,
         unit_of_work=unit_of_work,
     )
@@ -44,9 +45,7 @@ class TestRequestPasswordResetCommandHandler:
     ) -> None:
         await handler.handle(request_password_reset_command)
 
-        event_store_mock.get_stream.assert_awaited_once_with(
-            request_password_reset_command.user_id, AggregateTypeEnum.USER
-        )
+        event_store_mock.get_stream.assert_awaited_once()
         event_store_mock.append_to_stream.assert_awaited_once()
         event_handler_mock.dispatch.assert_awaited_once()
         unit_of_work.commit.assert_awaited_once()

@@ -13,11 +13,15 @@ logger = logging.getLogger(__name__)
 class UserAggregate(Aggregate):
     """User domain aggregate - encapsulates user business logic"""
 
+    last_applied_revision: int
+
     def __init__(self, aggregate_id: uuid.UUID):
         super().__init__(aggregate_id)
 
         # Track events for business logic validation
         self.events: List[EventDTO] = []
+        # Ensure mypy sees this attribute on this class
+        self.last_applied_revision: int = 0
 
         # User-specific attributes
         self.username: Optional[str] = None
@@ -31,7 +35,7 @@ class UserAggregate(Aggregate):
 
     def _get_next_revision(self) -> int:
         """Get the next revision number for this aggregate"""
-        return len(self.events) + 1
+        return self.last_applied_revision + 1
 
     def create_user(
         self,
@@ -240,6 +244,11 @@ class UserAggregate(Aggregate):
         logger.info(f"Applying event: {event}")
         # Track the event for business logic validation
         self.events.append(event)
+        # Maintain last applied revision
+        if event.revision is not None:
+            self.last_applied_revision = max(
+                self.last_applied_revision, int(event.revision)
+            )
 
         if event.event_type == EventType.USER_CREATED:
             self._apply_created_event(event)
@@ -308,3 +317,49 @@ class UserAggregate(Aggregate):
         """Apply user deleted event"""
         self.deleted_at = event.timestamp
         self.updated_at = event.timestamp
+
+    @classmethod
+    def from_snapshot(
+        cls, aggregate_id: uuid.UUID, data: dict, revision: int
+    ) -> "UserAggregate":
+        user = cls(aggregate_id)
+        user.username = data.get("username")
+        user.email = data.get("email")
+        user.first_name = data.get("first_name")
+        user.last_name = data.get("last_name")
+        user.password_hash = data.get("password_hash")
+        user.created_at = cls._parse_iso_datetime(data.get("created_at"))
+        user.updated_at = cls._parse_iso_datetime(data.get("updated_at"))
+        user.deleted_at = cls._parse_iso_datetime(data.get("deleted_at"))
+        user.last_applied_revision = int(revision)
+        return user
+
+    def to_snapshot(self) -> tuple[dict, int]:
+        data = {
+            "username": self.username,
+            "email": self.email,
+            "first_name": self.first_name,
+            "last_name": self.last_name,
+            "password_hash": self.password_hash,
+            "created_at": self._iso_datetime(self.created_at),
+            "updated_at": self._iso_datetime(self.updated_at),
+            "deleted_at": self._iso_datetime(self.deleted_at),
+        }
+        return data, int(self.last_applied_revision)
+
+    @staticmethod
+    def _iso_datetime(value: Optional[datetime]) -> Optional[str]:
+        """Serialize datetime to ISO 8601 string for JSONB storage."""
+        if value is None:
+            return None
+        return value.isoformat()
+
+    @staticmethod
+    def _parse_iso_datetime(value: Optional[str]) -> Optional[datetime]:
+        """Parse ISO 8601 string back to datetime."""
+        if value is None:
+            return None
+        try:
+            return datetime.fromisoformat(value)
+        except Exception:
+            return None

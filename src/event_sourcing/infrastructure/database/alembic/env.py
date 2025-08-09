@@ -16,6 +16,7 @@ from event_sourcing.infrastructure.database.models import (  # noqa
     EventStream,
     User,
     UserEventStream,
+    UserSnapshot,
 )
 
 # this is the Alembic Config object, which provides

@@ -30,6 +30,7 @@ class PostgreSQLEventStore(EventStore):
         self,
         aggregate_id: uuid.UUID,
         aggregate_type: AggregateTypeEnum,
+        start_revision: Optional[int] = None,
         start_time: Optional[datetime] = None,
         end_time: Optional[datetime] = None,
     ) -> List[EventDTO]:
@@ -45,6 +46,11 @@ class PostgreSQLEventStore(EventStore):
         query = select(UserEventStream).where(
             UserEventStream.aggregate_id == aggregate_id
         )
+
+        # Add revision/time filters if provided
+        if start_revision is not None:
+            query = query.where(UserEventStream.revision > start_revision)
+            logger.info(f"Filtering events with revision > {start_revision}")
 
         # Add time filters if provided
         if start_time:
