@@ -397,8 +397,7 @@ Once events are created, the Event Handler dispatches them to message queues. He
 
 ```python
 @app.task(
-    name="process_user_created_task", bind=True,
-    max_retries=3, cks_late=True, autoretry_for=(Exception,), retry_backoff=True, retry_jitter=True
+    name="process_user_created_task", bind=True,acks_late=True,
 )
 def process_user_created_task(self, event: Dict[str, Any]) -> None:
     """Celery task for processing USER_CREATED events"""
