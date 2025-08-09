@@ -93,3 +93,4 @@ Tests are organized into 3 directories:
 * Include meaningful error messages
 * Test both positive and negative cases
 * Verify side effects when relevant
+* Use Given When Then notation

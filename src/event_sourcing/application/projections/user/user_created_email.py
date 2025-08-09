@@ -49,11 +49,16 @@ class UserCreatedEmailProjection(Projection):
 
             if success:
                 logger.info(
-                    f"Welcome email sent successfully to user: {event.aggregate_id}"
+                    "Welcome email sent successfully to user: %s",
+                    event.aggregate_id,
                 )
             else:
                 logger.error(
-                    f"Failed to send welcome email to user: {event.aggregate_id}"
+                    "Failed to send welcome email to user: %s",
+                    event.aggregate_id,
+                )
+                raise Exception(
+                    "Welcome email sending failed for USER_CREATED event"
                 )
 
         except Exception as e:
