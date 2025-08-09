@@ -36,6 +36,7 @@ dev = [
     "pre-commit==4.1.0",
     "pytest-cov==6.0.0",
     "pytest==8.3.5",
+    "pytest-asyncio==0.25.3",
     "types-mock==5.2.0.20250306",
     "types-pyyaml==6.0.12.20241230",
     "faker==37.0.0",

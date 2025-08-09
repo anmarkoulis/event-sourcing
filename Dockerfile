@@ -32,6 +32,11 @@ WORKDIR $PYSETUP_PATH
 ENV PATH="$VENV_PATH/bin:$PATH" \
     VIRTUAL_ENV="$VENV_PATH"
 
+# APT robustness configuration (disable HTTP pipelining, avoid caches, add retries)
+RUN set -eux; \
+    printf 'Acquire::http::Pipeline-Depth "0";\nAcquire::http::No-Cache "true";\nAcquire::Retries "5";\n' > /etc/apt/apt.conf.d/99fixbadproxy
+
+
 FROM base-envs AS base
 
 RUN  apt-get update \
@@ -40,7 +45,7 @@ RUN  apt-get update \
 && apt-get install -y libpq-dev=15.10-0+deb12u1 --no-install-recommends \
 
 && apt-get install -y libcurl4-openssl-dev=7.88.1-10+deb12u12 --no-install-recommends \
-&& apt-get install -y libssl-dev=3.0.16-1~deb12u1 --no-install-recommends \
+&& apt-get install -y libssl-dev=3.0.17-1~deb12u2 --no-install-recommends \
 
 # cleaning up unused files
 && apt-get purge -y --auto-remove -o APT::AutoRemove::RecommendsImportant=false \
@@ -56,7 +61,7 @@ RUN apt-get update \
 && apt-get install -y libpq-dev=15.10-0+deb12u1 --no-install-recommends \
 
 && apt-get install -y libcurl4-openssl-dev=7.88.1-10+deb12u12 --no-install-recommends \
-&& apt-get install -y libssl-dev=3.0.16-1~deb12u1 --no-install-recommends \
+&& apt-get install -y libssl-dev=3.0.17-1~deb12u2 --no-install-recommends \
 
 # cleaning up unused files
 && apt-get purge -y --auto-remove -o APT::AutoRemove::RecommendsImportant=false \
