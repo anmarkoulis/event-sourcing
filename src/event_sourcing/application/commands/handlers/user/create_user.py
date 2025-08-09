@@ -6,8 +6,10 @@ from event_sourcing.application.commands.user.create_user import (
 )
 from event_sourcing.application.events.handlers.base import EventHandler
 from event_sourcing.domain.aggregates.user import UserAggregate
+from event_sourcing.dto.snapshot import UserSnapshotDTO
 from event_sourcing.enums import AggregateTypeEnum
 from event_sourcing.infrastructure.event_store import EventStore
+from event_sourcing.infrastructure.snapshot_store.base import SnapshotStore
 from event_sourcing.infrastructure.unit_of_work import BaseUnitOfWork
 
 logger = logging.getLogger(__name__)
@@ -19,10 +21,12 @@ class CreateUserCommandHandler(CommandHandler[CreateUserCommand]):
     def __init__(
         self,
         event_store: EventStore,
+        snapshot_store: SnapshotStore | None,
         event_handler: EventHandler,
         unit_of_work: BaseUnitOfWork,
     ):
         self.event_store = event_store
+        self.snapshot_store = snapshot_store
         self.event_handler = event_handler
         self.unit_of_work = unit_of_work
 
@@ -101,5 +105,15 @@ class CreateUserCommandHandler(CommandHandler[CreateUserCommand]):
                 new_events,
             )
             await self.event_handler.dispatch(new_events)
+
+        if self.snapshot_store is not None:
+            data, rev = user.to_snapshot()
+            await self.snapshot_store.set(
+                UserSnapshotDTO(
+                    aggregate_id=command.user_id,
+                    data=data,
+                    revision=rev,
+                )
+            )
 
         logger.info(f"Created user: {command.username}")

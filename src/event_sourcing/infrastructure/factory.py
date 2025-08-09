@@ -47,11 +47,22 @@ class CommandHandlerWrapper:
         session = await self.factory.session_manager.get_session()
         uow = SQLAUnitOfWork(session)
         event_store = PostgreSQLEventStore(session)
-        command_handler = self.handler_class(
-            event_store=event_store,
-            event_handler=self.factory.event_handler,
-            unit_of_work=uow,
+
+        # Build constructor kwargs (all command handlers receive snapshot_store)
+        ctor_kwargs: Dict[str, Any] = {
+            "event_store": event_store,
+            "event_handler": self.factory.event_handler,
+            "unit_of_work": uow,
+        }
+
+        from event_sourcing.infrastructure.snapshot_store.psql_store import (
+            PsqlSnapshotStore,
         )
+
+        logger.info("Creating snapshot store")
+        ctor_kwargs["snapshot_store"] = PsqlSnapshotStore(session)
+
+        command_handler = self.handler_class(**ctor_kwargs)
         return command_handler, session
 
     async def handle(self, command: Any) -> Any:

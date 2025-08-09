@@ -72,9 +72,11 @@ def handler(
     event_store_mock: MagicMock,
     event_handler_mock: MagicMock,
     unit_of_work: MagicMock,
+    snapshot_store_mock: MagicMock,
 ) -> CreateUserCommandHandler:
     return CreateUserCommandHandler(
         event_store=event_store_mock,
+        snapshot_store=snapshot_store_mock,
         event_handler=event_handler_mock,
         unit_of_work=unit_of_work,
     )

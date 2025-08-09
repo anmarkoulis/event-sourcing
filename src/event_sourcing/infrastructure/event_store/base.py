@@ -18,6 +18,7 @@ class EventStore(ABC):
         self,
         aggregate_id: uuid.UUID,
         aggregate_type: AggregateTypeEnum,
+        start_revision: Optional[int] = None,
         start_time: Optional[datetime] = None,
         end_time: Optional[datetime] = None,
     ) -> List[EventDTO]:
