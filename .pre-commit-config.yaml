@@ -32,10 +32,13 @@ repos:
         files: \.(yml|yaml)$
         # --unsafe arg ignores custom Tavern tags, checks only syntax instead of attempting to load the YAML
         args: [--allow-multiple-documents, --unsafe]
-      - id: fix-encoding-pragma
-        args: [--remove]
     repo: https://github.com/pre-commit/pre-commit-hooks
-    rev: v5.0.0
+    rev: v6.0.0
+
+  - repo: https://github.com/asottile/pyupgrade
+    rev: v3.20.0
+    hooks:
+      - id: pyupgrade
 
   - hooks:
       - id: ruff-check
@@ -47,7 +50,7 @@ repos:
         stages:
           - manual
     repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: v0.12.3
+    rev: v0.12.8
 
   - hooks:
       - id: commitizen
