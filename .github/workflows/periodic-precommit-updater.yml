@@ -1,0 +1,15 @@
+name: Update pre-commit hooks
+
+on:
+  schedule:
+    - cron: 0 6 11 * *
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  update:
+    uses: ./.github/workflows/update-precommit-deps.yml
+    with:
+      branch: main
