@@ -73,14 +73,14 @@ class UpdateUserCommandHandler(CommandHandler[UpdateUserCommand]):
             )
             await self.event_handler.dispatch(new_events)
 
-        if self.snapshot_store is not None:
-            data, rev = user.to_snapshot()
-            await self.snapshot_store.set(
-                UserSnapshotDTO(
-                    aggregate_id=command.user_id,
-                    data=data,
-                    revision=rev,
+            if self.snapshot_store is not None:
+                data, rev = user.to_snapshot()
+                await self.snapshot_store.set(
+                    UserSnapshotDTO(
+                        aggregate_id=command.user_id,
+                        data=data,
+                        revision=rev,
+                    )
                 )
-            )
 
         logger.info(f"Updated user: {command.user_id}")
