@@ -76,17 +76,47 @@ def anyio_backend() -> str:
     return "asyncio"
 
 
-@pytest.fixture(scope="function")
-async def app_with_test_db(db: AsyncSession) -> Any:
-    """
-    Override the app fixture to use an in-memory test database
-    Note: This fixture is not currently used as the app uses infrastructure factory pattern
-    """
+@pytest.fixture
+async def test_infrastructure_factory(db_engine: Any) -> Any:
+    """Create infrastructure factory configured with test database."""
+    from event_sourcing.infrastructure.factory import InfrastructureFactory
+
+    return InfrastructureFactory(database_url=settings.TEST_DATABASE_URL)
+
+
+@pytest.fixture
+async def app_with_test_infrastructure(
+    test_infrastructure_factory: Any,
+) -> Any:
+    """Override the app's infrastructure factory dependency to use test database."""
+    from event_sourcing.api.depends import get_infrastructure_factory
+
+    def override_get_infrastructure_factory() -> Any:
+        return test_infrastructure_factory
+
+    app.dependency_overrides[get_infrastructure_factory] = (
+        override_get_infrastructure_factory
+    )
     yield app
+    app.dependency_overrides.clear()
+
+
+@pytest.fixture
+async def async_client_with_test_db(
+    app_with_test_infrastructure: Any,
+) -> AsyncGenerator[httpx.AsyncClient, None]:
+    """Async HTTP client configured with test database."""
+    async with httpx.AsyncClient(
+        transport=httpx.ASGITransport(app=app_with_test_infrastructure),
+        base_url="http://test",
+    ) as client:
+        yield client
 
 
 @pytest.fixture
 async def async_client() -> AsyncGenerator[httpx.AsyncClient, None]:
+    from event_sourcing.main import app
+
     async with httpx.AsyncClient(
         transport=httpx.ASGITransport(app=app), base_url="http://test"
     ) as client:

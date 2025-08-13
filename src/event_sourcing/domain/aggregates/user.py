@@ -56,17 +56,23 @@ class UserAggregate(Aggregate):
         # Business rule: Username must be unique (in real app, check against DB)
         if not username or len(username) < 3:
             logger.info(f"Username must be at least 3 characters: {username}")
-            raise ValueError("Username must be at least 3 characters")
+            from event_sourcing.domain.exceptions import UsernameTooShort
+
+            raise UsernameTooShort(username)
 
         # Business rule: Email must be valid format
         if not email or "@" not in email:
             logger.info(f"Invalid email format: {email}")
-            raise ValueError("Invalid email format")
+            from event_sourcing.domain.exceptions import InvalidEmailFormat
+
+            raise InvalidEmailFormat(email)
 
         # Business rule: Password must be provided
         if not password_hash:
             logger.info(f"Password is required: {password_hash}")
-            raise ValueError("Password is required")
+            from event_sourcing.domain.exceptions import PasswordRequired
+
+            raise PasswordRequired()
 
         # Create the event
         logger.info(f"Creating USER_CREATED event for user: {username}")

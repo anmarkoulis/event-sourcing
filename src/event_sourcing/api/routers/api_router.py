@@ -1,12 +1,12 @@
 from fastapi import APIRouter
 from fastapi.responses import RedirectResponse
 
-from .users import users_router
+from event_sourcing.api.routers.v1.router import v1_router
 
 api_router = APIRouter()
 
-# Include sub-routers
-api_router.include_router(users_router)
+# Include the v1 router (which has its own prefix)
+api_router.include_router(v1_router)
 
 
 @api_router.get("/ht/", description="Health check", tags=["health"])

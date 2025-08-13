@@ -7,6 +7,11 @@ from unittest.mock import Mock
 import pytest
 
 from event_sourcing.domain.aggregates.user import UserAggregate
+from event_sourcing.domain.exceptions import (
+    InvalidEmailFormat,
+    PasswordRequired,
+    UsernameTooShort,
+)
 from event_sourcing.dto import EventDTO, EventFactory
 from event_sourcing.dto.events.user import (
     UserCreatedDataV1,
@@ -120,9 +125,7 @@ class TestUserAggregate:
         invalid_data = valid_user_data.copy()
         invalid_data["username"] = "ab"  # Less than 3 characters
 
-        with pytest.raises(
-            ValueError, match="Username must be at least 3 characters"
-        ):
+        with pytest.raises(UsernameTooShort):
             user_aggregate.create_user(**invalid_data)
 
     def test_create_user_invalid_username_empty(
@@ -132,9 +135,7 @@ class TestUserAggregate:
         invalid_data = valid_user_data.copy()
         invalid_data["username"] = ""
 
-        with pytest.raises(
-            ValueError, match="Username must be at least 3 characters"
-        ):
+        with pytest.raises(UsernameTooShort):
             user_aggregate.create_user(**invalid_data)
 
     def test_create_user_invalid_email_no_at(
@@ -144,7 +145,7 @@ class TestUserAggregate:
         invalid_data = valid_user_data.copy()
         invalid_data["email"] = "invalid-email"
 
-        with pytest.raises(ValueError, match="Invalid email format"):
+        with pytest.raises(InvalidEmailFormat):
             user_aggregate.create_user(**invalid_data)
 
     def test_create_user_invalid_email_empty(
@@ -154,7 +155,7 @@ class TestUserAggregate:
         invalid_data = valid_user_data.copy()
         invalid_data["email"] = ""
 
-        with pytest.raises(ValueError, match="Invalid email format"):
+        with pytest.raises(InvalidEmailFormat):
             user_aggregate.create_user(**invalid_data)
 
     def test_create_user_no_password(
@@ -164,7 +165,7 @@ class TestUserAggregate:
         invalid_data = valid_user_data.copy()
         invalid_data["password_hash"] = ""
 
-        with pytest.raises(ValueError, match="Password is required"):
+        with pytest.raises(PasswordRequired):
             user_aggregate.create_user(**invalid_data)
 
     def test_update_user_success(

@@ -25,7 +25,9 @@ class CreateUserRequest(BaseModel):
     email: EmailStr
     first_name: str
     last_name: str
-    password: str  # Will be hashed before storing
+    password: str = Field(
+        ..., min_length=1, description="Password cannot be empty"
+    )
 
 
 class CreateUserResponse(BaseModel):
