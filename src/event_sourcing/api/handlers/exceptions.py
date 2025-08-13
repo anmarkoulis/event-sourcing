@@ -60,11 +60,11 @@ def configure_exception_handlers(app: FastAPI) -> None:
     # FastAPI built-in exception handlers
     app.add_exception_handler(
         RequestValidationError,
-        lambda request, exc: handle_request_validation_error(request, exc),
+        _handle_request_validation_error_wrapper,
     )
     app.add_exception_handler(
         StarletteHTTPException,
-        lambda request, exc: handle_http_exception(request, exc),
+        _handle_http_exception_wrapper,
     )
 
     # Generic exception handler (catch-all)
@@ -290,3 +290,22 @@ async def handle_generic_exception(
             "type": exc.__class__.__name__,
         },
     )
+
+
+# Wrapper functions to satisfy Starlette's type requirements
+async def _handle_request_validation_error_wrapper(
+    request: Request, exc: Exception
+) -> Response:
+    """Wrapper for RequestValidationError handler."""
+    if isinstance(exc, RequestValidationError):
+        return await handle_request_validation_error(request, exc)
+    raise TypeError(f"Expected RequestValidationError, got {type(exc)}")
+
+
+async def _handle_http_exception_wrapper(
+    request: Request, exc: Exception
+) -> Response:
+    """Wrapper for HTTPException handler."""
+    if isinstance(exc, StarletteHTTPException):
+        return await handle_http_exception(request, exc)
+    raise TypeError(f"Expected StarletteHTTPException, got {type(exc)}")
