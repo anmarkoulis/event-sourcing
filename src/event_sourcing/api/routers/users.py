@@ -43,41 +43,34 @@ async def create_user(
     infrastructure_factory: InfrastructureFactoryDep = None,
 ) -> CreateUserResponse:
     """Create a new user"""
-    try:
-        # Generate user ID
-        user_id = uuid.uuid4()
+    # Generate user ID
+    user_id = uuid.uuid4()
 
-        # Hash password (in real app, use proper hashing)
-        password_hash = f"hashed_{user_data.password}"
+    # Hash password (in real app, use proper hashing)
+    password_hash = f"hashed_{user_data.password}"
 
-        # Create command
-        command = CreateUserCommand(
-            user_id=user_id,
-            username=user_data.username,
-            email=user_data.email,
-            first_name=user_data.first_name,
-            last_name=user_data.last_name,
-            password_hash=password_hash,
-        )
+    # Create command
+    command = CreateUserCommand(
+        user_id=user_id,
+        username=user_data.username,
+        email=user_data.email,
+        first_name=user_data.first_name,
+        last_name=user_data.last_name,
+        password_hash=password_hash,
+    )
 
-        # Get fully built command handler from factory
-        command_handler = (
-            infrastructure_factory.create_create_user_command_handler()
-        )
+    # Get fully built command handler from factory
+    command_handler = (
+        infrastructure_factory.create_create_user_command_handler()
+    )
 
-        # Process command
-        await command_handler.handle(command)
+    # Process command
+    await command_handler.handle(command)
 
-        return CreateUserResponse(
-            message="User created successfully",
-            user_id=str(user_id),
-        )
-
-    except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e))
-    except Exception as e:
-        logger.error(f"Error creating user: {e}")
-        raise HTTPException(status_code=500, detail="Internal server error")
+    return CreateUserResponse(
+        message="User created successfully",
+        user_id=str(user_id),
+    )
 
 
 @users_router.get(
@@ -99,37 +92,28 @@ async def list_users(
     infrastructure_factory: InfrastructureFactoryDep = None,
 ) -> ListUsersResponse:
     """List users with pagination and filtering"""
-    try:
-        # Create query
-        query = ListUsersQuery(
-            page=page,
-            page_size=page_size,
-            username=username,
-            email=email,
-        )
+    # Create query
+    query = ListUsersQuery(
+        page=page,
+        page_size=page_size,
+        username=username,
+        email=email,
+    )
 
-        # Get query handler
-        query_handler = (
-            infrastructure_factory.create_list_users_query_handler()
-        )
+    # Get query handler
+    query_handler = infrastructure_factory.create_list_users_query_handler()
 
-        # Execute query
-        result = await query_handler.handle(query)
+    # Execute query
+    result = await query_handler.handle(query)
 
-        return ListUsersResponse(
-            results=result["results"],
-            next=result["next"],
-            previous=result["previous"],
-            count=result["count"],
-            page=result["page"],
-            page_size=result["page_size"],
-        )
-
-    except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e))
-    except Exception as e:
-        logger.error(f"Error listing users: {e}")
-        raise HTTPException(status_code=500, detail="Internal server error")
+    return ListUsersResponse(
+        results=result["results"],
+        next=result["next"],
+        previous=result["previous"],
+        count=result["count"],
+        page=result["page"],
+        page_size=result["page_size"],
+    )
 
 
 @users_router.put(
@@ -143,30 +127,23 @@ async def update_user(
     infrastructure_factory: InfrastructureFactoryDep = None,
 ) -> UpdateUserResponse:
     """Update user information"""
-    try:
-        # Create command
-        command = UpdateUserCommand(
-            user_id=uuid.UUID(user_id),
-            first_name=user_data.first_name,
-            last_name=user_data.last_name,
-            email=user_data.email,
-        )
+    # Create command
+    command = UpdateUserCommand(
+        user_id=uuid.UUID(user_id),
+        first_name=user_data.first_name,
+        last_name=user_data.last_name,
+        email=user_data.email,
+    )
 
-        # Get command handler
-        command_handler = (
-            infrastructure_factory.create_update_user_command_handler()
-        )
+    # Get command handler
+    command_handler = (
+        infrastructure_factory.create_update_user_command_handler()
+    )
 
-        # Process command
-        await command_handler.handle(command)
+    # Process command
+    await command_handler.handle(command)
 
-        return UpdateUserResponse(message="User updated successfully")
-
-    except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e))
-    except Exception as e:
-        logger.error(f"Error updating user: {e}")
-        raise HTTPException(status_code=500, detail="Internal server error")
+    return UpdateUserResponse(message="User updated successfully")
 
 
 @users_router.put(
@@ -180,34 +157,25 @@ async def change_password(
     infrastructure_factory: InfrastructureFactoryDep = None,
 ) -> ChangePasswordResponse:
     """Change user's password"""
-    try:
-        # In a real app, you would verify current password and hash new password
-        new_password_hash = (
-            f"hashed_{password_data.new_password}"  # Placeholder
-        )
+    # In a real app, you would verify current password and hash new password
+    new_password_hash = f"hashed_{password_data.new_password}"  # Placeholder
 
-        # Create command
-        command = ChangePasswordCommand(
-            user_id=uuid.UUID(user_id), new_password_hash=new_password_hash
-        )
+    # Create command
+    command = ChangePasswordCommand(
+        user_id=uuid.UUID(user_id), new_password_hash=new_password_hash
+    )
 
-        # Get command handler
-        command_handler = (
-            infrastructure_factory.create_change_password_command_handler()
-        )
+    # Get command handler
+    command_handler = (
+        infrastructure_factory.create_change_password_command_handler()
+    )
 
-        # Process command
-        await command_handler.handle(command)
+    # Process command
+    await command_handler.handle(command)
 
-        return ChangePasswordResponse(
-            message="Password changed successfully",
-        )
-
-    except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e))
-    except Exception as e:
-        logger.error(f"Error changing password: {e}")
-        raise HTTPException(status_code=500, detail="Internal server error")
+    return ChangePasswordResponse(
+        message="Password changed successfully",
+    )
 
 
 @users_router.put(
@@ -223,25 +191,18 @@ async def delete_user(
     infrastructure_factory: InfrastructureFactoryDep = None,
 ) -> DeleteUserResponse:
     """Delete user"""
-    try:
-        # Create command
-        command = DeleteUserCommand(user_id=uuid.UUID(user_id))
+    # Create command
+    command = DeleteUserCommand(user_id=uuid.UUID(user_id))
 
-        # Get command handler
-        command_handler = (
-            infrastructure_factory.create_delete_user_command_handler()
-        )
+    # Get command handler
+    command_handler = (
+        infrastructure_factory.create_delete_user_command_handler()
+    )
 
-        # Process command
-        await command_handler.handle(command)
+    # Process command
+    await command_handler.handle(command)
 
-        return DeleteUserResponse(message="User deleted successfully")
-
-    except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e))
-    except Exception as e:
-        logger.error(f"Error deleting user: {e}")
-        raise HTTPException(status_code=500, detail="Internal server error")
+    return DeleteUserResponse(message="User deleted successfully")
 
 
 @users_router.get(
@@ -252,26 +213,19 @@ async def get_user(
     infrastructure_factory: InfrastructureFactoryDep = None,
 ) -> GetUserResponse:
     """Get user by ID"""
-    try:
-        # Create query
-        query = GetUserQuery(user_id=uuid.UUID(user_id))
+    # Create query
+    query = GetUserQuery(user_id=uuid.UUID(user_id))
 
-        # Get query handler
-        query_handler = infrastructure_factory.create_get_user_query_handler()
+    # Get query handler
+    query_handler = infrastructure_factory.create_get_user_query_handler()
 
-        # Execute query
-        user = await query_handler.handle(query)
+    # Execute query
+    user = await query_handler.handle(query)
 
-        if not user:
-            raise HTTPException(status_code=404, detail="User not found")
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
 
-        return GetUserResponse(user=user)
-
-    except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e))
-    except Exception as e:
-        logger.error(f"Error getting user: {e}")
-        raise HTTPException(status_code=500, detail="Internal server error")
+    return GetUserResponse(user=user)
 
 
 @users_router.get(
@@ -287,35 +241,26 @@ async def get_user_history(
     infrastructure_factory: InfrastructureFactoryDep = None,
 ) -> UserDTO:
     """Get user state at a specific point in time"""
-    try:
-        # Parse the required timestamp
-        timestamp_parsed = datetime.fromisoformat(
-            timestamp.replace("Z", "+00:00")
+    # Parse the required timestamp
+    timestamp_parsed = datetime.fromisoformat(timestamp.replace("Z", "+00:00"))
+
+    # Create query
+    query = GetUserHistoryQuery(
+        user_id=uuid.UUID(user_id),
+        timestamp=timestamp_parsed,
+    )
+
+    # Get query handler
+    query_handler = (
+        infrastructure_factory.create_get_user_history_query_handler()
+    )
+
+    # Execute query
+    user = await query_handler.handle(query)
+
+    if not user:
+        raise HTTPException(
+            status_code=404, detail="User not found at specified time"
         )
 
-        # Create query
-        query = GetUserHistoryQuery(
-            user_id=uuid.UUID(user_id),
-            timestamp=timestamp_parsed,
-        )
-
-        # Get query handler
-        query_handler = (
-            infrastructure_factory.create_get_user_history_query_handler()
-        )
-
-        # Execute query
-        user = await query_handler.handle(query)
-
-        if not user:
-            raise HTTPException(
-                status_code=404, detail="User not found at specified time"
-            )
-
-        return user
-
-    except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e))
-    except Exception as e:
-        logger.error(f"Error getting user state at {timestamp}: {e}")
-        raise HTTPException(status_code=500, detail="Internal server error")
+    return user
