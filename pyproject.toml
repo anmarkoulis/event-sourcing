@@ -10,13 +10,13 @@ authors = [{name = "Antonis Markoulis"}]
 requires-python = ">=3.13.0,<3.14.0"
 keywords = ["event_sourcing"]
 dependencies = [
-    "environs==14.2.0",
+    "environs==14.3.0",
     "requests==2.32.4",
     "fastapi==0.116.1",
     "uvicorn==0.35.0",
-    "asgiref==3.8.1",
+    "asgiref==3.9.1",
     "alembic==1.16.4",
-    "sqlalchemy==2.0.41",
+    "sqlalchemy==2.0.43",
     "asyncpg==0.30.0",
     "celery[sqs]==5.5.3",
     "psycopg2==2.9.10",
@@ -31,18 +31,18 @@ dependencies = [
 
 [dependency-groups]
 dev = [
-    "mypy==1.15.0",
-    "ipython==9.2.0",
-    "pre-commit==4.1.0",
-    "pytest-cov==6.0.0",
-    "pytest==8.3.5",
-    "pytest-asyncio==0.25.3",
-    "types-mock==5.2.0.20250306",
-    "types-pyyaml==6.0.12.20241230",
-    "faker==37.0.0",
+    "mypy==1.17.1",
+    "ipython==9.4.0",
+    "pre-commit==4.3.0",
+    "pytest-cov==6.2.1",
+    "pytest==8.4.1",
+    "pytest-asyncio==1.1.0",
+    "types-mock==5.2.0.20250809",
+    "types-pyyaml==6.0.12.20250809",
+    "faker==37.5.3",
     "httpx==0.28.1",
-    "greenlet==3.1.1",
-    "commitizen==4.4.1",
+    "greenlet==3.2.4",
+    "commitizen==4.8.3",
 ]
 
 [[tool.uv.index]]
