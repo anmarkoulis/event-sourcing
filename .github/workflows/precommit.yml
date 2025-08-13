@@ -9,4 +9,4 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Run pre-commit
-        run: make pre-commit
+        run: make pre-commit args="--all-files"
