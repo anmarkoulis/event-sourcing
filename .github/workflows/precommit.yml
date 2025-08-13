@@ -1,0 +1,12 @@
+on:
+  workflow_call:
+
+jobs:
+  precommit:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code Repository
+        uses: actions/checkout@v4
+
+      - name: Run pre-commit
+        run: make pre-commit
