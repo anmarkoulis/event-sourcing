@@ -1,4 +1,4 @@
-name: Update pre-commit hooks
+name: Periodic update of pre-commit hooks
 
 on:
   schedule:
