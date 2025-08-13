@@ -13,18 +13,12 @@ from event_sourcing.application.queries.user.get_user_history import (
 from event_sourcing.dto.events.factory import EventFactory
 from event_sourcing.dto.user import UserDTO
 from event_sourcing.enums import AggregateTypeEnum
-from event_sourcing.infrastructure.event_store import EventStore
-
-
-@pytest.fixture
-def event_store_mock() -> MagicMock:
-    store = MagicMock(spec_set=EventStore)
-    store.get_stream = AsyncMock()
-    return store
 
 
 @pytest.fixture
 def handler(event_store_mock: MagicMock) -> GetUserHistoryQueryHandler:
+    # Configure the mock for this specific test
+    event_store_mock.get_stream = AsyncMock()
     return GetUserHistoryQueryHandler(event_store=event_store_mock)
 
 

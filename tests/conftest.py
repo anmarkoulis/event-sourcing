@@ -140,3 +140,11 @@ def snapshot_store_mock() -> MagicMock:
     store.get = AsyncMock(return_value=None)
     store.set = AsyncMock()
     return store
+
+
+@pytest.fixture
+def read_model_mock() -> MagicMock:
+    """Bare PostgreSQLReadModel double; tests configure awaited methods as needed."""
+    from event_sourcing.infrastructure.read_model import PostgreSQLReadModel
+
+    return MagicMock(spec_set=PostgreSQLReadModel)

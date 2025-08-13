@@ -9,18 +9,12 @@ from event_sourcing.application.queries.handlers.user.get_user import (
 )
 from event_sourcing.application.queries.user.get_user import GetUserQuery
 from event_sourcing.dto.user import UserDTO
-from event_sourcing.infrastructure.read_model import ReadModel
-
-
-@pytest.fixture
-def read_model_mock() -> MagicMock:
-    rm = MagicMock(spec_set=ReadModel)
-    rm.get_user = AsyncMock()
-    return rm
 
 
 @pytest.fixture
 def handler(read_model_mock: MagicMock) -> GetUserQueryHandler:
+    # Configure the mock for this specific test
+    read_model_mock.get_user = AsyncMock()
     return GetUserQueryHandler(read_model=read_model_mock)
 
 

@@ -9,14 +9,9 @@ from event_sourcing.application.queries.user.list_users import ListUsersQuery
 
 
 @pytest.fixture
-def read_model_mock() -> MagicMock:
-    rm = MagicMock()
-    rm.list_users = AsyncMock()
-    return rm
-
-
-@pytest.fixture
 def handler(read_model_mock: MagicMock) -> ListUsersQueryHandler:
+    # Configure the mock for this specific test
+    read_model_mock.list_users = AsyncMock()
     return ListUsersQueryHandler(read_model=read_model_mock)
 
 
