@@ -270,7 +270,6 @@ So now we have events being created by aggregates. But these events are just sto
 - Event: User Created → Actions:
   - Create user record (read model)
   - Send welcome email (side effect)
-- Event: Email Changed → Action: Update email field
 
 ## Key characteristics:
 - **Event-driven**: Triggered by new events
