@@ -1,0 +1,61 @@
+name: Update pre-commit hooks
+
+on:
+  workflow_call:
+    inputs:
+      branch:
+        description: The branch where the PR will be opened against
+        required: false
+        type: string
+        default: main
+  workflow_dispatch:
+    inputs:
+      branch:
+        description: The branch where the PR will be opened against
+        required: false
+        type: string
+        default: main
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  update-precommit-deps:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-python@v5
+
+      - name: Set PY
+        shell: bash
+        run: echo "PY=$(python -VV | sha256sum | cut -d' ' -f1)" >> "$GITHUB_ENV"
+
+      - uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cache/pre-commit
+            ~/.cache/pip
+          key: pre-commit-${{ env.PY }}-${{ hashFiles('.pre-commit-config.yaml') }}
+
+      - name: Install pre-commit
+        shell: bash
+        run: pip install -U pre-commit
+
+      - name: Run `pre-commit autoupdate`
+        shell: bash
+        run: pre-commit autoupdate --color=always
+
+      - uses: peter-evans/create-pull-request@v7
+        with:
+          branch: build-pre-commit-autoupdate
+          title: "build(deps): Update pre-commit hooks"
+          commit-message: "build(deps): Update pre-commit hooks"
+          body: Update pre-commit hooks
+          labels: dependencies
+          delete-branch: True
+          token: ${{ secrets.GITHUB_TOKEN }}
+          base: ${{ inputs.branch }}
