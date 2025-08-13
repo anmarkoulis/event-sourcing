@@ -16,7 +16,7 @@ jobs:
       latest-release-version: ${{ steps.release.outputs.VERSION }}
     steps:
       - name: Checkout Repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Install dependencies
         uses: actions/setup-node@v4
