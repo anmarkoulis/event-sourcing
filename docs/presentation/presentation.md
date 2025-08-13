@@ -246,7 +246,7 @@ So we have commands that create events, and queries that read data. But where do
 
 ## Key characteristics:
 - **Business rules**: Enforce domain-specific validation
-- **State management**: Maintain current state from events
+- **Event replay**: Rebuild current state by applying all previous events
 - **Event creation**: Generate new events based on commands
 
 ## **Aggregates apply business logic** and create events
@@ -274,9 +274,7 @@ So now we have events being created by aggregates. But these events are just sto
 
 ## Key characteristics:
 - **Event-driven**: Triggered by new events
-- **Multiple projections**: One event can trigger multiple actions
-- **Read-optimized**: Designed for specific query patterns
-- **Denormalized**: Optimized for performance, not normalization
+- **Multiple actions per event**: One event can trigger multiple projections
 - **Eventually consistent**: Updated asynchronously
 
 ## **Projections update read models from events**
@@ -371,7 +369,9 @@ class ChangePasswordCommandHandler(CommandHandler[ChangePasswordCommand]):
 ## **Command Handler orchestrates: Event Store + Event Handler with Unit of Work**
 
 <!--
-Behind the API, command handlers are the orchestrators - they don't contain business logic, they delegate and coordinate. Here's our ChangePasswordCommandHandler: it leverages the event store to retrieve all existing events for the user, creates a UserAggregate and replays events to reconstruct its current state, calls the aggregate's business method to produce new events, and then handles both storage and dispatch. The key insight is that command handlers orchestrate the process, but the actual business logic lives in the aggregates.
+Behind the API, command handlers are the orchestrators - they don't contain business logic, they delegate and coordinate. Here's our ChangePasswordCommandHandler: it leverages the event store to retrieve all existing events for the user, creates a UserAggregate and replays events to reconstruct its current state, calls the aggregate's business method to produce new events, and then handles both storage and dispatch.
+
+The Unit of Work pattern (`async with self.uow:`) is crucial here - it ensures that both storing events to the event store AND dispatching them to the event bus happen atomically. If either operation fails, the entire transaction is rolled back. This prevents the nightmare scenario where events are stored but never processed, or processed but never stored. The key insight is that command handlers orchestrate the process with transactional guarantees, while the actual business logic lives in the aggregates.
 -->
 
 ---
