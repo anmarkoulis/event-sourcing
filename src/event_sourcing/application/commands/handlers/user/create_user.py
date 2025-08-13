@@ -32,49 +32,37 @@ class CreateUserCommandHandler(CommandHandler[CreateUserCommand]):
 
     async def _validate_username_uniqueness(self, username: str) -> bool:
         """Validate that username is unique across all users"""
-        try:
-            # Search for existing users with this username
-            existing_events = await self.event_store.search_events(
-                aggregate_type=AggregateTypeEnum.USER,
-                query_params={"username": username},
-            )
+        # Search for existing users with this username
+        existing_events = await self.event_store.search_events(
+            aggregate_type=AggregateTypeEnum.USER,
+            query_params={"username": username},
+        )
 
-            # If we find any USER_CREATED events with this username, it's not unique
-            for event in existing_events:
-                if event.event_type == "USER_CREATED":
-                    logger.info(f"Username {username} already exists")
-                    return False
+        # If we find any USER_CREATED events with this username, it's not unique
+        for event in existing_events:
+            if event.event_type == "USER_CREATED":
+                logger.info(f"Username {username} already exists")
+                return False
 
-            logger.info(f"Username {username} is unique")
-            return True
-
-        except Exception as e:
-            logger.error(f"Error validating username uniqueness: {e}")
-            # In case of error, we'll be conservative and assume it's not unique
-            return False
+        logger.info(f"Username {username} is unique")
+        return True
 
     async def _validate_email_uniqueness(self, email: str) -> bool:
         """Validate that email is unique across all users"""
-        try:
-            # Search for existing users with this email
-            existing_events = await self.event_store.search_events(
-                aggregate_type=AggregateTypeEnum.USER,
-                query_params={"email": email},
-            )
+        # Search for existing users with this email
+        existing_events = await self.event_store.search_events(
+            aggregate_type=AggregateTypeEnum.USER,
+            query_params={"email": email},
+        )
 
-            # If we find any USER_CREATED events with this email, it's not unique
-            for event in existing_events:
-                if event.event_type == "USER_CREATED":
-                    logger.info(f"Email {email} already exists")
-                    return False
+        # If we find any USER_CREATED events with this email, it's not unique
+        for event in existing_events:
+            if event.event_type == "USER_CREATED":
+                logger.info(f"Email {email} already exists")
+                return False
 
-            logger.info(f"Email {email} is unique")
-            return True
-
-        except Exception as e:
-            logger.error(f"Error validating email uniqueness: {e}")
-            # In case of error, we'll be conservative and assume it's not unique
-            return False
+        logger.info(f"Email {email} is unique")
+        return True
 
     async def handle(self, command: CreateUserCommand) -> None:
         logger.info(f"Creating user: {command.username}")
@@ -106,14 +94,14 @@ class CreateUserCommandHandler(CommandHandler[CreateUserCommand]):
             )
             await self.event_handler.dispatch(new_events)
 
-        if self.snapshot_store is not None:
-            data, rev = user.to_snapshot()
-            await self.snapshot_store.set(
-                UserSnapshotDTO(
-                    aggregate_id=command.user_id,
-                    data=data,
-                    revision=rev,
+            if self.snapshot_store is not None:
+                data, rev = user.to_snapshot()
+                await self.snapshot_store.set(
+                    UserSnapshotDTO(
+                        aggregate_id=command.user_id,
+                        data=data,
+                        revision=rev,
+                    )
                 )
-            )
 
         logger.info(f"Created user: {command.username}")

@@ -1,1 +1,1 @@
-# Unit tests for user projections
+"""Unit tests for user projections."""
