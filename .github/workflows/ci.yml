@@ -1,0 +1,23 @@
+name: CI on Production
+
+on:
+  push:
+    branches:
+      - "main"
+
+concurrency:
+  group: ${{ github.ref }}
+  cancel-in-progress: false
+
+permissions:
+  id-token: write
+  contents: write
+  issues: write
+  pull-requests: write
+
+
+jobs:
+  bump:
+    uses: ./.github/workflows/bump.yml
+    secrets:
+      RELEASE_TOKEN: ${{ secrets.GITHUB_TOKEN }}
