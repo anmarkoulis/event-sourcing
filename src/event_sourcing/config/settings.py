@@ -78,6 +78,7 @@ class Settings(BaseSettings):
     ALLOWED_HOSTS: List = env.list("ALLOWED_HOSTS")
     DATABASE_URL: str = env.str("DATABASE_URL", "")
     TEST_DATABASE_URL: str = DATABASE_URL.replace("event_sourcing", "test")
+    SYNC_EVENT_HANDLER: bool = env.bool("SYNC_EVENT_HANDLER", False)
     # Celery
     # ------------------------------------------------------------------------------
     CELERY_CONFIG: CeleryConfig = CeleryConfig()

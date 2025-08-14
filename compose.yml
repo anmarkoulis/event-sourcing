@@ -30,8 +30,6 @@ services:
     <<: *fastapi-common
     container_name: event_sourcing_fastapi
     command: /start
-    depends_on:
-      - postgres
 
 
   migrator:
@@ -45,9 +43,6 @@ services:
     container_name: event_sourcing_initializer
     restart: on-failure
     command: /initialize
-    depends_on:
-      - postgres
-      - migrator
 
 
   postgres:

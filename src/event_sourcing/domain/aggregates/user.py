@@ -37,6 +37,10 @@ class UserAggregate(Aggregate):
         """Get the next revision number for this aggregate"""
         return self.last_applied_revision + 1
 
+    def exists(self) -> bool:
+        """Check if the user aggregate exists (has been created)."""
+        return self.username is not None
+
     def create_user(
         self,
         username: str,
@@ -56,17 +60,23 @@ class UserAggregate(Aggregate):
         # Business rule: Username must be unique (in real app, check against DB)
         if not username or len(username) < 3:
             logger.info(f"Username must be at least 3 characters: {username}")
-            raise ValueError("Username must be at least 3 characters")
+            from event_sourcing.domain.exceptions import UsernameTooShort
+
+            raise UsernameTooShort(username)
 
         # Business rule: Email must be valid format
         if not email or "@" not in email:
             logger.info(f"Invalid email format: {email}")
-            raise ValueError("Invalid email format")
+            from event_sourcing.domain.exceptions import InvalidEmailFormat
+
+            raise InvalidEmailFormat(email)
 
         # Business rule: Password must be provided
         if not password_hash:
             logger.info(f"Password is required: {password_hash}")
-            raise ValueError("Password is required")
+            from event_sourcing.domain.exceptions import PasswordRequired
+
+            raise PasswordRequired()
 
         # Create the event
         logger.info(f"Creating USER_CREATED event for user: {username}")
@@ -93,6 +103,12 @@ class UserAggregate(Aggregate):
         email: Optional[str] = None,
     ) -> List[EventDTO]:
         """Update user information"""
+        # Business rule: User must exist to be updated
+        if not self.exists():
+            from event_sourcing.domain.exceptions import UserNotFound
+
+            raise UserNotFound(f"User {self.aggregate_id} not found")
+
         # Business rule: Cannot update deleted user
         if self.deleted_at is not None:
             raise ValueError("Cannot update deleted user")
@@ -124,6 +140,12 @@ class UserAggregate(Aggregate):
 
     def change_password(self, new_password_hash: str) -> List[EventDTO]:
         """Change user's password"""
+        # Business rule: User must exist to change password
+        if not self.exists():
+            from event_sourcing.domain.exceptions import UserNotFound
+
+            raise UserNotFound(f"User {self.aggregate_id} not found")
+
         # Business rule: Cannot change password if user is deleted
         if self.deleted_at is not None:
             raise ValueError("Cannot change password for deleted user")
@@ -151,6 +173,12 @@ class UserAggregate(Aggregate):
 
     def delete_user(self) -> List[EventDTO]:
         """Delete user"""
+        # Business rule: User must exist to be deleted
+        if not self.exists():
+            from event_sourcing.domain.exceptions import UserNotFound
+
+            raise UserNotFound(f"User {self.aggregate_id} not found")
+
         # Business rule: Cannot delete already deleted user
         if self.deleted_at is not None:
             raise ValueError("User is already deleted")

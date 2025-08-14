@@ -1,7 +1,311 @@
-from fastapi import FastAPI
+"""Exception handlers for mapping domain exceptions to HTTP responses."""
+
+import logging
+
+from fastapi import FastAPI, Request, status
+from fastapi.exceptions import RequestValidationError
+from fastapi.responses import JSONResponse
+from starlette.exceptions import HTTPException as StarletteHTTPException
+from starlette.responses import Response
+
+from event_sourcing.domain.exceptions import (
+    BusinessRuleViolation,
+    DomainException,
+    EmailAlreadyExists,
+    InvalidEmailFormat,
+    PasswordRequired,
+    ResourceConflict,
+    ResourceNotFound,
+    UserBusinessRuleViolation,
+    UserConflict,
+    UsernameAlreadyExists,
+    UsernameTooShort,
+    UserNotFound,
+    UserValidationError,
+    ValidationError,
+)
+
+logger = logging.getLogger(__name__)
 
 
 def configure_exception_handlers(app: FastAPI) -> None:
-    """
-    Configures the global exception handlers for the application.
-    """
+    """Configure exception handlers for the FastAPI application."""
+
+    # Domain exception handlers
+    app.add_exception_handler(DomainException, handle_domain_exception)
+    app.add_exception_handler(ValidationError, handle_validation_error)
+    app.add_exception_handler(
+        BusinessRuleViolation, handle_business_rule_violation
+    )
+    app.add_exception_handler(ResourceNotFound, handle_resource_not_found)
+    app.add_exception_handler(ResourceConflict, handle_resource_conflict)
+
+    # User-specific exception handlers
+    app.add_exception_handler(
+        UserValidationError, handle_user_validation_error
+    )
+    app.add_exception_handler(
+        UserBusinessRuleViolation, handle_user_business_rule_violation
+    )
+    app.add_exception_handler(UserNotFound, handle_user_not_found)
+    app.add_exception_handler(UserConflict, handle_user_conflict)
+    app.add_exception_handler(
+        UsernameAlreadyExists, handle_username_already_exists
+    )
+    app.add_exception_handler(EmailAlreadyExists, handle_email_already_exists)
+    app.add_exception_handler(UsernameTooShort, handle_username_too_short)
+    app.add_exception_handler(PasswordRequired, handle_password_required)
+    app.add_exception_handler(InvalidEmailFormat, handle_invalid_email_format)
+
+    # FastAPI built-in exception handlers
+    app.add_exception_handler(
+        RequestValidationError,
+        _handle_request_validation_error_wrapper,
+    )
+    app.add_exception_handler(
+        StarletteHTTPException,
+        _handle_http_exception_wrapper,
+    )
+
+    # Generic exception handler (catch-all)
+    app.add_exception_handler(Exception, handle_generic_exception)
+
+
+async def handle_domain_exception(
+    request: Request, exc: DomainException
+) -> JSONResponse:
+    """Handle generic domain exceptions."""
+    logger.warning(
+        f"Domain exception: {exc.message}", extra={"details": exc.details}
+    )
+
+    return JSONResponse(
+        status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+        content={
+            "error": "Domain Error",
+            "message": exc.message,
+            "details": exc.details,
+            "type": exc.__class__.__name__,
+        },
+    )
+
+
+async def handle_validation_error(
+    request: Request, exc: ValidationError
+) -> JSONResponse:
+    """Handle validation errors."""
+    logger.warning(
+        f"Validation error: {exc.message}",
+        extra={"field": exc.field, "details": exc.details},
+    )
+
+    return JSONResponse(
+        status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+        content={
+            "error": "Validation Error",
+            "message": exc.message,
+            "field": exc.field,
+            "details": exc.details,
+            "type": exc.__class__.__name__,
+        },
+    )
+
+
+async def handle_business_rule_violation(
+    request: Request, exc: BusinessRuleViolation
+) -> JSONResponse:
+    """Handle business rule violations."""
+    logger.warning(
+        f"Business rule violation: {exc.message}",
+        extra={"rule": exc.rule_name, "details": exc.details},
+    )
+
+    return JSONResponse(
+        status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+        content={
+            "error": "Business Rule Violation",
+            "message": exc.message,
+            "rule": exc.rule_name,
+            "details": exc.details,
+            "type": exc.__class__.__name__,
+        },
+    )
+
+
+async def handle_resource_not_found(
+    request: Request, exc: ResourceNotFound
+) -> JSONResponse:
+    """Handle resource not found errors."""
+    logger.info(
+        f"Resource not found: {exc.message}",
+        extra={
+            "resource_type": exc.resource_type,
+            "resource_id": exc.resource_id,
+        },
+    )
+
+    return JSONResponse(
+        status_code=status.HTTP_404_NOT_FOUND,
+        content={
+            "error": "Resource Not Found",
+            "message": exc.message,
+            "resource_type": exc.resource_type,
+            "resource_id": exc.resource_id,
+            "type": exc.__class__.__name__,
+        },
+    )
+
+
+async def handle_resource_conflict(
+    request: Request, exc: ResourceConflict
+) -> JSONResponse:
+    """Handle resource conflicts."""
+    logger.warning(
+        f"Resource conflict: {exc.message}",
+        extra={"conflict_type": exc.conflict_type, "details": exc.details},
+    )
+
+    return JSONResponse(
+        status_code=status.HTTP_409_CONFLICT,
+        content={
+            "error": "Resource Conflict",
+            "message": exc.message,
+            "conflict_type": exc.conflict_type,
+            "details": exc.details,
+            "type": exc.__class__.__name__,
+        },
+    )
+
+
+# User-specific handlers
+async def handle_user_validation_error(
+    request: Request, exc: UserValidationError
+) -> JSONResponse:
+    """Handle user validation errors."""
+    return await handle_validation_error(request, exc)
+
+
+async def handle_user_business_rule_violation(
+    request: Request, exc: UserBusinessRuleViolation
+) -> JSONResponse:
+    """Handle user business rule violations."""
+    return await handle_business_rule_violation(request, exc)
+
+
+async def handle_user_not_found(
+    request: Request, exc: UserNotFound
+) -> JSONResponse:
+    """Handle user not found errors."""
+    return await handle_resource_not_found(request, exc)
+
+
+async def handle_user_conflict(
+    request: Request, exc: UserConflict
+) -> JSONResponse:
+    """Handle user conflicts."""
+    return await handle_resource_conflict(request, exc)
+
+
+async def handle_username_already_exists(
+    request: Request, exc: UsernameAlreadyExists
+) -> JSONResponse:
+    """Handle username already exists errors."""
+    return await handle_user_conflict(request, exc)
+
+
+async def handle_email_already_exists(
+    request: Request, exc: EmailAlreadyExists
+) -> JSONResponse:
+    """Handle email already exists errors."""
+    return await handle_user_conflict(request, exc)
+
+
+async def handle_username_too_short(
+    request: Request, exc: UsernameTooShort
+) -> JSONResponse:
+    """Handle username too short errors."""
+    return await handle_user_validation_error(request, exc)
+
+
+async def handle_password_required(
+    request: Request, exc: PasswordRequired
+) -> JSONResponse:
+    """Handle password required errors."""
+    return await handle_user_validation_error(request, exc)
+
+
+async def handle_invalid_email_format(
+    request: Request, exc: InvalidEmailFormat
+) -> JSONResponse:
+    """Handle invalid email format errors."""
+    return await handle_user_validation_error(request, exc)
+
+
+# FastAPI built-in exception handlers
+async def handle_request_validation_error(
+    request: Request, exc: RequestValidationError
+) -> Response:
+    """Handle FastAPI request validation errors."""
+
+    logger.warning(f"Request validation error: {exc.errors()}")
+
+    return JSONResponse(
+        status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+        content={
+            "error": "Request Validation Error",
+            "message": "Invalid request data",
+            "details": exc.errors(),
+            "type": "RequestValidationError",
+        },
+    )
+
+
+async def handle_http_exception(
+    request: Request, exc: StarletteHTTPException
+) -> Response:
+    """Handle HTTP exceptions."""
+    logger.info(f"HTTP exception: {exc.status_code} - {exc.detail}")
+
+    return JSONResponse(
+        status_code=exc.status_code,
+        content={
+            "error": "HTTP Error",
+            "message": exc.detail,
+            "type": "HTTPException",
+        },
+    )
+
+
+async def handle_generic_exception(
+    request: Request, exc: Exception
+) -> Response:
+    """Handle generic exceptions (catch-all)."""
+    logger.error(f"Unhandled exception: {exc}", exc_info=True)
+
+    return JSONResponse(
+        status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+        content={
+            "error": "Internal Server Error",
+            "message": "An unexpected error occurred",
+            "type": exc.__class__.__name__,
+        },
+    )
+
+
+# Wrapper functions to satisfy Starlette's type requirements
+async def _handle_request_validation_error_wrapper(
+    request: Request, exc: Exception
+) -> Response:
+    """Wrapper for RequestValidationError handler."""
+    if isinstance(exc, RequestValidationError):
+        return await handle_request_validation_error(request, exc)
+    raise TypeError(f"Expected RequestValidationError, got {type(exc)}")
+
+
+async def _handle_http_exception_wrapper(
+    request: Request, exc: Exception
+) -> Response:
+    """Wrapper for HTTPException handler."""
+    if isinstance(exc, StarletteHTTPException):
+        return await handle_http_exception(request, exc)
+    raise TypeError(f"Expected StarletteHTTPException, got {type(exc)}")

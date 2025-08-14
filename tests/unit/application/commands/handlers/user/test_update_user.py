@@ -288,23 +288,19 @@ class TestUpdateUserCommandHandler:
         update_user_command: UpdateUserCommand,
     ) -> None:
         """Test that domain errors are propagated."""
-        # Configure mocks
+        # Configure mocks - no events means user doesn't exist
         event_store_mock.get_stream.return_value = []
         snapshot_store_mock = handler.snapshot_store
         snapshot_store_mock.get.return_value = None
 
-        # Create command that will cause domain error (no fields to update)
-        bad_command = UpdateUserCommand(
-            user_id=update_user_command.user_id,
-            first_name=None,
-            last_name=None,
-            email=None,
-        )
+        # Now the aggregate will raise UserNotFound when no events exist
+        from event_sourcing.domain.exceptions import UserNotFound
 
         with pytest.raises(
-            ValueError, match="Must provide at least one field to update"
+            UserNotFound,
+            match="User 11111111-1111-1111-1111-111111111111 not found",
         ):
-            await handler.handle(bad_command)
+            await handler.handle(update_user_command)
 
         # Verify no events were persisted
         event_store_mock.append_to_stream.assert_not_awaited()

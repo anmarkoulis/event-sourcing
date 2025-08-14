@@ -10,39 +10,40 @@ authors = [{name = "Antonis Markoulis"}]
 requires-python = ">=3.13.0,<3.14.0"
 keywords = ["event_sourcing"]
 dependencies = [
-    "environs==14.3.0",
-    "requests==2.32.4",
-    "fastapi==0.116.1",
-    "uvicorn==0.35.0",
-    "asgiref==3.9.1",
     "alembic==1.16.4",
-    "sqlalchemy==2.0.43",
+    "asgiref==3.9.1",
     "asyncpg==0.30.0",
     "celery[sqs]==5.5.3",
-    "psycopg2==2.9.10",
-    "typer==0.16.0",
-    "pyyaml==6.0.2",
-    "pydantic[email]==2.11.7",
-    "pydantic-settings==2.10.1",
+    "environs==14.3.0",
+    "fastapi==0.116.1",
+    "fastapi-cache2==0.2.2",
     "gunicorn==23.0.0",
     "JSON-log-formatter==1.1.1",
-    "fastapi-cache2==0.2.2",
+    "psycopg2==2.9.10",
+    "pydantic[email]==2.11.7",
+    "pydantic-settings==2.10.1",
+    "pyyaml==6.0.2",
+    "requests==2.32.4",
+    "sqlalchemy==2.0.43",
+    "typer==0.16.0",
+    "uvicorn==0.35.0",
 ]
 
 [dependency-groups]
 dev = [
-    "mypy==1.17.1",
+    "commitizen==4.8.3",
+    "faker==37.5.3",
+    "freezegun==1.5.5",
+    "greenlet==3.2.4",
+    "httpx==0.28.1",
     "ipython==9.4.0",
+    "mypy==1.17.1",
     "pre-commit==4.3.0",
-    "pytest-cov==6.2.1",
     "pytest==8.4.1",
     "pytest-asyncio==1.1.0",
+    "pytest-cov==6.2.1",
     "types-mock==5.2.0.20250809",
     "types-pyyaml==6.0.12.20250809",
-    "faker==37.5.3",
-    "httpx==0.28.1",
-    "greenlet==3.2.4",
-    "commitizen==4.8.3",
 ]
 
 [[tool.uv.index]]

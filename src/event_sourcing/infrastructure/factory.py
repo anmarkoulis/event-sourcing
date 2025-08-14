@@ -159,9 +159,14 @@ class InfrastructureFactory:
             # Dynamic import to avoid circular dependency
             from event_sourcing.application.events.handlers import (
                 CeleryEventHandler,
+                SyncEventHandler,
             )
+            from event_sourcing.config.settings import settings
 
-            self._event_handler = CeleryEventHandler()
+            if settings.SYNC_EVENT_HANDLER:
+                self._event_handler = SyncEventHandler(self)
+            else:
+                self._event_handler = CeleryEventHandler()
         return self._event_handler
 
     def _initialize_email_providers(self) -> None:

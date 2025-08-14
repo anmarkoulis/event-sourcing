@@ -7,4 +7,5 @@ def configure_routers(app: FastAPI) -> None:
     """
     Configures the application's API routers.
     """
+    # Include the main API router (which includes v1 and non-versioned endpoints)
     app.include_router(api_router)
