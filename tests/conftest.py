@@ -4,6 +4,7 @@ from unittest.mock import AsyncMock, MagicMock
 import asyncpg
 import httpx
 import pytest
+from freezegun import freeze_time
 from sqlalchemy.engine.url import make_url
 from sqlalchemy.ext.asyncio import (
     AsyncEngine,
@@ -44,7 +45,7 @@ async def create_database_if_not_exists() -> None:
         await sys_conn.close()
 
 
-@pytest.fixture(scope="session")
+@pytest.fixture(scope="function")
 async def db_engine() -> Any:
     await create_database_if_not_exists()
     engine: AsyncEngine = create_async_engine(
@@ -79,7 +80,11 @@ def anyio_backend() -> str:
 @pytest.fixture
 async def test_infrastructure_factory(db_engine: Any) -> Any:
     """Create infrastructure factory configured with test database."""
+    from event_sourcing.config.settings import settings
     from event_sourcing.infrastructure.factory import InfrastructureFactory
+
+    # Enable sync event handling for tests
+    settings.SYNC_EVENT_HANDLER = True
 
     return InfrastructureFactory(database_url=settings.TEST_DATABASE_URL)
 
@@ -178,3 +183,9 @@ def read_model_mock() -> MagicMock:
     from event_sourcing.infrastructure.read_model import PostgreSQLReadModel
 
     return MagicMock(spec_set=PostgreSQLReadModel)
+
+
+@pytest.fixture
+def freezer() -> Any:
+    """Freezegun fixture for controlling time in tests."""
+    return freeze_time

@@ -270,21 +270,18 @@ class TestDeleteUserCommandHandler:
         delete_user_command: DeleteUserCommand,
     ) -> None:
         """Test that domain errors are propagated."""
-        # Configure mocks
+        # Configure mocks - no events means user doesn't exist
         event_store_mock.get_stream.return_value = []
         snapshot_store_mock = handler.snapshot_store
         snapshot_store_mock.get.return_value = None
 
-        # Create a user that's already deleted (this would cause domain error)
-        # We need to mock the event store to return events that create a deleted user
-        deleted_user_event = EventFactory.create_user_deleted(
-            aggregate_id=delete_user_command.user_id,
-            revision=1,
-            timestamp=datetime(2023, 1, 1, 12, 0, 0, tzinfo=timezone.utc),
-        )
-        event_store_mock.get_stream.return_value = [deleted_user_event]
+        # Now the aggregate will raise UserNotFound when no events exist
+        from event_sourcing.domain.exceptions import UserNotFound
 
-        with pytest.raises(ValueError, match="User is already deleted"):
+        with pytest.raises(
+            UserNotFound,
+            match="User 11111111-1111-1111-1111-111111111111 not found",
+        ):
             await handler.handle(delete_user_command)
 
         # Verify no events were persisted

@@ -2,13 +2,12 @@ import logging
 from datetime import datetime, timezone
 from typing import List, Optional, Tuple
 
-from sqlalchemy import and_, func, select
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from event_sourcing.dto.user import UserDTO, UserReadModelData
 from event_sourcing.infrastructure.database.models.read.user import User
-
-from .base import ReadModel
+from event_sourcing.infrastructure.read_model.base import ReadModel
 
 logger = logging.getLogger(__name__)
 
@@ -70,7 +69,10 @@ class PostgreSQLReadModel(ReadModel):
         """Get a specific user by ID"""
         logger.info(f"Getting user {user_id}")
 
-        query = select(User).where(User.id == user_id)
+        query = select(User).where(
+            User.id == user_id,
+            User.deleted_at.is_(None),  # Exclude deleted users
+        )
 
         result = await self.session.execute(query)
         user_model = result.scalar_one_or_none()
@@ -120,53 +122,45 @@ class PostgreSQLReadModel(ReadModel):
         username: Optional[str] = None,
         email: Optional[str] = None,
     ) -> Tuple[List[UserDTO], int]:
-        """List users with pagination and filtering"""
-        logger.info(f"Listing users with page={page}, page_size={page_size}")
+        """List users with pagination and optional filtering"""
+        logger.info(f"Listing users: page={page}, page_size={page_size}")
 
-        # Build base query
-        query = select(User)
-        count_query = select(func.count(User.id))
+        # Build base query - exclude deleted users
+        base_query = select(User).where(User.deleted_at.is_(None))
 
-        # Build filters
-        filters = []
+        # Add filters if provided
         if username:
-            filters.append(User.username.ilike(f"%{username}%"))
+            base_query = base_query.where(User.username.ilike(f"%{username}%"))
+            logger.info(f"Filtering by username: {username}")
+
         if email:
-            filters.append(User.email.ilike(f"%{email}%"))
+            base_query = base_query.where(User.email.ilike(f"%{email}%"))
+            logger.info(f"Filtering by email: {email}")
 
-        # Apply filters to both queries
-        if filters:
-            query = query.where(and_(*filters))
-            count_query = count_query.where(and_(*filters))
-
-        # Get total count
+        # Count total matching users
+        count_query = select(func.count()).select_from(base_query.subquery())
         count_result = await self.session.execute(count_query)
-        total_count = count_result.scalar() or 0
+        total_count = count_result.scalar() or 0  # Ensure it's always an int
 
-        # Apply pagination
+        # Get paginated results
         offset = (page - 1) * page_size
-        query = query.offset(offset).limit(page_size)
-
-        # Order by created_at descending
-        query = query.order_by(User.created_at.desc())
-
-        # Execute query
-        result = await self.session.execute(query)
-        user_models = result.scalars().all()
+        users_query = base_query.offset(offset).limit(page_size)
+        users_result = await self.session.execute(users_query)
+        users = users_result.scalars().all()
 
         # Convert to DTOs
-        user_dtos = []
-        for user_model in user_models:
-            user_dto = UserDTO(
-                id=user_model.id,
-                username=user_model.username,
-                email=user_model.email,
-                first_name=user_model.first_name,
-                last_name=user_model.last_name,
-                created_at=user_model.created_at,
-                updated_at=user_model.updated_at,
+        user_dtos = [
+            UserDTO(
+                id=user.id,
+                username=user.username,
+                email=user.email,
+                first_name=user.first_name,
+                last_name=user.last_name,
+                created_at=user.created_at,
+                updated_at=user.updated_at,
             )
-            user_dtos.append(user_dto)
+            for user in users
+        ]
 
         logger.info(
             f"Retrieved {len(user_dtos)} users out of {total_count} total"
