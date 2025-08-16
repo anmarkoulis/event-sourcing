@@ -1,6 +1,7 @@
 #!/bin/bash
 
 set -o errexit
+set -o pipefail
 set -o nounset
 
-gunicorn event_sourcing.main:app --bind 0.0.0.0:5000 --chdir=/app/src -k uvicorn.workers.UvicornWorker
+uvicorn event_sourcing.main:app  --host 0.0.0.0 --port 5000
