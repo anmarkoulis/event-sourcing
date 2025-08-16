@@ -9,11 +9,7 @@ x-fastapi-common: &fastapi-common
   build:
     context: .
     target: local
-  environment:
-    - DD_SERVICE=event-sourcing
-    - DD_ENV=local
-    - DD_TAGS=env:dev
-    - DD_AGENT_HOST=datadog
+  environment: []
   depends_on:
     postgres:
       condition: service_healthy
@@ -92,19 +88,3 @@ services:
     <<: *fastapi-common
     container_name: event_sourcing_celerybeat
     command: /start-celerybeat
-
-  datadog:
-    image: datadog/agent:latest
-    profiles:
-      - datadog
-    container_name: datadog-agent
-    env_file:
-      - ./.envs/.datadog
-    volumes:
-      - /var/run/docker.sock:/var/run/docker.sock
-      - /var/lib/docker/containers:/var/lib/docker/containers:ro
-      - /proc/:/host/proc/:ro
-      - /opt/datadog-agent/run:/opt/datadog-agent/run:rw
-      - /sys/fs/cgroup:/host/sys/fs/cgroup:ro
-    ports:
-      - '8126:8126/tcp'

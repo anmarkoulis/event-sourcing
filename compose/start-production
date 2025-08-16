@@ -3,8 +3,4 @@
 set -o errexit
 set -o nounset
 
-if [ "${DD_ENABLED:-}" == "true" ]; then
-  ddtrace-run gunicorn event_sourcing.main:app --bind 0.0.0.0:5000 --chdir=/app/src -k uvicorn.workers.UvicornWorker
-else
-  gunicorn event_sourcing.main:app --bind 0.0.0.0:5000 --chdir=/app/src -k uvicorn.workers.UvicornWorker
-fi
+gunicorn event_sourcing.main:app --bind 0.0.0.0:5000 --chdir=/app/src -k uvicorn.workers.UvicornWorker
