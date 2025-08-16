@@ -59,7 +59,9 @@ class UserAggregate(Aggregate):
         logger.info(f"User: {self.username}")
         if self.username is not None:
             logger.info(f"User already exists: {self.username}")
-            raise ValueError("User already exists")
+            from event_sourcing.domain.exceptions import UserAlreadyExists
+
+            raise UserAlreadyExists(username)
 
         # Business rule: Username must be unique (in real app, check against DB)
         if not username or len(username) < 3:
@@ -117,15 +119,23 @@ class UserAggregate(Aggregate):
 
         # Business rule: Cannot update deleted user
         if self.deleted_at is not None:
-            raise ValueError("Cannot update deleted user")
+            from event_sourcing.domain.exceptions import (
+                CannotUpdateDeletedUser,
+            )
+
+            raise CannotUpdateDeletedUser(str(self.aggregate_id))
 
         # Business rule: Must provide at least one field to update
         if not any([first_name, last_name, email]):
-            raise ValueError("Must provide at least one field to update")
+            from event_sourcing.domain.exceptions import NoFieldsToUpdate
+
+            raise NoFieldsToUpdate()
 
         # Business rule: Email must be valid if provided
         if email and "@" not in email:
-            raise ValueError("Invalid email format")
+            from event_sourcing.domain.exceptions import InvalidEmailFormat
+
+            raise InvalidEmailFormat(email)
 
         # Create the event
         event = EventFactory.create_user_updated(
@@ -156,17 +166,25 @@ class UserAggregate(Aggregate):
 
         # Business rule: Cannot change password if user is deleted
         if self.deleted_at is not None:
-            raise ValueError("Cannot change password for deleted user")
+            from event_sourcing.domain.exceptions import (
+                CannotChangePasswordForDeletedUser,
+            )
+
+            raise CannotChangePasswordForDeletedUser(str(self.aggregate_id))
 
         # Business rule: New password must be provided
         if not new_password_hash:
-            raise ValueError("New password is required")
+            from event_sourcing.domain.exceptions import NewPasswordRequired
+
+            raise NewPasswordRequired()
 
         # Business rule: New password must be different from current password
         if new_password_hash == self.password_hash:
-            raise ValueError(
-                "New password must be different from current password"
+            from event_sourcing.domain.exceptions import (
+                PasswordMustBeDifferent,
             )
+
+            raise PasswordMustBeDifferent()
 
         # Create the event
         event = EventFactory.create_password_changed(
@@ -196,7 +214,9 @@ class UserAggregate(Aggregate):
 
         # Business rule: Cannot delete already deleted user
         if self.deleted_at is not None:
-            raise ValueError("User is already deleted")
+            from event_sourcing.domain.exceptions import UserAlreadyDeleted
+
+            raise UserAlreadyDeleted(str(self.aggregate_id))
 
         # Create the event
         event = EventFactory.create_user_deleted(
