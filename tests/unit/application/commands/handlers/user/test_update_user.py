@@ -14,8 +14,7 @@ from event_sourcing.application.commands.user.update_user import (
 )
 from event_sourcing.dto import EventDTO, EventFactory
 from event_sourcing.dto.snapshot import UserSnapshotDTO
-from event_sourcing.enums import AggregateTypeEnum
-from event_sourcing.infrastructure.enums import HashingMethod
+from event_sourcing.enums import AggregateTypeEnum, HashingMethod
 
 
 @pytest.fixture

@@ -15,8 +15,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from event_sourcing.dto.events.base import EventDTO
 from event_sourcing.dto.events.user.user_created import UserCreatedDataV1
 from event_sourcing.dto.events.user.user_updated import UserUpdatedDataV1
-from event_sourcing.enums import AggregateTypeEnum, EventType
-from event_sourcing.infrastructure.enums import HashingMethod
+from event_sourcing.enums import AggregateTypeEnum, EventType, HashingMethod
 
 if TYPE_CHECKING:
     from event_sourcing.infrastructure.event_store.psql import (

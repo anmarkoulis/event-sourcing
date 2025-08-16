@@ -238,7 +238,7 @@ class TestJWTAuthService:
         )
 
         # Mock the event search to return a USER_CREATED event
-        from event_sourcing.infrastructure.enums import HashingMethod
+        from event_sourcing.enums import HashingMethod
 
         # Generate a proper hash for "password123"
         password = "password123"  # noqa: S105  # pragma: allowlist secret
@@ -301,7 +301,7 @@ class TestJWTAuthService:
         )
 
         # Mock the event search to return a USER_CREATED event
-        from event_sourcing.infrastructure.enums import HashingMethod
+        from event_sourcing.enums import HashingMethod
 
         user_created_event = UserCreatedV1(
             aggregate_id=sample_user.id,
@@ -348,7 +348,7 @@ class TestJWTAuthService:
         )
 
         # Mock the event stream to return a USER_CREATED event
-        from event_sourcing.infrastructure.enums import HashingMethod
+        from event_sourcing.enums import HashingMethod
 
         user_created_event = UserCreatedV1(
             aggregate_id=sample_user.id,

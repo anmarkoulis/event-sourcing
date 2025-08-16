@@ -13,8 +13,7 @@ from event_sourcing.dto.events.user.user_created import (
     UserCreatedDataV1,
     UserCreatedV1,
 )
-from event_sourcing.enums import EventType, Role
-from event_sourcing.infrastructure.enums import HashingMethod
+from event_sourcing.enums import EventType, HashingMethod, Role
 from event_sourcing.infrastructure.providers.email import (
     EmailProviderInterface,
 )

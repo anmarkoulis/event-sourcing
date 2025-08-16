@@ -2,8 +2,7 @@ from pydantic import Field
 
 from event_sourcing.dto.base import ModelConfigBaseModel
 from event_sourcing.dto.events.base import EventDTO
-from event_sourcing.enums import EventType
-from event_sourcing.infrastructure.enums import HashingMethod
+from event_sourcing.enums import EventType, HashingMethod
 
 
 class PasswordChangedDataV1(ModelConfigBaseModel):

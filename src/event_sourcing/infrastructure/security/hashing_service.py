@@ -4,7 +4,7 @@ from abc import ABC, abstractmethod
 
 from passlib.context import CryptContext
 
-from event_sourcing.infrastructure.enums import HashingMethod
+from event_sourcing.enums import HashingMethod
 
 
 class HashingServiceInterface(ABC):

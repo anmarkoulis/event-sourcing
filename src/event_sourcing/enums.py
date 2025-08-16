@@ -25,3 +25,19 @@ class AggregateTypeEnum(str, Enum):
     """Enum for aggregate types"""
 
     USER = "User"
+
+
+class HashingMethod(str, Enum):
+    """Available hashing methods for passwords."""
+
+    BCRYPT = "bcrypt"
+
+
+class Permission(str, Enum):
+    """Available permissions in the system as JWT scopes."""
+
+    # User management permissions
+    USER_CREATE = "user:create"
+    USER_READ = "user:read"
+    USER_UPDATE = "user:update"
+    USER_DELETE = "user:delete"

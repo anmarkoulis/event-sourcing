@@ -13,8 +13,7 @@ from event_sourcing.dto.events.user import (
     UserUpdatedDataV1,
     UserUpdatedV1,
 )
-from event_sourcing.enums import Role
-from event_sourcing.infrastructure.enums import HashingMethod
+from event_sourcing.enums import HashingMethod, Role
 
 T = TypeVar("T", bound=EventDTO)
 

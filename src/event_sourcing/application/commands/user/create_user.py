@@ -2,8 +2,7 @@ import uuid
 
 from pydantic import BaseModel, EmailStr
 
-from event_sourcing.enums import Role
-from event_sourcing.infrastructure.enums import HashingMethod
+from event_sourcing.enums import HashingMethod, Role
 
 
 class CreateUserCommand(BaseModel):
