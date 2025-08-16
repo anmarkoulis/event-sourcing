@@ -1,12 +1,12 @@
 """Permission dependencies for API endpoints using JWT scopes."""
 
-from enum import Enum
 from typing import Annotated, Callable, Optional
 
 from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 
 from event_sourcing.dto.user import UserDTO
+from event_sourcing.enums import Permission
 from event_sourcing.infrastructure.security.auth_service import (
     AuthServiceInterface,
 )
@@ -14,16 +14,6 @@ from event_sourcing.infrastructure.security.provider import get_auth_service
 
 # JWT security scheme - set auto_error=False to handle missing tokens manually
 security = HTTPBearer(auto_error=False)
-
-
-class Permission(str, Enum):
-    """Available permissions in the system as JWT scopes."""
-
-    # User management permissions
-    USER_CREATE = "user:create"
-    USER_READ = "user:read"
-    USER_UPDATE = "user:update"
-    USER_DELETE = "user:delete"
 
 
 async def get_current_user_with_scope(

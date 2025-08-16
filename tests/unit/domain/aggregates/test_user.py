@@ -13,8 +13,7 @@ from event_sourcing.domain.exceptions import (
     UsernameTooShort,
 )
 from event_sourcing.dto import EventDTO, EventFactory
-from event_sourcing.enums import EventType
-from event_sourcing.infrastructure.enums import HashingMethod
+from event_sourcing.enums import EventType, HashingMethod
 
 
 class TestUserAggregate:

@@ -5,8 +5,7 @@ from typing import List, Optional
 
 from event_sourcing.domain.aggregates.base import Aggregate
 from event_sourcing.dto import EventDTO, EventFactory
-from event_sourcing.enums import EventType, Role
-from event_sourcing.infrastructure.enums import HashingMethod
+from event_sourcing.enums import EventType, HashingMethod, Role
 
 logger = logging.getLogger(__name__)
 

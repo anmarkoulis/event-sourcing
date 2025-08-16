@@ -14,8 +14,7 @@ from event_sourcing.dto.events.user.user_created import (
     UserCreatedV1,
 )
 from event_sourcing.dto.user import UserReadModelData
-from event_sourcing.enums import EventType
-from event_sourcing.infrastructure.enums import HashingMethod
+from event_sourcing.enums import EventType, HashingMethod
 
 
 class TestUserCreatedProjection:
