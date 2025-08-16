@@ -36,6 +36,15 @@ def event_handler_mock() -> MagicMock:
 
 
 @pytest.fixture
+def hashing_service_mock() -> MagicMock:
+    """Mocked hashing service."""
+    service = MagicMock()
+    service.hash_password = MagicMock(return_value="hashed_password")
+    service.get_hashing_method = MagicMock(return_value="bcrypt")
+    return service
+
+
+@pytest.fixture
 def unit_of_work() -> MagicMock:
     """Mocked UnitOfWork that supports async context management and tracks state."""
     uow = MagicMock(spec=BaseUnitOfWork)
@@ -77,12 +86,14 @@ def handler(
     event_handler_mock: MagicMock,
     unit_of_work: MagicMock,
     snapshot_store_mock: MagicMock,
+    hashing_service_mock: MagicMock,
 ) -> CreateUserCommandHandler:
     return CreateUserCommandHandler(
         event_store=event_store_mock,
         snapshot_store=snapshot_store_mock,
         event_handler=event_handler_mock,
         unit_of_work=unit_of_work,
+        hashing_service=hashing_service_mock,
     )
 
 
@@ -94,7 +105,7 @@ def create_user_command() -> CreateUserCommand:
         email="newuser@example.com",
         first_name="New",
         last_name="User",
-        password_hash="hashed",  # noqa: S106 # pragma: allowlist secret
+        password="password123",  # noqa: S106 # pragma: allowlist secret
     )
 
 

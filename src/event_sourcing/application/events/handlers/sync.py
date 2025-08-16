@@ -102,16 +102,6 @@ class SyncEventHandler(EventHandler):
                         "No infrastructure factory available for user deleted projection"
                     )
 
-            elif handler_name == "process_password_changed_task":
-                if self.infrastructure_factory:
-                    # Use the infrastructure factory to create the projection
-                    projection = self.infrastructure_factory.create_password_changed_projection()
-                    await projection.handle(event)
-                else:
-                    logger.warning(
-                        "No infrastructure factory available for password changed projection"
-                    )
-
             else:
                 logger.warning(f"Unknown handler: {handler_name}")
 
@@ -131,7 +121,6 @@ class SyncEventHandler(EventHandler):
             ],
             EventType.USER_UPDATED: ["process_user_updated_task"],
             EventType.USER_DELETED: ["process_user_deleted_task"],
-            EventType.PASSWORD_CHANGED: ["process_password_changed_task"],
         }
 
         return handler_mappings.get(event_type, ["default_event_handler"])

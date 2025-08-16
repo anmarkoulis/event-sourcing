@@ -13,7 +13,8 @@ from event_sourcing.dto.events.user.user_created import (
     UserCreatedDataV1,
     UserCreatedV1,
 )
-from event_sourcing.enums import EventType
+from event_sourcing.enums import EventType, Role
+from event_sourcing.infrastructure.enums import HashingMethod
 from event_sourcing.infrastructure.providers.email import (
     EmailProviderInterface,
 )
@@ -52,6 +53,8 @@ class TestUserCreatedEmailProjection:
                 first_name="Test",
                 last_name="User",
                 password_hash="hashed_password",  # noqa: S106  # pragma: allowlist secret
+                hashing_method=HashingMethod.BCRYPT,
+                role=Role.USER,
             ),
         )
 
@@ -255,6 +258,8 @@ class TestUserCreatedEmailProjection:
                 first_name="Another",
                 last_name="Person",
                 password_hash="different_hash",  # noqa: S106  # pragma: allowlist secret
+                hashing_method=HashingMethod.BCRYPT,
+                role=Role.USER,
             ),
         )
 
@@ -289,6 +294,8 @@ class TestUserCreatedEmailProjection:
                 first_name="",
                 last_name="",
                 password_hash="hash",  # noqa: S106  # pragma: allowlist secret
+                hashing_method=HashingMethod.BCRYPT,
+                role=Role.USER,
             ),
         )
 
@@ -324,6 +331,8 @@ class TestUserCreatedEmailProjection:
                 first_name="",  # Empty string instead of None
                 last_name="",  # Empty string instead of None
                 password_hash="hash",  # noqa: S106  # pragma: allowlist secret
+                hashing_method=HashingMethod.BCRYPT,
+                role=Role.USER,
             ),
         )
 
@@ -358,6 +367,8 @@ class TestUserCreatedEmailProjection:
                 first_name="Special",
                 last_name="User",
                 password_hash="hash",  # noqa: S106  # pragma: allowlist secret
+                hashing_method=HashingMethod.BCRYPT,
+                role=Role.USER,
             ),
         )
 
@@ -393,6 +404,8 @@ class TestUserCreatedEmailProjection:
                 first_name="Long",
                 last_name="Email",
                 password_hash="hash",  # noqa: S106  # pragma: allowlist secret
+                hashing_method=HashingMethod.BCRYPT,
+                role=Role.USER,
             ),
         )
 
@@ -427,6 +440,8 @@ class TestUserCreatedEmailProjection:
                 first_name="Year",
                 last_name="End",
                 password_hash="hash",  # noqa: S106  # pragma: allowlist secret
+                hashing_method=HashingMethod.BCRYPT,
+                role=Role.USER,
             ),
         )
 
@@ -461,6 +476,8 @@ class TestUserCreatedEmailProjection:
                 first_name="Version",
                 last_name="Two",
                 password_hash="hash",  # noqa: S106  # pragma: allowlist secret
+                hashing_method=HashingMethod.BCRYPT,
+                role=Role.USER,
             ),
         )
 
@@ -495,6 +512,8 @@ class TestUserCreatedEmailProjection:
                 first_name="Revision",
                 last_name="NineNineNine",
                 password_hash="hash",  # noqa: S106  # pragma: allowlist secret
+                hashing_method=HashingMethod.BCRYPT,
+                role=Role.USER,
             ),
         )
 
@@ -529,6 +548,8 @@ class TestUserCreatedEmailProjection:
                 first_name="Different",
                 last_name="Event",
                 password_hash="hash",  # noqa: S106  # pragma: allowlist secret
+                hashing_method=HashingMethod.BCRYPT,
+                role=Role.USER,
             ),
         )
 
@@ -563,6 +584,8 @@ class TestUserCreatedEmailProjection:
                 first_name="User",
                 last_name="One",
                 password_hash="hash1",  # noqa: S106  # pragma: allowlist secret
+                hashing_method=HashingMethod.BCRYPT,
+                role=Role.USER,
             ),
         )
 
@@ -579,6 +602,8 @@ class TestUserCreatedEmailProjection:
                 first_name="User",
                 last_name="Two",
                 password_hash="hash2",  # noqa: S106  # pragma: allowlist secret
+                hashing_method=HashingMethod.BCRYPT,
+                role=Role.USER,
             ),
         )
 

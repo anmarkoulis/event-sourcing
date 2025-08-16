@@ -62,6 +62,18 @@ class CommandHandlerWrapper:
         logger.info("Creating snapshot store")
         ctor_kwargs["snapshot_store"] = PsqlSnapshotStore(session)
 
+        # Add hashing service only for command handlers that need it
+        # Check if the handler class expects hashing_service parameter
+        import inspect
+
+        sig = inspect.signature(self.handler_class.__init__)
+        if "hashing_service" in sig.parameters:
+            from event_sourcing.infrastructure.security.hashing_service import (
+                BcryptHashingService,
+            )
+
+            ctor_kwargs["hashing_service"] = BcryptHashingService()
+
         command_handler = self.handler_class(**ctor_kwargs)
         return command_handler, session
 
@@ -265,15 +277,7 @@ class InfrastructureFactory:
 
     # Removed: create_username_changed_projection
 
-    def create_password_changed_projection(self) -> Any:
-        """Create PasswordChangedProjection with read model dependency"""
-        logger.info("Creating PasswordChangedProjection")
-        # Dynamic import to avoid circular dependency
-        from event_sourcing.application.projections.user import (
-            PasswordChangedProjection,
-        )
-
-        return ProjectionWrapper(self, PasswordChangedProjection)
+    # Removed: create_password_changed_projection
 
     # Removed: create_password_reset_requested_projection
 
@@ -445,6 +449,30 @@ class InfrastructureFactory:
             "GetClientHistoryQueryHandler is deprecated, use user queries instead"
         )
         return None
+
+    @property
+    def auth_service(self) -> Any:
+        """Get or create authentication service."""
+        if not hasattr(self, "_auth_service"):
+            logger.info("Creating auth service")
+
+            logger.info("Using JWT authentication service")
+            from event_sourcing.infrastructure.security import (
+                BcryptHashingService,
+                JWTAuthService,
+            )
+
+            # Create hashing service for JWT auth
+            hashing_service = BcryptHashingService()
+
+            # Create JWT auth service with factory reference
+            # The auth service will get the event store when needed
+            self._auth_service = JWTAuthService(None, hashing_service)
+
+            # Store factory reference for dynamic event store creation
+            self._auth_service._factory = self
+
+        return self._auth_service
 
     async def close(self) -> None:
         """Close all infrastructure components"""

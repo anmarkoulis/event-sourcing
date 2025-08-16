@@ -13,6 +13,7 @@ from event_sourcing.application.queries.user.get_user_history import (
 from event_sourcing.dto.events.factory import EventFactory
 from event_sourcing.dto.user import UserDTO
 from event_sourcing.enums import AggregateTypeEnum
+from event_sourcing.infrastructure.enums import HashingMethod
 
 
 @pytest.fixture
@@ -46,6 +47,7 @@ class TestGetUserHistoryQueryHandler:
             first_name="A",
             last_name="B",
             password_hash="p",  # noqa: S106
+            hashing_method=HashingMethod.BCRYPT,
             revision=1,
         )
         event_store_mock.get_stream.return_value = [created_event]

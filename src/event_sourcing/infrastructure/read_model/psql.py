@@ -6,6 +6,7 @@ from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from event_sourcing.dto.user import UserDTO, UserReadModelData
+from event_sourcing.enums import Role
 from event_sourcing.infrastructure.database.models.read.user import User
 from event_sourcing.infrastructure.read_model.base import ReadModel
 
@@ -47,8 +48,8 @@ class PostgreSQLReadModel(ReadModel):
                 existing_user.first_name = user_data.first_name
             if user_data.last_name is not None:
                 existing_user.last_name = user_data.last_name
-            if user_data.password_hash is not None:
-                existing_user.password_hash = user_data.password_hash
+            if user_data.role is not None:
+                existing_user.role = user_data.role
             # updated_at is handled by the UpdatedAtMixin
         else:
             # Create new user
@@ -58,7 +59,8 @@ class PostgreSQLReadModel(ReadModel):
                 email=user_data.email,
                 first_name=user_data.first_name,
                 last_name=user_data.last_name,
-                password_hash=user_data.password_hash,
+                role=user_data.role
+                or Role.USER,  # Default to USER role if not specified
             )
             self.session.add(user_model)
 
@@ -87,11 +89,46 @@ class PostgreSQLReadModel(ReadModel):
             email=user_model.email,
             first_name=user_model.first_name,
             last_name=user_model.last_name,
+            role=user_model.role,
             created_at=user_model.created_at,
             updated_at=user_model.updated_at,
         )
 
         logger.info(f"Retrieved user {user_id}")
+        return user_dto
+
+    async def get_user_by_username(self, username: str) -> Optional[UserDTO]:
+        """Get a specific user by username.
+
+        :param username: Username to search for.
+        :return: User DTO if found, None otherwise.
+        """
+        logger.info(f"Getting user by username: {username}")
+
+        query = select(User).where(
+            User.username == username,
+            User.deleted_at.is_(None),  # Exclude deleted users
+        )
+
+        result = await self.session.execute(query)
+        user_model = result.scalar_one_or_none()
+
+        if not user_model:
+            logger.info(f"User with username {username} not found")
+            return None
+
+        user_dto = UserDTO(
+            id=user_model.id,
+            username=user_model.username,
+            email=user_model.email,
+            first_name=user_model.first_name,
+            last_name=user_model.last_name,
+            role=user_model.role,
+            created_at=user_model.created_at,
+            updated_at=user_model.updated_at,
+        )
+
+        logger.info(f"Retrieved user by username: {username}")
         return user_dto
 
     async def delete_user(self, user_id: str) -> None:
@@ -156,6 +193,7 @@ class PostgreSQLReadModel(ReadModel):
                 email=user.email,
                 first_name=user.first_name,
                 last_name=user.last_name,
+                role=user.role,
                 created_at=user.created_at,
                 updated_at=user.updated_at,
             )

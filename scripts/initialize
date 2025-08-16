@@ -4,4 +4,8 @@ set -o errexit
 set -o pipefail
 set -o nounset
 
+
+# Create admin user
+python -m event_sourcing.cli create-admin create-admin --force
+
 exec "$@"

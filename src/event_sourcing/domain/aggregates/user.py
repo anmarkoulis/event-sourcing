@@ -5,7 +5,8 @@ from typing import List, Optional
 
 from event_sourcing.domain.aggregates.base import Aggregate
 from event_sourcing.dto import EventDTO, EventFactory
-from event_sourcing.enums import EventType
+from event_sourcing.enums import EventType, Role
+from event_sourcing.infrastructure.enums import HashingMethod
 
 logger = logging.getLogger(__name__)
 
@@ -29,6 +30,8 @@ class UserAggregate(Aggregate):
         self.first_name: Optional[str] = None
         self.last_name: Optional[str] = None
         self.password_hash: Optional[str] = None
+        self.hashing_method: Optional[HashingMethod] = None
+        self.role: Optional[Role] = None
         self.created_at: Optional[datetime] = None
         self.updated_at: Optional[datetime] = None
         self.deleted_at: Optional[datetime] = None
@@ -48,6 +51,8 @@ class UserAggregate(Aggregate):
         first_name: str,
         last_name: str,
         password_hash: str,
+        hashing_method: HashingMethod,
+        role: Role = Role.USER,
     ) -> List[EventDTO]:
         """Create a new user"""
         # Business rule: Cannot create user if already exists
@@ -87,6 +92,8 @@ class UserAggregate(Aggregate):
             first_name=first_name,
             last_name=last_name,
             password_hash=password_hash,
+            hashing_method=hashing_method,
+            role=role,
             revision=self._get_next_revision(),
         )
         logger.info(f"Event: {event}")
@@ -138,7 +145,9 @@ class UserAggregate(Aggregate):
 
     # Removed: change_username (username is immutable in this simplified model)
 
-    def change_password(self, new_password_hash: str) -> List[EventDTO]:
+    def change_password(
+        self, new_password_hash: str, hashing_method: HashingMethod
+    ) -> List[EventDTO]:
         """Change user's password"""
         # Business rule: User must exist to change password
         if not self.exists():
@@ -150,14 +159,21 @@ class UserAggregate(Aggregate):
         if self.deleted_at is not None:
             raise ValueError("Cannot change password for deleted user")
 
-        # Business rule: Password must be provided
+        # Business rule: New password must be provided
         if not new_password_hash:
-            raise ValueError("Password is required")
+            raise ValueError("New password is required")
+
+        # Business rule: New password must be different from current password
+        if new_password_hash == self.password_hash:
+            raise ValueError(
+                "New password must be different from current password"
+            )
 
         # Create the event
         event = EventFactory.create_password_changed(
             aggregate_id=self.aggregate_id,
             password_hash=new_password_hash,
+            hashing_method=hashing_method,
             revision=self._get_next_revision(),
         )
 
@@ -225,6 +241,8 @@ class UserAggregate(Aggregate):
         self.first_name = data.first_name
         self.last_name = data.last_name
         self.password_hash = data.password_hash
+        self.hashing_method = data.hashing_method
+        self.role = data.role
         self.created_at = event.timestamp
         self.updated_at = event.timestamp
 
@@ -246,6 +264,7 @@ class UserAggregate(Aggregate):
         """Apply password changed event"""
         data = event.data
         self.password_hash = data.password_hash
+        self.hashing_method = data.hashing_method
         self.updated_at = event.timestamp
 
     # Removed: _apply_password_reset_requested_event
@@ -267,6 +286,8 @@ class UserAggregate(Aggregate):
         user.first_name = data.get("first_name")
         user.last_name = data.get("last_name")
         user.password_hash = data.get("password_hash")
+        user.hashing_method = data.get("hashing_method")
+        user.role = data.get("role")
         user.created_at = cls._parse_iso_datetime(data.get("created_at"))
         user.updated_at = cls._parse_iso_datetime(data.get("updated_at"))
         user.deleted_at = cls._parse_iso_datetime(data.get("deleted_at"))
@@ -280,6 +301,8 @@ class UserAggregate(Aggregate):
             "first_name": self.first_name,
             "last_name": self.last_name,
             "password_hash": self.password_hash,
+            "hashing_method": self.hashing_method,
+            "role": self.role,
             "created_at": self._iso_datetime(self.created_at),
             "updated_at": self._iso_datetime(self.updated_at),
             "deleted_at": self._iso_datetime(self.deleted_at),

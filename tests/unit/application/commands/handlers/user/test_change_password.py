@@ -15,6 +15,17 @@ from event_sourcing.application.commands.user.change_password import (
 from event_sourcing.dto import EventDTO, EventFactory
 from event_sourcing.dto.snapshot import UserSnapshotDTO
 from event_sourcing.enums import AggregateTypeEnum
+from event_sourcing.infrastructure.enums import HashingMethod
+
+
+@pytest.fixture
+def hashing_service_mock() -> MagicMock:
+    """Mocked hashing service."""
+    service = MagicMock()
+    service.hash_password = MagicMock(return_value="hashed_password")
+    service.get_hashing_method = MagicMock(return_value="bcrypt")
+    service.verify_password = MagicMock(return_value=True)
+    return service
 
 
 @pytest.fixture
@@ -23,12 +34,14 @@ def handler(
     event_handler_mock: MagicMock,
     unit_of_work: MagicMock,
     snapshot_store_mock: MagicMock,
+    hashing_service_mock: MagicMock,
 ) -> ChangePasswordCommandHandler:
     return ChangePasswordCommandHandler(
         event_store=event_store_mock,
         event_handler=event_handler_mock,
         unit_of_work=unit_of_work,
         snapshot_store=snapshot_store_mock,
+        hashing_service=hashing_service_mock,
     )
 
 
@@ -36,7 +49,8 @@ def handler(
 def change_password_command() -> ChangePasswordCommand:
     return ChangePasswordCommand(
         user_id=uuid.UUID("11111111-1111-1111-1111-111111111111"),
-        new_password_hash="new_hashed_password",  # noqa: S106  # pragma: allowlist secret
+        old_password="old_password",  # noqa: S106  # pragma: allowlist secret
+        new_password="new_password",  # noqa: S106  # pragma: allowlist secret
     )
 
 
@@ -49,7 +63,8 @@ def user_created_event() -> EventDTO:
         email="test@example.com",
         first_name="Test",
         last_name="User",
-        password_hash="old_hashed_password",  # noqa: S106  # pragma: allowlist secret
+        password_hash="$2b$12$LQv3c1yqBWVHxkd0LHAkCOYz6TtxMQJqhN8/LewdBPj/RK.s5uO6C",  # noqa: S106  # pragma: allowlist secret
+        hashing_method=HashingMethod.BCRYPT,
         revision=1,
         timestamp=datetime(2023, 1, 1, 12, 0, 0, tzinfo=timezone.utc),
     )
@@ -79,7 +94,7 @@ def user_snapshot() -> UserSnapshotDTO:
             "email": "test@example.com",
             "first_name": "Test",
             "last_name": "User",
-            "password_hash": "old_hashed_password",  # noqa: S106  # pragma: allowlist secret
+            "password_hash": "$2b$12$LQv3c1yqBWVHxkd0LHAkCOYz6TtxMQJqhN8/LewdBPj/RK.s5uO6C",  # noqa: S106  # pragma: allowlist secret
             "created_at": "2023-01-01T12:00:00+00:00",
             "updated_at": "2023-01-01T12:00:00+00:00",
             "deleted_at": None,
@@ -232,6 +247,7 @@ class TestChangePasswordCommandHandler:
         event_store_mock: MagicMock,
         event_handler_mock: MagicMock,
         unit_of_work: MagicMock,
+        hashing_service_mock: MagicMock,
         change_password_command: ChangePasswordCommand,
         user_created_event: EventDTO,
     ) -> None:
@@ -242,6 +258,7 @@ class TestChangePasswordCommandHandler:
             event_handler=event_handler_mock,
             unit_of_work=unit_of_work,
             snapshot_store=None,
+            hashing_service=hashing_service_mock,
         )
 
         # Configure mocks

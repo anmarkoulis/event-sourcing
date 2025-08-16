@@ -35,6 +35,9 @@ class UserUpdatedProjection(Projection):
                 first_name=event.data.first_name,
                 last_name=event.data.last_name,
                 email=event.data.email,
+                role=current_user.role
+                if current_user
+                else None,  # Preserve existing role
                 updated_at=event.timestamp,
             )
 

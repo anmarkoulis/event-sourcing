@@ -9,6 +9,9 @@ from event_sourcing.domain.aggregates.user import UserAggregate
 from event_sourcing.dto.snapshot import UserSnapshotDTO
 from event_sourcing.enums import AggregateTypeEnum
 from event_sourcing.infrastructure.event_store import EventStore
+from event_sourcing.infrastructure.security.hashing_service import (
+    HashingServiceInterface,
+)
 from event_sourcing.infrastructure.snapshot_store.base import SnapshotStore
 from event_sourcing.infrastructure.unit_of_work import BaseUnitOfWork
 
@@ -24,11 +27,13 @@ class CreateUserCommandHandler(CommandHandler[CreateUserCommand]):
         snapshot_store: SnapshotStore | None,
         event_handler: EventHandler,
         unit_of_work: BaseUnitOfWork,
+        hashing_service: HashingServiceInterface,
     ):
         self.event_store = event_store
         self.snapshot_store = snapshot_store
         self.event_handler = event_handler
         self.unit_of_work = unit_of_work
+        self.hashing_service = hashing_service
 
     async def _validate_username_uniqueness(self, username: str) -> bool:
         """Validate that username is unique across all users"""
@@ -78,6 +83,10 @@ class CreateUserCommandHandler(CommandHandler[CreateUserCommand]):
 
             raise EmailAlreadyExists(command.email)
 
+        # Hash the password before creating the user
+        password_hash = self.hashing_service.hash_password(command.password)
+        hashing_method = self.hashing_service.get_hashing_method()
+
         user = UserAggregate(command.user_id)
         logger.info(f"User: {user}")
 
@@ -86,7 +95,9 @@ class CreateUserCommandHandler(CommandHandler[CreateUserCommand]):
             email=command.email,
             first_name=command.first_name,
             last_name=command.last_name,
-            password_hash=command.password_hash,
+            password_hash=password_hash,
+            hashing_method=hashing_method,
+            role=command.role,
         )
         logger.info(f"New events: {new_events}")
 

@@ -9,6 +9,9 @@ from event_sourcing.domain.aggregates.user import UserAggregate
 from event_sourcing.dto.snapshot import UserSnapshotDTO
 from event_sourcing.enums import AggregateTypeEnum
 from event_sourcing.infrastructure.event_store import EventStore
+from event_sourcing.infrastructure.security.hashing_service import (
+    HashingServiceInterface,
+)
 from event_sourcing.infrastructure.snapshot_store.base import SnapshotStore
 from event_sourcing.infrastructure.unit_of_work import BaseUnitOfWork
 
@@ -24,11 +27,13 @@ class ChangePasswordCommandHandler(CommandHandler[ChangePasswordCommand]):
         snapshot_store: SnapshotStore | None,
         event_handler: EventHandler,
         unit_of_work: BaseUnitOfWork,
+        hashing_service: HashingServiceInterface,
     ):
         self.event_store = event_store
         self.snapshot_store = snapshot_store
         self.event_handler = event_handler
         self.unit_of_work = unit_of_work
+        self.hashing_service = hashing_service
 
     async def handle(self, command: ChangePasswordCommand) -> None:
         logger.info(f"Changing password for user: {command.user_id}")
@@ -66,8 +71,25 @@ class ChangePasswordCommandHandler(CommandHandler[ChangePasswordCommand]):
                 continue
             user.apply(event)
 
+        # Verify the old password and hash the new password
+        # First check if user exists
+        if not user.exists():
+            from event_sourcing.domain.exceptions import UserNotFound
+
+            raise UserNotFound(f"User {command.user_id} not found")
+
+        if not self.hashing_service.verify_password(
+            command.old_password, user.password_hash
+        ):
+            raise ValueError("Old password is incorrect")
+
+        new_password_hash = self.hashing_service.hash_password(
+            command.new_password
+        )
+        hashing_method = self.hashing_service.get_hashing_method()
+
         # Change the password
-        new_events = user.change_password(command.new_password_hash)
+        new_events = user.change_password(new_password_hash, hashing_method)
         logger.debug(f"New events: {new_events}")
 
         async with self.unit_of_work:

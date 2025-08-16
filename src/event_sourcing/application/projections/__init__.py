@@ -1,6 +1,5 @@
 # User projections
 from .user import (
-    PasswordChangedProjection,
     UserCreatedEmailProjection,
     UserCreatedProjection,
     UserDeletedProjection,
@@ -12,5 +11,4 @@ __all__ = [
     "UserCreatedEmailProjection",
     "UserUpdatedProjection",
     "UserDeletedProjection",
-    "PasswordChangedProjection",
 ]

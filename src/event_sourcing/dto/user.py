@@ -5,6 +5,7 @@ from uuid import UUID
 from pydantic import BaseModel, EmailStr, Field
 
 from event_sourcing.dto.base import ModelConfigBaseModel
+from event_sourcing.enums import Role
 
 
 class UserDTO(ModelConfigBaseModel):
@@ -15,6 +16,7 @@ class UserDTO(ModelConfigBaseModel):
     email: str = Field(..., description="Email address")
     first_name: Optional[str] = Field(None, description="First name")
     last_name: Optional[str] = Field(None, description="Last name")
+    role: Role = Field(default=Role.USER, description="User role")
     created_at: datetime = Field(..., description="Creation timestamp")
     updated_at: datetime = Field(..., description="Last update timestamp")
 
@@ -88,6 +90,6 @@ class UserReadModelData(BaseModel):
     email: Optional[str] = None
     first_name: Optional[str] = None
     last_name: Optional[str] = None
-    password_hash: Optional[str] = None
+    role: Optional[Role] = None
     created_at: Optional[datetime] = None
     updated_at: Optional[datetime] = None

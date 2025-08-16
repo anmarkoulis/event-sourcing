@@ -13,10 +13,8 @@ from event_sourcing.domain.exceptions import (
     UsernameTooShort,
 )
 from event_sourcing.dto import EventDTO, EventFactory
-from event_sourcing.dto.events.user import (
-    UserCreatedDataV1,
-)
 from event_sourcing.enums import EventType
+from event_sourcing.infrastructure.enums import HashingMethod
 
 
 class TestUserAggregate:
@@ -41,6 +39,7 @@ class TestUserAggregate:
             "first_name": "Test",
             "last_name": "User",
             "password_hash": "hashed_password_123",  # noqa: S106  # pragma: allowlist secret
+            "hashing_method": HashingMethod.BCRYPT,
         }
 
     @pytest.fixture
@@ -84,6 +83,7 @@ class TestUserAggregate:
             first_name=valid_user_data["first_name"],
             last_name=valid_user_data["last_name"],
             password_hash=valid_user_data["password_hash"],
+            hashing_method=valid_user_data["hashing_method"],
         )
 
         assert len(events) == 1
@@ -261,7 +261,9 @@ class TestUserAggregate:
 
         # Change password
         new_password = "new_hashed_password"  # noqa: S105  # pragma: allowlist secret
-        events = user_aggregate.change_password(new_password)
+        events = user_aggregate.change_password(
+            new_password, HashingMethod.BCRYPT
+        )
 
         assert len(events) == 1
         event = events[0]
@@ -280,8 +282,8 @@ class TestUserAggregate:
         # First create a user
         user_aggregate.create_user(**valid_user_data)
 
-        with pytest.raises(ValueError, match="Password is required"):
-            user_aggregate.change_password("")
+        with pytest.raises(ValueError, match="New password is required"):
+            user_aggregate.change_password("", HashingMethod.BCRYPT)
 
     def test_change_password_deleted_user(
         self, user_aggregate: UserAggregate, valid_user_data: dict
@@ -297,7 +299,9 @@ class TestUserAggregate:
         with pytest.raises(
             ValueError, match="Cannot change password for deleted user"
         ):
-            user_aggregate.change_password("new_password")
+            user_aggregate.change_password(
+                "new_password", HashingMethod.BCRYPT
+            )
 
     def test_delete_user_success(
         self, user_aggregate: UserAggregate, valid_user_data: dict
@@ -339,14 +343,6 @@ class TestUserAggregate:
         timestamp: datetime,
     ) -> None:
         """Test applying USER_CREATED event."""
-        UserCreatedDataV1(
-            username="testuser",
-            email="test@example.com",
-            first_name="Test",
-            last_name="User",
-            password_hash="hashed_password",  # noqa: S106  # pragma: allowlist secret
-        )
-
         event = EventFactory.create_user_created(
             aggregate_id=aggregate_id,
             username="testuser",
@@ -354,6 +350,7 @@ class TestUserAggregate:
             first_name="Test",
             last_name="User",
             password_hash="hashed_password",  # noqa: S106  # pragma: allowlist secret
+            hashing_method=HashingMethod.BCRYPT,
             revision=1,
             timestamp=timestamp,
         )
@@ -458,6 +455,7 @@ class TestUserAggregate:
         event = EventFactory.create_password_changed(
             aggregate_id=aggregate_id,
             password_hash="new_password",  # noqa: S106  # pragma: allowlist secret
+            hashing_method=HashingMethod.BCRYPT,
             revision=2,
             timestamp=timestamp,
         )
@@ -542,6 +540,7 @@ class TestUserAggregate:
             first_name="Test",
             last_name="User",
             password_hash="hashed_password",  # noqa: S106  # pragma: allowlist secret
+            hashing_method=HashingMethod.BCRYPT,
             revision=1,
             timestamp=timestamp,
         )
@@ -573,6 +572,7 @@ class TestUserAggregate:
             first_name="Test",
             last_name="User",
             password_hash="hashed_password",  # noqa: S106  # pragma: allowlist secret
+            hashing_method=HashingMethod.BCRYPT,
             revision=1,
             timestamp=timestamp,
         )
@@ -593,6 +593,7 @@ class TestUserAggregate:
         event3 = EventFactory.create_password_changed(
             aggregate_id=aggregate_id,
             password_hash="new_password",  # noqa: S106  # pragma: allowlist secret
+            hashing_method=HashingMethod.BCRYPT,
             revision=2,  # Lower revision
             timestamp=timestamp,
         )
@@ -762,7 +763,9 @@ class TestUserAggregate:
         assert user_aggregate.last_applied_revision == 2
 
         # Change password
-        password_events = user_aggregate.change_password("new_password")
+        password_events = user_aggregate.change_password(
+            "new_password", HashingMethod.BCRYPT
+        )
         assert len(password_events) == 1
         assert user_aggregate.password_hash == "new_password"  # noqa: S105  # pragma: allowlist secret
         assert user_aggregate.last_applied_revision == 3
@@ -793,6 +796,7 @@ class TestUserAggregate:
         event3 = EventFactory.create_password_changed(
             aggregate_id=aggregate_id,
             password_hash="password3",  # noqa: S106  # pragma: allowlist secret
+            hashing_method=HashingMethod.BCRYPT,
             revision=3,
             timestamp=timestamp,
         )
@@ -803,6 +807,7 @@ class TestUserAggregate:
             first_name="User",
             last_name="One",
             password_hash="password1",  # noqa: S106  # pragma: allowlist secret
+            hashing_method=HashingMethod.BCRYPT,
             revision=1,
             timestamp=timestamp,
         )

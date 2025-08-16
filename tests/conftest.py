@@ -1,3 +1,4 @@
+import os
 from typing import Any, AsyncGenerator
 from unittest.mock import AsyncMock, MagicMock
 
@@ -189,3 +190,253 @@ def read_model_mock() -> MagicMock:
 def freezer() -> Any:
     """Freezegun fixture for controlling time in tests."""
     return freeze_time
+
+
+# System test fixtures for authentication and user management
+
+
+@pytest.fixture
+async def admin_user_credentials() -> dict:
+    """Admin user credentials for testing."""
+    return {
+        "username": "admin",
+        "password": "admin123",
+        "email": "admin@test.com",
+        "first_name": "Admin",
+        "last_name": "User",
+        "role": "admin",
+    }
+
+
+@pytest.fixture
+async def regular_user_credentials() -> dict:
+    """Regular user credentials for testing."""
+    return {
+        "username": "testuser",
+        "password": "user123",
+        "email": "user@test.com",
+        "first_name": "Test",
+        "last_name": "User",
+        "role": "user",
+    }
+
+
+@pytest.fixture
+async def admin_user(
+    test_infrastructure_factory: Any,
+    admin_user_credentials: dict,
+) -> dict:
+    """Create an admin user and return user info."""
+    try:
+        import uuid
+
+        from event_sourcing.application.commands.user.create_user import (
+            CreateUserCommand,
+        )
+        from event_sourcing.enums import Role
+
+        # Create command handler
+        command_handler = (
+            test_infrastructure_factory.create_create_user_command_handler()
+        )
+
+        # Create the command
+        command = CreateUserCommand(
+            user_id=uuid.uuid4(),
+            username=admin_user_credentials["username"],
+            email=admin_user_credentials["email"],
+            first_name=admin_user_credentials["first_name"],
+            last_name=admin_user_credentials["last_name"],
+            password=admin_user_credentials["password"],
+            role=Role.ADMIN,
+        )
+
+        # Execute the command
+        await command_handler.handle(command)
+
+        return {
+            "user_id": str(command.user_id),
+            "username": admin_user_credentials["username"],
+            "email": admin_user_credentials["email"],
+            "first_name": admin_user_credentials["first_name"],
+            "last_name": admin_user_credentials["last_name"],
+            "role": admin_user_credentials["role"],
+            "password": admin_user_credentials["password"],
+        }
+
+    except Exception as e:
+        pytest.fail(f"Failed to create admin user: {e}")
+
+
+@pytest.fixture
+async def regular_user(
+    test_infrastructure_factory: Any,
+    regular_user_credentials: dict,
+) -> dict:
+    """Create a regular user and return user info."""
+    try:
+        import uuid
+
+        from event_sourcing.application.commands.user.create_user import (
+            CreateUserCommand,
+        )
+        from event_sourcing.enums import Role
+
+        # Create command handler
+        command_handler = (
+            test_infrastructure_factory.create_create_user_command_handler()
+        )
+
+        # Create the command
+        command = CreateUserCommand(
+            user_id=uuid.uuid4(),
+            username=regular_user_credentials["username"],
+            email=regular_user_credentials["email"],
+            first_name=regular_user_credentials["first_name"],
+            last_name=regular_user_credentials["last_name"],
+            password=regular_user_credentials["password"],
+            role=Role.USER,
+        )
+
+        # Execute the command
+        await command_handler.handle(command)
+
+        return {
+            "user_id": str(command.user_id),
+            "username": regular_user_credentials["username"],
+            "email": regular_user_credentials["email"],
+            "first_name": regular_user_credentials["first_name"],
+            "last_name": regular_user_credentials["last_name"],
+            "role": regular_user_credentials["role"],
+            "password": regular_user_credentials["password"],
+        }
+
+    except Exception as e:
+        pytest.fail(f"Failed to create regular user: {e}")
+
+
+@pytest.fixture
+async def admin_jwt_token(
+    async_client_with_test_db: httpx.AsyncClient,
+    admin_user: dict,
+) -> str:
+    """Get JWT token for admin user."""
+    try:
+        response = await async_client_with_test_db.post(
+            "/v1/auth/login/",
+            json={
+                "username": admin_user["username"],
+                "password": admin_user["password"],
+            },
+        )
+
+        if response.status_code != 200:
+            pytest.fail(
+                f"Admin login failed: {response.status_code} - {response.text}"
+            )
+
+        data = response.json()
+        access_token = data.get("access_token")
+        if not access_token:
+            pytest.fail("No access_token in response")
+        return str(access_token)
+
+    except Exception as e:
+        pytest.fail(f"Failed to get admin JWT token: {e}")
+
+
+@pytest.fixture
+async def user_jwt_token(
+    async_client_with_test_db: httpx.AsyncClient,
+    regular_user: dict,
+) -> str:
+    """Get JWT token for regular user."""
+    try:
+        response = await async_client_with_test_db.post(
+            "/v1/auth/login/",
+            json={
+                "username": regular_user["username"],
+                "password": regular_user["password"],
+            },
+        )
+
+        if response.status_code != 200:
+            pytest.fail(
+                f"User login failed: {response.status_code} - {response.text}"
+            )
+
+        data = response.json()
+        access_token = data.get("access_token")
+        if not access_token:
+            pytest.fail("No access_token in response")
+        return str(access_token)
+
+    except Exception as e:
+        pytest.fail(f"Failed to get user JWT token: {e}")
+
+
+@pytest.fixture
+async def admin_client(
+    async_client_with_test_db: httpx.AsyncClient,
+    admin_jwt_token: str,
+) -> httpx.AsyncClient:
+    """HTTP client authenticated as admin user."""
+    # Create a new client instance to avoid sharing headers
+    import httpx
+
+    client = httpx.AsyncClient(
+        transport=async_client_with_test_db._transport,
+        base_url=async_client_with_test_db.base_url,
+        headers={"Authorization": f"Bearer {admin_jwt_token}"},
+    )
+    return client
+
+
+@pytest.fixture
+async def user_client(
+    async_client_with_test_db: httpx.AsyncClient,
+    user_jwt_token: str,
+) -> httpx.AsyncClient:
+    """HTTP client authenticated as regular user."""
+    # Create a new client instance to avoid sharing headers
+    import httpx
+
+    client = httpx.AsyncClient(
+        transport=async_client_with_test_db._transport,
+        base_url=async_client_with_test_db.base_url,
+        headers={"Authorization": f"Bearer {user_jwt_token}"},
+    )
+    return client
+
+
+@pytest.fixture
+async def unauthenticated_client(
+    async_client_with_test_db: httpx.AsyncClient,
+) -> httpx.AsyncClient:
+    """HTTP client without authentication."""
+    # Ensure no auth headers are set
+    if "Authorization" in async_client_with_test_db.headers:
+        del async_client_with_test_db.headers["Authorization"]
+    return async_client_with_test_db
+
+
+def _get_test_db_url() -> str:
+    """Get test database URL from environment or use default."""
+    return (
+        os.getenv(
+            "TEST_DATABASE_URL",
+            "postgresql://test:test@localhost:5432/test_db",
+        )
+        or "postgresql://test:test@localhost:5432/test_db"
+    )
+
+
+def _get_test_db_url_async() -> str:
+    """Get async test database URL from environment or use default."""
+    return (
+        os.getenv(
+            "TEST_DATABASE_URL",
+            "postgresql+asyncpg://test:test@localhost:5432/test_db",
+        )
+        or "postgresql+asyncpg://test:test@localhost:5432/test_db"
+    )

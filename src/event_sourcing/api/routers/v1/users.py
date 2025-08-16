@@ -3,7 +3,7 @@ import uuid
 from datetime import datetime
 from typing import Optional
 
-from fastapi import APIRouter, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query
 
 from event_sourcing.api.depends import InfrastructureFactoryDep
 from event_sourcing.application.commands.user import (
@@ -29,6 +29,12 @@ from event_sourcing.dto.user import (
     UpdateUserResponse,
     UserDTO,
 )
+from event_sourcing.infrastructure.security.permissions import (
+    CreateUserPermissionDep,
+    DeleteUserPermissionDep,
+    ReadUserPermissionDep,
+    require_update_specific_user_permission_dep,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -41,22 +47,22 @@ users_router = APIRouter(prefix="/users", tags=["users"])
 async def create_user(
     user_data: CreateUserRequest,
     infrastructure_factory: InfrastructureFactoryDep = None,
+    permission: CreateUserPermissionDep = None,
 ) -> CreateUserResponse:
     """Create a new user"""
+    # Permission is checked automatically via dependency injection
+
     # Generate user ID
     user_id = uuid.uuid4()
 
-    # Hash password (in real app, use proper hashing)
-    password_hash = f"hashed_{user_data.password}"
-
-    # Create command
+    # Create command with plain password - will be hashed in command handler
     command = CreateUserCommand(
         user_id=user_id,
         username=user_data.username,
         email=user_data.email,
         first_name=user_data.first_name,
         last_name=user_data.last_name,
-        password_hash=password_hash,
+        password=user_data.password,
     )
 
     # Get fully built command handler from factory
@@ -90,8 +96,11 @@ async def list_users(
         None, description="Filter by email (partial match)"
     ),
     infrastructure_factory: InfrastructureFactoryDep = None,
+    permission: ReadUserPermissionDep = None,
 ) -> ListUsersResponse:
     """List users with pagination and filtering"""
+    # Permission is checked automatically via dependency injection
+
     # Create query
     query = ListUsersQuery(
         page=page,
@@ -125,8 +134,11 @@ async def update_user(
     user_id: str,
     user_data: UpdateUserRequest,
     infrastructure_factory: InfrastructureFactoryDep = None,
+    permission: UserDTO = Depends(require_update_specific_user_permission_dep),
 ) -> UpdateUserResponse:
     """Update user information"""
+    # Permission is checked automatically via dependency injection
+
     # Create command
     command = UpdateUserCommand(
         user_id=uuid.UUID(user_id),
@@ -155,14 +167,16 @@ async def change_password(
     user_id: str,
     password_data: ChangePasswordRequest,
     infrastructure_factory: InfrastructureFactoryDep = None,
+    permission: UserDTO = Depends(require_update_specific_user_permission_dep),
 ) -> ChangePasswordResponse:
     """Change user's password"""
-    # In a real app, you would verify current password and hash new password
-    new_password_hash = f"hashed_{password_data.new_password}"  # Placeholder
+    # Permission is checked automatically via dependency injection
 
-    # Create command
+    # Create command with plain password - will be hashed in command handler
     command = ChangePasswordCommand(
-        user_id=uuid.UUID(user_id), new_password_hash=new_password_hash
+        user_id=uuid.UUID(user_id),
+        old_password=password_data.current_password,
+        new_password=password_data.new_password,
     )
 
     # Get command handler
@@ -178,19 +192,17 @@ async def change_password(
     )
 
 
-@users_router.put(
-    "/{user_id}/password/",
-    description="Change user's password",
-    response_model=ChangePasswordResponse,
-)
 @users_router.delete(
     "/{user_id}/", description="Delete user", response_model=DeleteUserResponse
 )
 async def delete_user(
     user_id: str,
     infrastructure_factory: InfrastructureFactoryDep = None,
+    permission: DeleteUserPermissionDep = None,
 ) -> DeleteUserResponse:
     """Delete user"""
+    # Permission is checked automatically via dependency injection
+
     # Create command
     command = DeleteUserCommand(user_id=uuid.UUID(user_id))
 
@@ -211,8 +223,11 @@ async def delete_user(
 async def get_user(
     user_id: str,
     infrastructure_factory: InfrastructureFactoryDep = None,
+    permission: ReadUserPermissionDep = None,
 ) -> GetUserResponse:
     """Get user by ID"""
+    # Permission is checked automatically via dependency injection
+
     # Create query
     query = GetUserQuery(user_id=uuid.UUID(user_id))
 
@@ -239,8 +254,11 @@ async def get_user_history(
         ..., description="Point in time (ISO format) - required"
     ),
     infrastructure_factory: InfrastructureFactoryDep = None,
+    permission: ReadUserPermissionDep = None,
 ) -> UserDTO:
     """Get user state at a specific point in time"""
+    # Permission is checked automatically via dependency injection
+
     # Parse the required timestamp
     timestamp_parsed = datetime.fromisoformat(timestamp.replace("Z", "+00:00"))
 

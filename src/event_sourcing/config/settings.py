@@ -73,7 +73,13 @@ class Settings(BaseSettings):
     DESCRIPTION: str = "This is an example Event Sourcing project"
     VERSION: str = env.str("VERSION", "0.1.0")
     ENABLE_SWAGGER: bool = env.bool("ENABLE_SWAGGER", False)
-    USE_AUTH: bool = env.bool("USE_AUTH", True)
+    SECRET_KEY: str = env.str("SECRET_KEY")
+
+    # Admin user configuration
+    ADMIN_USERNAME: str = env.str("ADMIN_USERNAME", "admin")
+    ADMIN_PASSWORD: str = env.str("ADMIN_PASSWORD", "admin")
+    ADMIN_EMAIL: str = env.str("ADMIN_EMAIL", "admin@admin.com")
+
     BACKEND_CORS_ORIGINS: List = env.list("BACKEND_CORS_ORIGINS")
     ALLOWED_HOSTS: List = env.list("ALLOWED_HOSTS")
     DATABASE_URL: str = env.str("DATABASE_URL", "")

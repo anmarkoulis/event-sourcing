@@ -70,6 +70,10 @@ def configure_exception_handlers(app: FastAPI) -> None:
     # Generic exception handler (catch-all)
     app.add_exception_handler(Exception, handle_generic_exception)
 
+    # Content type error handler
+    app.add_exception_handler(UnicodeDecodeError, handle_content_type_error)
+    app.add_exception_handler(ValueError, handle_content_type_error)
+
 
 async def handle_domain_exception(
     request: Request, exc: DomainException
@@ -245,16 +249,26 @@ async def handle_invalid_email_format(
 async def handle_request_validation_error(
     request: Request, exc: RequestValidationError
 ) -> Response:
-    """Handle FastAPI request validation errors."""
-
+    """Handle request validation errors."""
     logger.warning(f"Request validation error: {exc.errors()}")
+
+    # Safely process errors to handle non-serializable content like bytes
+    safe_errors = []
+    for error in exc.errors():
+        safe_error = error.copy()
+        # Convert bytes to string representation if present
+        if isinstance(safe_error.get("input"), bytes):
+            safe_error["input"] = safe_error["input"].decode(
+                "utf-8", errors="replace"
+            )
+        safe_errors.append(safe_error)
 
     return JSONResponse(
         status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
         content={
             "error": "Request Validation Error",
-            "message": "Invalid request data",
-            "details": exc.errors(),
+            "message": "Request validation failed",
+            "details": safe_errors,
             "type": "RequestValidationError",
         },
     )
@@ -279,7 +293,7 @@ async def handle_http_exception(
 async def handle_generic_exception(
     request: Request, exc: Exception
 ) -> Response:
-    """Handle generic exceptions (catch-all)."""
+    """Handle generic exceptions."""
     logger.error(f"Unhandled exception: {exc}", exc_info=True)
 
     return JSONResponse(
@@ -288,6 +302,26 @@ async def handle_generic_exception(
             "error": "Internal Server Error",
             "message": "An unexpected error occurred",
             "type": exc.__class__.__name__,
+        },
+    )
+
+
+async def handle_content_type_error(
+    request: Request, exc: Exception
+) -> Response:
+    """Handle content type errors gracefully.
+
+    This handler prevents crashes when invalid content types are sent
+    in request bodies, such as bytes or malformed content.
+    """
+    logger.warning(f"Content type error: {exc}")
+
+    return JSONResponse(
+        status_code=status.HTTP_400_BAD_REQUEST,
+        content={
+            "error": "Bad Request",
+            "message": "Invalid content type or malformed request body",
+            "type": "ContentTypeError",
         },
     )
 
