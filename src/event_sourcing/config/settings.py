@@ -52,7 +52,7 @@ class CeleryConfig(BaseModel):
     broker_transport_options: dict = {
         # 'visibility_timeout': 3600,
         "polling_interval": 10,
-        "wait_time_seconds": 10,  # valid values: 0 - 20
+        "wait_seconds": 10,  # valid values: 0 - 20
         # 'region': 'us-east-1'
         "predefined_queues": {
             "celery": {
@@ -74,6 +74,12 @@ class Settings(BaseSettings):
     VERSION: str = env.str("VERSION", "0.1.0")
     ENABLE_SWAGGER: bool = env.bool("ENABLE_SWAGGER", False)
     SECRET_KEY: str = env.str("SECRET_KEY")
+
+    # JWT Configuration
+    ACCESS_TOKEN_EXPIRE_MINUTES: int = env.int(
+        "ACCESS_TOKEN_EXPIRE_MINUTES", 30
+    )
+    ALGORITHM: str = env.str("ALGORITHM", "HS256")
 
     # Admin user configuration
     ADMIN_USERNAME: str = env.str("ADMIN_USERNAME", "admin")

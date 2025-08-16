@@ -1,20 +1,24 @@
-"""Authentication DTOs."""
+"""Authentication-related DTOs."""
 
 from pydantic import BaseModel
 
-from event_sourcing.dto.user import UserDTO
-
 
 class LoginRequest(BaseModel):
-    """Login request model."""
+    """Login request DTO."""
 
     username: str
     password: str
 
 
 class LoginResponse(BaseModel):
-    """Login response model."""
+    """Login response DTO."""
 
     access_token: str
-    token_type: str
-    user: UserDTO
+    token_type: str = "bearer"  # noqa: S105
+
+
+class TokenData(BaseModel):
+    """Token payload data."""
+
+    username: str
+    user_id: str

@@ -1,73 +1,44 @@
-import uuid
-from typing import Optional
+"""PostgreSQL-based user snapshot store implementation."""
 
-from sqlalchemy import select
-from sqlalchemy.ext.asyncio import AsyncSession
+from typing import Any
 
-from event_sourcing.domain.aggregates.user import UserAggregate
-from event_sourcing.enums import AggregateTypeEnum
-from event_sourcing.infrastructure.database.models.snapshot import UserSnapshot
-from event_sourcing.infrastructure.snapshot_store.base import SnapshotStore
+from event_sourcing.infrastructure.snapshot_store.dto.user import (
+    UserSnapshotDTO,
+)
+from event_sourcing.infrastructure.snapshot_store.psql_store import (
+    PsqlSnapshotStore,
+)
 
 
-class PsqlUserSnapshotStore(SnapshotStore):
-    """Postgres-backed snapshot store for User aggregate (read-only).
+class PsqlUserSnapshotStore(PsqlSnapshotStore):
+    """PostgreSQL-based user snapshot store implementation."""
 
-    This expects `UserSnapshot.data` to be a JSON serialization of
-    `UserAggregate` state. For now, we'll deserialize minimally.
-    """
+    def __init__(self, session: Any) -> None:
+        """Initialize PostgreSQL user snapshot store.
 
-    def __init__(self, session: AsyncSession) -> None:
-        self.session = session
+        :param session: Database session.
+        """
+        super().__init__(session)
 
-    async def get(
-        self, aggregate_id: uuid.UUID, aggregate_type: AggregateTypeEnum
-    ) -> Optional[object]:
-        if aggregate_type != AggregateTypeEnum.USER:
-            return None
-
-        stmt = select(UserSnapshot).where(UserSnapshot.id == aggregate_id)
-        result = await self.session.execute(stmt)
-        row = result.scalar_one_or_none()
-        if row is None:
-            return None
-
-        # Rebuild a minimal aggregate from snapshot data
-        agg = UserAggregate(aggregate_id)
-        data = row.data or {}
-        # Best-effort field mapping (depends on your snapshot format)
-        agg.username = data.get("username")
-        agg.email = data.get("email")
-        agg.first_name = data.get("first_name")
-        agg.last_name = data.get("last_name")
-        agg.password_hash = data.get("password_hash")
-        agg.created_at = data.get("created_at")
-        agg.updated_at = data.get("updated_at")
-        agg.deleted_at = data.get("deleted_at")
-
-        class _UserSnapshotObj:
-            def __init__(
-                self, aggregate: UserAggregate, revision: int
-            ) -> None:
-                self.aggregate = aggregate
-                self.last_revision = revision
-
-        return _UserSnapshotObj(agg, row.revision)
-
-    async def set(
-        self,
-        aggregate_id: uuid.UUID,
-        aggregate_type: AggregateTypeEnum,
-        revision: int,
-        data: dict,
+    async def save_user_snapshot(
+        self, aggregate_id: str, snapshot: UserSnapshotDTO
     ) -> None:
-        if aggregate_type != AggregateTypeEnum.USER:
-            return
+        """Save a user snapshot to the database.
 
-        existing = await self.session.get(UserSnapshot, aggregate_id)
-        if existing is None:
-            row = UserSnapshot(id=aggregate_id, revision=revision, data=data)
-            self.session.add(row)
-        else:
-            existing.revision = revision
-            existing.data = data
+        :param aggregate_id: ID of the user aggregate.
+        :param snapshot: User snapshot DTO to save.
+        """
+        await self.save_snapshot(aggregate_id, snapshot)
+
+    async def get_user_snapshot(self, aggregate_id: str) -> UserSnapshotDTO:
+        """Get the latest user snapshot.
+
+        :param aggregate_id: ID of the user aggregate.
+        :return: User snapshot DTO if found, None otherwise.
+        """
+        from event_sourcing.domain.aggregates.user import UserAggregate
+
+        snapshot = await self.get_snapshot(aggregate_id, UserAggregate)
+        if snapshot:
+            return UserSnapshotDTO(**snapshot.dict())
+        return None

@@ -7,7 +7,7 @@ from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 
 from event_sourcing.dto.user import UserDTO
 from event_sourcing.enums import Permission
-from event_sourcing.infrastructure.security.auth_service import (
+from event_sourcing.infrastructure.security.auth.base import (
     AuthServiceInterface,
 )
 from event_sourcing.infrastructure.security.provider import get_auth_service
