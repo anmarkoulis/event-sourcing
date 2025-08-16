@@ -2,6 +2,9 @@ import uuid
 
 from pydantic import BaseModel, EmailStr
 
+from event_sourcing.enums import Role
+from event_sourcing.infrastructure.enums import HashingMethod
+
 
 class CreateUserCommand(BaseModel):
     """Command to create a new user"""
@@ -11,4 +14,8 @@ class CreateUserCommand(BaseModel):
     email: EmailStr
     first_name: str
     last_name: str
-    password_hash: str
+    password: str  # Plain text password - will be hashed in command handler
+    hashing_method: HashingMethod = (
+        HashingMethod.BCRYPT
+    )  # Default hashing method
+    role: Role = Role.USER  # Default role is USER

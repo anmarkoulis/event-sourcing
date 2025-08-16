@@ -2,7 +2,8 @@ from pydantic import Field
 
 from event_sourcing.dto.base import ModelConfigBaseModel
 from event_sourcing.dto.events.base import EventDTO
-from event_sourcing.enums import EventType
+from event_sourcing.enums import EventType, Role
+from event_sourcing.infrastructure.enums import HashingMethod
 
 
 class UserCreatedDataV1(ModelConfigBaseModel):
@@ -13,6 +14,10 @@ class UserCreatedDataV1(ModelConfigBaseModel):
     first_name: str = Field(..., description="First name")
     last_name: str = Field(..., description="Last name")
     password_hash: str = Field(..., description="Hashed password")
+    hashing_method: HashingMethod = Field(
+        ..., description="Hashing method used"
+    )
+    role: Role = Field(default=Role.USER, description="User role")
 
 
 class UserCreatedV1(EventDTO[UserCreatedDataV1]):

@@ -13,6 +13,8 @@ from event_sourcing.dto.events.user import (
     UserUpdatedDataV1,
     UserUpdatedV1,
 )
+from event_sourcing.enums import Role
+from event_sourcing.infrastructure.enums import HashingMethod
 
 T = TypeVar("T", bound=EventDTO)
 
@@ -28,7 +30,9 @@ class EventFactory:
         first_name: str,
         last_name: str,
         password_hash: str,
-        revision: int,
+        hashing_method: HashingMethod,
+        role: Role = Role.USER,
+        revision: int = 1,
         timestamp: Optional[datetime] = None,
     ) -> UserCreatedV1:
         """Create a USER_CREATED event"""
@@ -38,6 +42,8 @@ class EventFactory:
             first_name=first_name,
             last_name=last_name,
             password_hash=password_hash,
+            hashing_method=hashing_method,
+            role=role,
         )
 
         return UserCreatedV1(
@@ -94,12 +100,14 @@ class EventFactory:
     def create_password_changed(
         aggregate_id: uuid.UUID,
         password_hash: str,
+        hashing_method: HashingMethod,
         revision: int,
         timestamp: Optional[datetime] = None,
     ) -> PasswordChangedV1:
         """Create a PASSWORD_CHANGED event"""
         data = PasswordChangedDataV1(
             password_hash=password_hash,
+            hashing_method=hashing_method,
         )
 
         return PasswordChangedV1(

@@ -17,8 +17,64 @@ class TestUserCreation:
     """Test user creation endpoint with real database."""
 
     @pytest.mark.asyncio
+    async def test_create_user_unauthorized_no_jwt(
+        self, unauthenticated_client: AsyncClient
+    ) -> None:
+        """Test that creating a user without JWT returns 401."""
+        # Arrange
+        user_data = {
+            "username": "newuser",
+            "email": "newuser@example.com",
+            "first_name": "New",
+            "last_name": "User",
+            "password": "password123",  # pragma: allowlist secret
+        }
+
+        # Act
+        response = await unauthenticated_client.post(
+            "/v1/users/", json=user_data
+        )
+
+        # Assert
+        assert response.status_code == 401
+        response_data = response.json()
+
+        # Check error response structure
+        assert "error" in response_data
+        assert "message" in response_data
+        assert response_data["error"] == "HTTP Error"
+        assert "not authenticated" in response_data["message"].lower()
+
+    @pytest.mark.asyncio
+    async def test_create_user_forbidden_regular_user(
+        self, user_client: AsyncClient
+    ) -> None:
+        """Test that regular users cannot create users (403)."""
+        # Arrange
+        user_data = {
+            "username": "testuser",
+            "email": "testuser@example.com",
+            "first_name": "Test",
+            "last_name": "User",
+            "password": "securepassword123",  # pragma: allowlist secret
+        }
+
+        # Act
+        response = await user_client.post("/v1/users/", json=user_data)
+
+        # Assert
+        assert response.status_code == 403
+        response_data = response.json()
+
+        # Check error response structure
+        assert "error" in response_data
+        assert "message" in response_data
+        assert response_data["error"] == "HTTP Error"
+        assert "insufficient permissions" in response_data["message"].lower()
+
+    @pytest.mark.asyncio
     async def test_create_user_success(
-        self, async_client_with_test_db: AsyncClient
+        self, admin_client: AsyncClient
     ) -> None:
         """Test successful user creation."""
         # Arrange
@@ -31,9 +87,7 @@ class TestUserCreation:
         }
 
         # Act
-        response = await async_client_with_test_db.post(
-            "/v1/users/", json=user_data
-        )
+        response = await admin_client.post("/v1/users/", json=user_data)
 
         # Assert
         assert response.status_code == 200
@@ -61,7 +115,7 @@ class TestUserCreation:
 
     @pytest.mark.asyncio
     async def test_create_user_duplicate_username(
-        self, async_client_with_test_db: AsyncClient
+        self, admin_client: AsyncClient
     ) -> None:
         """Test that creating a user with duplicate username fails."""
         # Arrange - create first user
@@ -73,9 +127,7 @@ class TestUserCreation:
             "password": "password123",  # pragma: allowlist secret
         }
 
-        first_response = await async_client_with_test_db.post(
-            "/v1/users/", json=user_data
-        )
+        first_response = await admin_client.post("/v1/users/", json=user_data)
         assert first_response.status_code == 200
 
         # Act - try to create second user with same username
@@ -87,7 +139,7 @@ class TestUserCreation:
             "password": "password456",  # pragma: allowlist secret
         }
 
-        second_response = await async_client_with_test_db.post(
+        second_response = await admin_client.post(
             "/v1/users/", json=duplicate_user_data
         )
 
@@ -111,7 +163,7 @@ class TestUserCreation:
 
     @pytest.mark.asyncio
     async def test_create_user_duplicate_email(
-        self, async_client_with_test_db: AsyncClient
+        self, admin_client: AsyncClient
     ) -> None:
         """Test that creating a user with duplicate email fails."""
         # Arrange - create first user
@@ -123,9 +175,7 @@ class TestUserCreation:
             "password": "password123",  # pragma: allowlist secret
         }
 
-        first_response = await async_client_with_test_db.post(
-            "/v1/users/", json=user_data
-        )
+        first_response = await admin_client.post("/v1/users/", json=user_data)
         assert first_response.status_code == 200
 
         # Act - try to create second user with same email
@@ -137,7 +187,7 @@ class TestUserCreation:
             "password": "password456",  # pragma: allowlist secret
         }
 
-        second_response = await async_client_with_test_db.post(
+        second_response = await admin_client.post(
             "/v1/users/", json=duplicate_user_data
         )
 
@@ -159,7 +209,7 @@ class TestUserCreation:
 
     @pytest.mark.asyncio
     async def test_create_user_invalid_data(
-        self, async_client_with_test_db: AsyncClient
+        self, admin_client: AsyncClient
     ) -> None:
         """Test user creation with invalid data."""
         # Test missing required fields
@@ -171,7 +221,7 @@ class TestUserCreation:
             "password": "password123",  # pragma: allowlist secret
         }
 
-        response = await async_client_with_test_db.post(
+        response = await admin_client.post(
             "/v1/users/", json=invalid_user_data
         )
 
@@ -200,7 +250,7 @@ class TestUserCreation:
 
     @pytest.mark.asyncio
     async def test_create_user_username_too_short(
-        self, async_client_with_test_db: AsyncClient
+        self, admin_client: AsyncClient
     ) -> None:
         """Test that username must be at least 3 characters."""
         user_data = {
@@ -211,9 +261,7 @@ class TestUserCreation:
             "password": "password123",  # pragma: allowlist secret
         }
 
-        response = await async_client_with_test_db.post(
-            "/v1/users/", json=user_data
-        )
+        response = await admin_client.post("/v1/users/", json=user_data)
 
         # Assert - should fail with validation error (422)
         assert response.status_code == 422
@@ -234,7 +282,7 @@ class TestUserCreation:
 
     @pytest.mark.asyncio
     async def test_create_user_empty_password(
-        self, async_client_with_test_db: AsyncClient
+        self, admin_client: AsyncClient
     ) -> None:
         """Test that password cannot be empty."""
         user_data = {
@@ -245,9 +293,7 @@ class TestUserCreation:
             "password": "",  # Empty password
         }
 
-        response = await async_client_with_test_db.post(
-            "/v1/users/", json=user_data
-        )
+        response = await admin_client.post("/v1/users/", json=user_data)
 
         # Assert - should fail with validation error (422)
         assert response.status_code == 422
@@ -279,10 +325,50 @@ class TestUserListing:
     """Test user listing endpoint with real database."""
 
     @pytest.mark.asyncio
-    async def test_list_users_success(
-        self, async_client_with_test_db: AsyncClient
+    async def test_list_users_unauthorized_no_jwt(
+        self, unauthenticated_client: AsyncClient
     ) -> None:
-        """Test successful user listing."""
+        """Test that listing users without JWT returns 401."""
+        # Act
+        response = await unauthenticated_client.get("/v1/users/")
+
+        # Assert
+        assert response.status_code == 401
+        response_data = response.json()
+
+        # Check error response structure
+        assert "error" in response_data
+        assert "message" in response_data
+        assert response_data["error"] == "HTTP Error"
+        assert "not authenticated" in response_data["message"].lower()
+
+    @pytest.mark.asyncio
+    async def test_list_users_success_regular_user(
+        self, user_client: AsyncClient
+    ) -> None:
+        """Test that regular users can list users (they have user:read permission)."""
+        # Act
+        response = await user_client.get("/v1/users/")
+
+        # Assert
+        assert response.status_code == 200
+        response_data = response.json()
+
+        # Check response structure
+        assert "results" in response_data
+        assert "count" in response_data
+        assert "page" in response_data
+        assert "page_size" in response_data
+        assert isinstance(response_data["results"], list)
+        assert isinstance(response_data["count"], int)
+        assert isinstance(response_data["page"], int)
+        assert isinstance(response_data["page_size"], int)
+
+    @pytest.mark.asyncio
+    async def test_list_users_success_admin(
+        self, admin_client: AsyncClient
+    ) -> None:
+        """Test successful user listing as admin."""
         # Arrange - create exactly 3 users for predictable testing
         users_data = [
             {
@@ -310,14 +396,12 @@ class TestUserListing:
 
         created_user_ids = []
         for user_data in users_data:
-            response = await async_client_with_test_db.post(
-                "/v1/users/", json=user_data
-            )
+            response = await admin_client.post("/v1/users/", json=user_data)
             assert response.status_code == 200
             created_user_ids.append(response.json()["user_id"])
 
         # Act - list users
-        response = await async_client_with_test_db.get("/v1/users/")
+        response = await admin_client.get("/v1/users/")
 
         # Assert
         assert response.status_code == 200
@@ -340,9 +424,10 @@ class TestUserListing:
         assert isinstance(response_data["page_size"], int)
         assert isinstance(response_data["results"], list)
 
-        # With a fresh database, we should have exactly 3 users
-        assert response_data["count"] == 3
-        assert len(response_data["results"]) == 3
+        # With a fresh database and 3 users created in this test, we should have 4 users total
+        # (admin from setup + 3 users created in this test)
+        assert response_data["count"] == 4
+        assert len(response_data["results"]) == 4
 
         # Check that our created users are in the results
         found_usernames = [
@@ -364,7 +449,7 @@ class TestUserListing:
 
     @pytest.mark.asyncio
     async def test_list_users_pagination(
-        self, async_client_with_test_db: AsyncClient
+        self, admin_client: AsyncClient
     ) -> None:
         """Test user listing pagination."""
         # Arrange - create exactly 15 users to test pagination properly
@@ -380,16 +465,12 @@ class TestUserListing:
                 "password": "password123",  # pragma: allowlist secret
             }
 
-            response = await async_client_with_test_db.post(
-                "/v1/users/", json=user_data
-            )
+            response = await admin_client.post("/v1/users/", json=user_data)
             assert response.status_code == 200
             created_users.append(response.json()["user_id"])
 
         # Act - test pagination with page_size=5
-        response = await async_client_with_test_db.get(
-            "/v1/users/?page=1&page_size=5"
-        )
+        response = await admin_client.get("/v1/users/?page=1&page_size=5")
 
         # Assert
         assert response.status_code == 200
@@ -405,8 +486,8 @@ class TestUserListing:
         assert isinstance(response_data["count"], int)
         assert isinstance(response_data["results"], list)
 
-        # Check pagination logic - we created exactly 15 users
-        assert response_data["count"] == 15
+        # Check pagination logic - we created exactly 15 users plus admin from setup
+        assert response_data["count"] == 16
         assert len(response_data["results"]) == 5
 
         # Check pagination links
@@ -414,7 +495,7 @@ class TestUserListing:
         assert response_data["previous"] is None  # Page 1 has no previous
 
         # Test page 2
-        response_page2 = await async_client_with_test_db.get(
+        response_page2 = await admin_client.get(
             "/v1/users/?page=2&page_size=5"
         )
         assert response_page2.status_code == 200
@@ -422,15 +503,15 @@ class TestUserListing:
 
         assert page2_data["page"] == 2
         assert page2_data["page_size"] == 5
-        assert page2_data["count"] == 15
+        assert page2_data["count"] == 16
         assert len(page2_data["results"]) == 5
 
         # Check pagination links for page 2
         assert page2_data["next"] is not None  # Should have next page
         assert page2_data["previous"] is not None  # Should have previous page
 
-        # Test page 3 (last page)
-        response_page3 = await async_client_with_test_db.get(
+        # Test page 3 (should have next page since we have 16 users total)
+        response_page3 = await admin_client.get(
             "/v1/users/?page=3&page_size=5"
         )
         assert response_page3.status_code == 200
@@ -438,12 +519,28 @@ class TestUserListing:
 
         assert page3_data["page"] == 3
         assert page3_data["page_size"] == 5
-        assert page3_data["count"] == 15
+        assert page3_data["count"] == 16
         assert len(page3_data["results"]) == 5
 
-        # Check pagination links for page 3 (last page)
-        assert page3_data["next"] is None  # Last page has no next
+        # Check pagination links for page 3 (should have next page since there are more users)
+        assert page3_data["next"] is not None  # Should have next page (page 4)
         assert page3_data["previous"] is not None  # Should have previous page
+
+        # Test page 4 (last page with 1 user)
+        response_page4 = await admin_client.get(
+            "/v1/users/?page=4&page_size=5"
+        )
+        assert response_page4.status_code == 200
+        page4_data = response_page4.json()
+
+        assert page4_data["page"] == 4
+        assert page4_data["page_size"] == 5
+        assert page4_data["count"] == 16
+        assert len(page4_data["results"]) == 1
+
+        # Check pagination links for page 4 (last page)
+        assert page4_data["next"] is None  # Last page has no next
+        assert page4_data["previous"] is not None  # Should have previous page
 
         # Verify that different pages return different users
         page1_usernames = [
@@ -461,7 +558,7 @@ class TestUserListing:
 
     @pytest.mark.asyncio
     async def test_list_users_filtering(
-        self, async_client_with_test_db: AsyncClient
+        self, admin_client: AsyncClient
     ) -> None:
         """Test user listing with filters."""
         # Arrange - create users with specific patterns for filtering
@@ -490,15 +587,11 @@ class TestUserListing:
         ]
 
         for user_data in filter_users_data:
-            response = await async_client_with_test_db.post(
-                "/v1/users/", json=user_data
-            )
+            response = await admin_client.post("/v1/users/", json=user_data)
             assert response.status_code == 200
 
         # Act - list users with username filter
-        response = await async_client_with_test_db.get(
-            "/v1/users/?username=filteruser"
-        )
+        response = await admin_client.get("/v1/users/?username=filteruser")
 
         # Assert
         assert response.status_code == 200
@@ -535,9 +628,63 @@ class TestUserRetrieval:
     """Test user retrieval endpoints with real database."""
 
     @pytest.mark.asyncio
-    async def test_get_user_success(
-        self, async_client_with_test_db: AsyncClient
+    async def test_get_user_unauthorized_no_jwt(
+        self, unauthenticated_client: AsyncClient
     ) -> None:
+        """Test that getting a user without JWT returns 401."""
+        # Act
+        response = await unauthenticated_client.get(
+            "/v1/users/11111111-1111-1111-1111-111111111111/"
+        )
+
+        # Assert
+        assert response.status_code == 401
+        response_data = response.json()
+
+        # Check error response structure
+        assert "error" in response_data
+        assert "message" in response_data
+        assert response_data["error"] == "HTTP Error"
+        assert "not authenticated" in response_data["message"].lower()
+
+    @pytest.mark.asyncio
+    async def test_get_user_success_regular_user(
+        self, admin_client: AsyncClient, user_client: AsyncClient
+    ) -> None:
+        """Test that regular users can get user information (they have user:read permission)."""
+        # Arrange - create a user as admin first
+        user_data = {
+            "username": "readableuser",
+            "email": "readable@example.com",
+            "first_name": "Readable",
+            "last_name": "User",
+            "password": "password123",  # pragma: allowlist secret
+        }
+
+        create_response = await admin_client.post("/v1/users/", json=user_data)
+        assert create_response.status_code == 200
+
+        user_id = create_response.json()["user_id"]
+
+        # Act - try to get the user with regular user permissions (should succeed with 200)
+        response = await user_client.get(f"/v1/users/{user_id}/")
+
+        # Assert
+        assert response.status_code == 200
+        response_data = response.json()
+
+        # Check response structure
+        assert "user" in response_data
+        user = response_data["user"]
+
+        # Check user data matches what we created
+        assert user["username"] == "readableuser"
+        assert user["email"] == "readable@example.com"
+        assert user["first_name"] == "Readable"
+        assert user["last_name"] == "User"
+
+    @pytest.mark.asyncio
+    async def test_get_user_success(self, admin_client: AsyncClient) -> None:
         """Test successful user retrieval."""
         # Arrange - create a user
         user_data = {
@@ -548,15 +695,13 @@ class TestUserRetrieval:
             "password": "password123",  # pragma: allowlist secret
         }
 
-        create_response = await async_client_with_test_db.post(
-            "/v1/users/", json=user_data
-        )
+        create_response = await admin_client.post("/v1/users/", json=user_data)
         assert create_response.status_code == 200
 
         user_id = create_response.json()["user_id"]
 
         # Act - get the user
-        response = await async_client_with_test_db.get(f"/v1/users/{user_id}/")
+        response = await admin_client.get(f"/v1/users/{user_id}/")
 
         # Assert
         # With synchronous event handling, the read model is updated immediately
@@ -591,12 +736,10 @@ class TestUserRetrieval:
         assert user["id"] == user_id
 
     @pytest.mark.asyncio
-    async def test_get_user_not_found(
-        self, async_client_with_test_db: AsyncClient
-    ) -> None:
+    async def test_get_user_not_found(self, admin_client: AsyncClient) -> None:
         """Test getting a non-existent user."""
         # Act - try to get a non-existent user
-        response = await async_client_with_test_db.get(
+        response = await admin_client.get(
             "/v1/users/11111111-1111-1111-1111-111111111111/"
         )
 
@@ -615,7 +758,7 @@ class TestUserRetrieval:
 
     @pytest.mark.asyncio
     async def test_get_user_history_success(
-        self, async_client_with_test_db: AsyncClient, freezer: Any
+        self, admin_client: AsyncClient, freezer: Any
     ) -> None:
         """Test successful user history retrieval."""
         # Arrange - create a user at a specific time
@@ -629,7 +772,7 @@ class TestUserRetrieval:
 
         # Create user at a specific time
         with freezer("2025-08-14 06:00:00"):
-            create_response = await async_client_with_test_db.post(
+            create_response = await admin_client.post(
                 "/v1/users/", json=user_data
             )
             assert create_response.status_code == 200
@@ -637,7 +780,7 @@ class TestUserRetrieval:
 
         # Act - get user history (use a timestamp after user creation)
         with freezer("2025-08-14 06:30:00"):
-            response = await async_client_with_test_db.get(
+            response = await admin_client.get(
                 f"/v1/users/{user_id}/history/?timestamp=2025-08-14T06:30:00"
             )
 
@@ -674,8 +817,66 @@ class TestUserUpdate:
     """Test user update endpoints with real database."""
 
     @pytest.mark.asyncio
+    async def test_update_user_unauthorized_no_jwt(
+        self, unauthenticated_client: AsyncClient
+    ) -> None:
+        """Test that updating a user without JWT returns 401."""
+        # Arrange
+        update_data = {"first_name": "Updated", "last_name": "Name"}
+
+        # Act
+        response = await unauthenticated_client.put(
+            "/v1/users/11111111-1111-1111-1111-111111111111/", json=update_data
+        )
+
+        # Assert
+        assert response.status_code == 401
+        response_data = response.json()
+
+        # Check error response structure
+        assert "error" in response_data
+        assert "message" in response_data
+        assert response_data["error"] == "HTTP Error"
+        assert "not authenticated" in response_data["message"].lower()
+
+    @pytest.mark.asyncio
+    async def test_update_user_forbidden_regular_user(
+        self, admin_client: AsyncClient, user_client: AsyncClient
+    ) -> None:
+        """Test that regular users cannot update users (403)."""
+        # Arrange - create a user as admin first
+        user_data = {
+            "username": "updateforbiddenuser",
+            "email": "updateforbidden@example.com",
+            "first_name": "Update",
+            "last_name": "Forbidden",
+            "password": "password123",  # pragma: allowlist secret
+        }
+
+        create_response = await admin_client.post("/v1/users/", json=user_data)
+        assert create_response.status_code == 200
+
+        user_id = create_response.json()["user_id"]
+
+        # Act - try to update the user with regular user permissions (should fail with 403)
+        update_data = {"first_name": "Updated", "last_name": "Name"}
+        response = await user_client.put(
+            f"/v1/users/{user_id}/", json=update_data
+        )
+
+        # Assert
+        assert response.status_code == 403
+        response_data = response.json()
+
+        # Check error response structure
+        assert "error" in response_data
+        assert "message" in response_data
+        assert response_data["error"] == "HTTP Error"
+        assert "insufficient permissions" in response_data["message"].lower()
+
+    @pytest.mark.asyncio
     async def test_update_user_success(
-        self, async_client_with_test_db: AsyncClient
+        self, admin_client: AsyncClient
     ) -> None:
         """Test successful user update."""
         # Arrange - create a user
@@ -687,9 +888,7 @@ class TestUserUpdate:
             "password": "password123",  # pragma: allowlist secret
         }
 
-        create_response = await async_client_with_test_db.post(
-            "/v1/users/", json=user_data
-        )
+        create_response = await admin_client.post("/v1/users/", json=user_data)
         assert create_response.status_code == 200
 
         user_id = create_response.json()["user_id"]
@@ -701,7 +900,7 @@ class TestUserUpdate:
             "email": "updated@example.com",
         }
 
-        response = await async_client_with_test_db.put(
+        response = await admin_client.put(
             f"/v1/users/{user_id}/", json=update_data
         )
 
@@ -714,9 +913,7 @@ class TestUserUpdate:
         assert response_data["message"] == "User updated successfully"
 
         # Verify the update by getting the user again
-        get_response = await async_client_with_test_db.get(
-            f"/v1/users/{user_id}/"
-        )
+        get_response = await admin_client.get(f"/v1/users/{user_id}/")
         assert get_response.status_code == 200
 
         updated_user = get_response.json()["user"]
@@ -735,13 +932,13 @@ class TestUserUpdate:
 
     @pytest.mark.asyncio
     async def test_update_user_not_found(
-        self, async_client_with_test_db: AsyncClient
+        self, admin_client: AsyncClient
     ) -> None:
         """Test updating a non-existent user."""
         # Act - try to update a non-existent user
         update_data = {"first_name": "Updated", "last_name": "Name"}
 
-        response = await async_client_with_test_db.put(
+        response = await admin_client.put(
             "/v1/users/11111111-1111-1111-1111-111111111111/", json=update_data
         )
 
@@ -757,7 +954,7 @@ class TestUserUpdate:
 
     @pytest.mark.asyncio
     async def test_update_user_invalid_data(
-        self, async_client_with_test_db: AsyncClient
+        self, admin_client: AsyncClient
     ) -> None:
         """Test user update with invalid data."""
         # Arrange - create a user
@@ -769,9 +966,7 @@ class TestUserUpdate:
             "password": "password123",  # pragma: allowlist secret
         }
 
-        create_response = await async_client_with_test_db.post(
-            "/v1/users/", json=user_data
-        )
+        create_response = await admin_client.post("/v1/users/", json=user_data)
         assert create_response.status_code == 200
 
         user_id = create_response.json()["user_id"]
@@ -781,7 +976,7 @@ class TestUserUpdate:
             "email": "invalid-email"  # Invalid email format
         }
 
-        response = await async_client_with_test_db.put(
+        response = await admin_client.put(
             f"/v1/users/{user_id}/", json=invalid_update_data
         )
 
@@ -813,8 +1008,73 @@ class TestPasswordChange:
     """Test password change endpoint with real database."""
 
     @pytest.mark.asyncio
+    async def test_change_password_unauthorized_no_jwt(
+        self, unauthenticated_client: AsyncClient
+    ) -> None:
+        """Test that changing password without JWT returns 401."""
+        # Arrange
+        password_data = {
+            "current_password": "oldpassword123",  # pragma: allowlist secret
+            "new_password": "newpassword456",  # pragma: allowlist secret
+        }
+
+        # Act
+        response = await unauthenticated_client.put(
+            "/v1/users/11111111-1111-1111-1111-111111111111/password/",
+            json=password_data,
+        )
+
+        # Assert
+        assert response.status_code == 401
+        response_data = response.json()
+
+        # Check error response structure
+        assert "error" in response_data
+        assert "message" in response_data
+        assert response_data["error"] == "HTTP Error"
+        assert "not authenticated" in response_data["message"].lower()
+
+    @pytest.mark.asyncio
+    async def test_change_password_forbidden_regular_user(
+        self, admin_client: AsyncClient, user_client: AsyncClient
+    ) -> None:
+        """Test that regular users cannot change passwords (403)."""
+        # Arrange - create a user as admin first
+        user_data = {
+            "username": "passwordforbiddenuser",
+            "email": "passwordforbidden@example.com",
+            "first_name": "Password",
+            "last_name": "Forbidden",
+            "password": "password123",  # pragma: allowlist secret
+        }
+
+        create_response = await admin_client.post("/v1/users/", json=user_data)
+        assert create_response.status_code == 200
+
+        user_id = create_response.json()["user_id"]
+
+        # Act - try to change password with regular user permissions (should fail with 403)
+        password_data = {
+            "current_password": "password123",  # pragma: allowlist secret
+            "new_password": "newpassword456",  # pragma: allowlist secret
+        }
+        response = await user_client.put(
+            f"/v1/users/{user_id}/password/", json=password_data
+        )
+
+        # Assert
+        assert response.status_code == 403
+        response_data = response.json()
+
+        # Check error response structure
+        assert "error" in response_data
+        assert "message" in response_data
+        assert response_data["error"] == "HTTP Error"
+        assert "insufficient permissions" in response_data["message"].lower()
+
+    @pytest.mark.asyncio
     async def test_change_password_success(
-        self, async_client_with_test_db: AsyncClient
+        self, admin_client: AsyncClient
     ) -> None:
         """Test successful password change."""
         # Arrange - create a user
@@ -826,9 +1086,7 @@ class TestPasswordChange:
             "password": "oldpassword123",  # pragma: allowlist secret
         }
 
-        create_response = await async_client_with_test_db.post(
-            "/v1/users/", json=user_data
-        )
+        create_response = await admin_client.post("/v1/users/", json=user_data)
         assert create_response.status_code == 200
 
         user_id = create_response.json()["user_id"]
@@ -839,7 +1097,7 @@ class TestPasswordChange:
             "new_password": "newpassword456",  # pragma: allowlist secret
         }
 
-        response = await async_client_with_test_db.put(
+        response = await admin_client.put(
             f"/v1/users/{user_id}/password/", json=password_data
         )
 
@@ -852,9 +1110,7 @@ class TestPasswordChange:
         assert response_data["message"] == "Password changed successfully"
 
         # Verify the password change by getting the user again
-        get_response = await async_client_with_test_db.get(
-            f"/v1/users/{user_id}/"
-        )
+        get_response = await admin_client.get(f"/v1/users/{user_id}/")
         assert get_response.status_code == 200
 
         updated_user = get_response.json()["user"]
@@ -875,7 +1131,7 @@ class TestPasswordChange:
 
     @pytest.mark.asyncio
     async def test_change_password_not_found(
-        self, async_client_with_test_db: AsyncClient
+        self, admin_client: AsyncClient
     ) -> None:
         """Test changing password for non-existent user."""
         # Act - try to change password for non-existent user
@@ -884,7 +1140,7 @@ class TestPasswordChange:
             "new_password": "newpassword456",  # pragma: allowlist secret
         }
 
-        response = await async_client_with_test_db.put(
+        response = await admin_client.put(
             "/v1/users/11111111-1111-1111-1111-111111111111/password/",
             json=password_data,
         )
@@ -892,11 +1148,14 @@ class TestPasswordChange:
         # Assert - should fail with 404 since user doesn't exist
         assert response.status_code == 404
         response_data = response.json()
+
+        # Check error response structure
         assert "error" in response_data
+        assert "message" in response_data
         assert response_data["error"] == "Resource Not Found"
         assert (
-            "User 11111111-1111-1111-1111-111111111111 not found"
-            in response_data["message"]
+            "user" in response_data["message"].lower()
+            and "not found" in response_data["message"].lower()
         )
 
 
@@ -904,8 +1163,48 @@ class TestUserDeletion:
     """Test user deletion endpoint with real database."""
 
     @pytest.mark.asyncio
+    async def test_delete_user_unauthorized_no_jwt(
+        self, unauthenticated_client: AsyncClient
+    ) -> None:
+        """Test that deleting a user without JWT returns 401."""
+        # Act
+        response = await unauthenticated_client.delete(
+            "/v1/users/11111111-1111-1111-1111-111111111111/"
+        )
+
+        # Assert
+        assert response.status_code == 401
+        response_data = response.json()
+
+        # Check error response structure
+        assert "error" in response_data
+        assert "message" in response_data
+        assert response_data["error"] == "HTTP Error"
+        assert "not authenticated" in response_data["message"].lower()
+
+    @pytest.mark.asyncio
+    async def test_delete_user_forbidden_regular_user(
+        self, user_client: AsyncClient
+    ) -> None:
+        """Test that regular users cannot delete users (403)."""
+        # Act
+        response = await user_client.delete(
+            "/v1/users/11111111-1111-1111-1111-111111111111/"
+        )
+
+        # Assert
+        assert response.status_code == 403
+        response_data = response.json()
+
+        # Check error response structure
+        assert "error" in response_data
+        assert "message" in response_data
+        assert response_data["error"] == "HTTP Error"
+        assert "insufficient permissions" in response_data["message"].lower()
+
+    @pytest.mark.asyncio
     async def test_delete_user_success(
-        self, async_client_with_test_db: AsyncClient
+        self, admin_client: AsyncClient
     ) -> None:
         """Test successful user deletion."""
         # Arrange - create a user
@@ -917,17 +1216,13 @@ class TestUserDeletion:
             "password": "password123",  # pragma: allowlist secret
         }
 
-        create_response = await async_client_with_test_db.post(
-            "/v1/users/", json=user_data
-        )
+        create_response = await admin_client.post("/v1/users/", json=user_data)
         assert create_response.status_code == 200
 
         user_id = create_response.json()["user_id"]
 
         # Act - delete the user
-        response = await async_client_with_test_db.delete(
-            f"/v1/users/{user_id}/"
-        )
+        response = await admin_client.delete(f"/v1/users/{user_id}/")
 
         # Assert
         assert response.status_code == 200
@@ -938,9 +1233,7 @@ class TestUserDeletion:
         assert response_data["message"] == "User deleted successfully"
 
         # Verify the deletion by trying to get the user again
-        get_response = await async_client_with_test_db.get(
-            f"/v1/users/{user_id}/"
-        )
+        get_response = await admin_client.get(f"/v1/users/{user_id}/")
 
         # The user should not be found after deletion
         assert get_response.status_code == 404
@@ -954,11 +1247,11 @@ class TestUserDeletion:
 
     @pytest.mark.asyncio
     async def test_delete_user_not_found(
-        self, async_client_with_test_db: AsyncClient
+        self, admin_client: AsyncClient
     ) -> None:
         """Test deleting a non-existent user."""
         # Act - try to delete a non-existent user
-        response = await async_client_with_test_db.delete(
+        response = await admin_client.delete(
             "/v1/users/11111111-1111-1111-1111-111111111111/"
         )
 
@@ -977,8 +1270,132 @@ class TestUserHistoricalQueries:
     """Test user historical queries with freezegun for time control."""
 
     @pytest.mark.asyncio
+    async def test_user_history_unauthorized_no_jwt(
+        self, unauthenticated_client: AsyncClient
+    ) -> None:
+        """Test that getting user history without JWT returns 401."""
+        # Act
+        response = await unauthenticated_client.get(
+            "/v1/users/11111111-1111-1111-1111-111111111111/history/?timestamp=2025-01-01T10:00:00"
+        )
+
+        # Assert
+        assert response.status_code == 401
+        response_data = response.json()
+
+        # Check error response structure
+        assert "error" in response_data
+        assert "message" in response_data
+        assert response_data["error"] == "HTTP Error"
+        assert "not authenticated" in response_data["message"].lower()
+
+    @pytest.mark.asyncio
+    async def test_user_history_success_regular_user(
+        self, admin_client: AsyncClient, user_client: AsyncClient
+    ) -> None:
+        """Test that regular users can get user history (they have user:read permission)."""
+        from freezegun import freeze_time
+
+        # Arrange - create a user as admin first with controlled time
+        with freeze_time("2025-08-16T12:00:00"):
+            user_data = {
+                "username": "historyreadableuser",
+                "email": "historyreadable@example.com",
+                "first_name": "History",
+                "last_name": "Readable",
+                "password": "password123",  # pragma: allowlist secret
+            }
+
+            create_response = await admin_client.post(
+                "/v1/users/", json=user_data
+            )
+            assert create_response.status_code == 200
+
+            user_id = create_response.json()["user_id"]
+
+        # Act - get user history with regular user permissions at a time after creation
+        with freeze_time("2025-08-16T12:01:00"):
+            response = await user_client.get(
+                f"/v1/users/{user_id}/history/?timestamp=2025-08-16T12:00:30"
+            )
+
+        # Assert
+        assert response.status_code == 200
+        response_data = response.json()
+
+        # Check response structure - user data is at the top level, not nested under "user"
+        assert "id" in response_data
+        assert "username" in response_data
+        assert "email" in response_data
+        assert "first_name" in response_data
+        assert "last_name" in response_data
+        assert "created_at" in response_data
+
+        # Check user data values
+        assert response_data["id"] == user_id
+        assert response_data["username"] == "historyreadableuser"
+        assert response_data["email"] == "historyreadable@example.com"
+        assert response_data["first_name"] == "History"
+        assert response_data["last_name"] == "Readable"
+
+        # Check that created_at matches our frozen time
+        assert response_data["created_at"] == "2025-08-16T12:00:00Z"
+
+    @pytest.mark.asyncio
+    async def test_user_history_success_regular_user_other_user(
+        self, admin_client: AsyncClient, user_client: AsyncClient
+    ) -> None:
+        """Test that regular users can get user history for other users (they have user:read permission)."""
+        from freezegun import freeze_time
+
+        # Arrange - create a user as admin first with controlled time
+        with freeze_time("2025-08-16T12:00:00"):
+            user_data = {
+                "username": "historyreadableuser",
+                "email": "historyreadable@example.com",
+                "first_name": "History",
+                "last_name": "Readable",
+                "password": "password123",  # pragma: allowlist secret
+            }
+
+            create_response = await admin_client.post(
+                "/v1/users/", json=user_data
+            )
+            assert create_response.status_code == 200
+
+            user_id = create_response.json()["user_id"]
+
+        # Act - get user history with regular user permissions (should succeed with 200)
+        with freeze_time("2025-08-16T12:01:00"):
+            response = await user_client.get(
+                f"/v1/users/{user_id}/history/?timestamp=2025-08-16T12:00:30"
+            )
+
+        # Assert
+        assert response.status_code == 200
+        response_data = response.json()
+
+        # Check response structure - user data is at the top level, not nested under "user"
+        assert "id" in response_data
+        assert "username" in response_data
+        assert "email" in response_data
+        assert "first_name" in response_data
+        assert "last_name" in response_data
+        assert "created_at" in response_data
+
+        # Check user data values
+        assert response_data["id"] == user_id
+        assert response_data["username"] == "historyreadableuser"
+        assert response_data["email"] == "historyreadable@example.com"
+        assert response_data["first_name"] == "History"
+        assert response_data["last_name"] == "Readable"
+
+        # Check that created_at matches our frozen time
+        assert response_data["created_at"] == "2025-08-16T12:00:00Z"
+
+    @pytest.mark.asyncio
     async def test_user_history_at_different_timestamps(
-        self, async_client_with_test_db: AsyncClient, freezer: Any
+        self, admin_client: AsyncClient, freezer: Any
     ) -> None:
         """Test user history at different timestamps using freezegun."""
         # Arrange - create a user at a specific time
@@ -992,7 +1409,7 @@ class TestUserHistoricalQueries:
 
         # Create user at 2025-01-01 10:00:00
         with freezer("2025-01-01 10:00:00"):
-            create_response = await async_client_with_test_db.post(
+            create_response = await admin_client.post(
                 "/v1/users/", json=user_data
             )
             assert create_response.status_code == 200
@@ -1004,14 +1421,14 @@ class TestUserHistoricalQueries:
                 "first_name": "Updated",
                 "email": "updated@example.com",
             }
-            update_response = await async_client_with_test_db.put(
+            update_response = await admin_client.put(
                 f"/v1/users/{user_id}/", json=update_data
             )
             assert update_response.status_code == 200
 
         # Test 1: Get user state at creation time (should have original data)
         with freezer("2025-01-01 10:30:00"):
-            response = await async_client_with_test_db.get(
+            response = await admin_client.get(
                 f"/v1/users/{user_id}/history/?timestamp=2025-01-01T10:30:00"
             )
             assert response.status_code == 200
@@ -1024,7 +1441,7 @@ class TestUserHistoricalQueries:
 
         # Test 2: Get user state after update (should have updated data)
         with freezer("2025-01-01 11:30:00"):
-            response = await async_client_with_test_db.get(
+            response = await admin_client.get(
                 f"/v1/users/{user_id}/history/?timestamp=2025-01-01T11:30:00"
             )
             assert response.status_code == 200
@@ -1037,7 +1454,7 @@ class TestUserHistoricalQueries:
 
         # Test 3: Get user state before creation (should return 404)
         with freezer("2025-01-01 09:00:00"):
-            response = await async_client_with_test_db.get(
+            response = await admin_client.get(
                 f"/v1/users/{user_id}/history/?timestamp=2025-01-01T09:00:00"
             )
             assert response.status_code == 404

@@ -564,16 +564,6 @@ class TestInfrastructureFactory:
         assert result.factory == factory
 
     @pytest.mark.asyncio
-    async def test_create_password_changed_projection(
-        self, factory: InfrastructureFactory
-    ) -> None:
-        """Test creating PasswordChangedProjection."""
-        result = factory.create_password_changed_projection()
-
-        assert isinstance(result, ProjectionWrapper)
-        assert result.factory == factory
-
-    @pytest.mark.asyncio
     async def test_create_user_created_email_projection(
         self, factory: InfrastructureFactory
     ) -> None:

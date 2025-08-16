@@ -15,6 +15,7 @@ from event_sourcing.application.commands.user.update_user import (
 from event_sourcing.dto import EventDTO, EventFactory
 from event_sourcing.dto.snapshot import UserSnapshotDTO
 from event_sourcing.enums import AggregateTypeEnum
+from event_sourcing.infrastructure.enums import HashingMethod
 
 
 @pytest.fixture
@@ -52,6 +53,7 @@ def user_created_event() -> EventDTO:
         first_name="Test",
         last_name="User",
         password_hash="hashed_password",  # noqa: S106  # pragma: allowlist secret
+        hashing_method=HashingMethod.BCRYPT,
         revision=1,
         timestamp=datetime(2023, 1, 1, 12, 0, 0, tzinfo=timezone.utc),
     )
@@ -76,6 +78,7 @@ def user_password_changed_event() -> EventDTO:
     return EventFactory.create_password_changed(
         aggregate_id=uuid.UUID("11111111-1111-1111-1111-111111111111"),
         password_hash="new_password",  # noqa: S106  # pragma: allowlist secret
+        hashing_method=HashingMethod.BCRYPT,
         revision=3,
         timestamp=datetime(2023, 1, 3, 12, 0, 0, tzinfo=timezone.utc),
     )

@@ -15,6 +15,7 @@ from event_sourcing.application.commands.user.delete_user import (
 from event_sourcing.dto import EventDTO, EventFactory
 from event_sourcing.dto.snapshot import UserSnapshotDTO
 from event_sourcing.enums import AggregateTypeEnum
+from event_sourcing.infrastructure.enums import HashingMethod
 
 
 @pytest.fixture
@@ -49,6 +50,7 @@ def user_created_event() -> EventDTO:
         first_name="Test",
         last_name="User",
         password_hash="hashed_password",  # noqa: S106  # pragma: allowlist secret
+        hashing_method=HashingMethod.BCRYPT,
         revision=1,
         timestamp=datetime(2023, 1, 1, 12, 0, 0, tzinfo=timezone.utc),
     )

@@ -17,6 +17,7 @@ from event_sourcing.dto.events.user.user_created import UserCreatedDataV1
 from event_sourcing.dto.events.user.user_updated import UserUpdatedDataV1
 from event_sourcing.dto.user import UserReadModelData
 from event_sourcing.enums import AggregateTypeEnum, EventType
+from event_sourcing.infrastructure.enums import HashingMethod
 
 if TYPE_CHECKING:
     from event_sourcing.infrastructure.event_store.psql import (
@@ -69,6 +70,7 @@ class TestEventStoreReadModelIntegration:
                 first_name="Test",
                 last_name="User",
                 password_hash="hashed_password",  # pragma: allowlist secret
+                hashing_method=HashingMethod.BCRYPT,
             ),
         )
 
@@ -272,6 +274,7 @@ class TestEventStoreReadModelIntegration:
                     first_name="User",
                     last_name="One",
                     password_hash="hash1",  # pragma: allowlist secret
+                    hashing_method=HashingMethod.BCRYPT,
                 ),
             )
         ]
@@ -290,6 +293,7 @@ class TestEventStoreReadModelIntegration:
                     first_name="User",
                     last_name="Two",
                     password_hash="hash2",  # pragma: allowlist secret
+                    hashing_method=HashingMethod.BCRYPT,
                 ),
             )
         ]
@@ -363,6 +367,7 @@ class TestEventStoreReadModelIntegration:
                     first_name="Time",
                     last_name="User",
                     password_hash="hash",  # pragma: allowlist secret
+                    hashing_method=HashingMethod.BCRYPT,
                 ),
             ),
             EventDTO(
@@ -444,6 +449,7 @@ class TestEventStoreReadModelIntegration:
                     first_name="Rev",
                     last_name="User",
                     password_hash="hash",  # pragma: allowlist secret
+                    hashing_method=HashingMethod.BCRYPT,
                 ),
             ),
             EventDTO(

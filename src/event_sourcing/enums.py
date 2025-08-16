@@ -1,6 +1,13 @@
 from enum import Enum
 
 
+class Role(str, Enum):
+    """User roles in the system."""
+
+    ADMIN = "admin"
+    USER = "user"
+
+
 class EventType(str, Enum):
     """Enum for event types (ALL_CAPS for DB consistency)"""
 

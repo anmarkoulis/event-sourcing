@@ -1,7 +1,13 @@
 # General
 # ------------------------------------------------------------------------------
 ENV=local
-USE_AUTH=false
+SECRET_KEY=FAKE  # pragma: allowlist secret
+
+# Admin user configuration
+# ------------------------------------------------------------------------------
+ADMIN_USERNAME=admin
+ADMIN_PASSWORD=admin  # pragma: allowlist secret
+ADMIN_EMAIL=admin@admin.com
 
 # SQS
 # ------------------------------------------------------------------------------

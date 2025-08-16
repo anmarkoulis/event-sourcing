@@ -19,5 +19,9 @@ class ReadModel(ABC):
         """Get a specific user by ID"""
 
     @abstractmethod
+    async def get_user_by_username(self, username: str) -> Optional[UserDTO]:
+        """Get a specific user by username."""
+
+    @abstractmethod
     async def delete_user(self, user_id: str) -> None:
         """Delete user from read model"""

@@ -15,6 +15,7 @@ from event_sourcing.dto.events.user.user_created import (
 )
 from event_sourcing.dto.user import UserReadModelData
 from event_sourcing.enums import EventType
+from event_sourcing.infrastructure.enums import HashingMethod
 
 
 class TestUserCreatedProjection:
@@ -45,6 +46,7 @@ class TestUserCreatedProjection:
                 first_name="Test",
                 last_name="User",
                 password_hash="hashed_password",  # noqa: S106  # pragma: allowlist secret
+                hashing_method=HashingMethod.BCRYPT,
             ),
         )
 
@@ -77,9 +79,6 @@ class TestUserCreatedProjection:
         assert saved_data.email == user_created_event.data.email
         assert saved_data.first_name == user_created_event.data.first_name
         assert saved_data.last_name == user_created_event.data.last_name
-        assert (
-            saved_data.password_hash == user_created_event.data.password_hash
-        )
         assert saved_data.created_at == user_created_event.timestamp
         assert saved_data.updated_at is None
 
@@ -136,9 +135,6 @@ class TestUserCreatedProjection:
         assert saved_data.email == user_created_event.data.email
         assert saved_data.first_name == user_created_event.data.first_name
         assert saved_data.last_name == user_created_event.data.last_name
-        assert (
-            saved_data.password_hash == user_created_event.data.password_hash
-        )
 
     @pytest.mark.asyncio
     async def test_handle_with_different_event_data(
@@ -158,6 +154,7 @@ class TestUserCreatedProjection:
                 first_name="Another",
                 last_name="Person",
                 password_hash="different_hash",  # noqa: S106  # pragma: allowlist secret
+                hashing_method=HashingMethod.BCRYPT,
             ),
         )
 
@@ -168,7 +165,6 @@ class TestUserCreatedProjection:
         assert saved_data.email == "another@example.com"
         assert saved_data.first_name == "Another"
         assert saved_data.last_name == "Person"
-        assert saved_data.password_hash == "different_hash"  # noqa: S105  # pragma: allowlist secret
         assert saved_data.created_at == event.timestamp
 
     @pytest.mark.asyncio
@@ -189,6 +185,7 @@ class TestUserCreatedProjection:
                 first_name="",
                 last_name="",
                 password_hash="hash",  # noqa: S106  # pragma: allowlist secret
+                hashing_method=HashingMethod.BCRYPT,
             ),
         )
 
@@ -217,6 +214,7 @@ class TestUserCreatedProjection:
                 first_name="",  # Empty string instead of None
                 last_name="",  # Empty string instead of None
                 password_hash="hash",  # noqa: S106  # pragma: allowlist secret
+                hashing_method=HashingMethod.BCRYPT,
             ),
         )
 
@@ -244,6 +242,7 @@ class TestUserCreatedProjection:
                 first_name="José",
                 last_name="O'Connor",
                 password_hash="hash",  # noqa: S106  # pragma: allowlist secret
+                hashing_method=HashingMethod.BCRYPT,
             ),
         )
 
@@ -262,7 +261,6 @@ class TestUserCreatedProjection:
         long_email = "very_long_email_address_that_exceeds_normal_length@very_long_domain_name.com"
         long_first_name = "VeryLongFirstNameThatExceedsNormalLength"
         long_last_name = "VeryLongLastNameThatExceedsNormalLength"
-        long_password_hash = "x" * 200  # pragma: allowlist secret
 
         event = UserCreatedV1(
             id=uuid4(),
@@ -276,7 +274,8 @@ class TestUserCreatedProjection:
                 email=long_email,
                 first_name=long_first_name,
                 last_name=long_last_name,
-                password_hash=long_password_hash,
+                password_hash="hash",  # noqa: S106  # pragma: allowlist secret
+                hashing_method=HashingMethod.BCRYPT,
             ),
         )
 
@@ -287,4 +286,4 @@ class TestUserCreatedProjection:
         assert saved_data.email == long_email
         assert saved_data.first_name == long_first_name
         assert saved_data.last_name == long_last_name
-        assert saved_data.password_hash == long_password_hash
+        assert saved_data.created_at == event.timestamp

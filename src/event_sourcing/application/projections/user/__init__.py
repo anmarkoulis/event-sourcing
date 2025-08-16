@@ -1,4 +1,3 @@
-from .password_changed import PasswordChangedProjection
 from .user_created import UserCreatedProjection
 from .user_created_email import UserCreatedEmailProjection
 from .user_deleted import UserDeletedProjection
@@ -9,5 +8,4 @@ __all__ = [
     "UserCreatedEmailProjection",
     "UserUpdatedProjection",
     "UserDeletedProjection",
-    "PasswordChangedProjection",
 ]

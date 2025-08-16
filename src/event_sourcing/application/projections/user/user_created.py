@@ -28,7 +28,7 @@ class UserCreatedProjection(Projection):
                 email=event.data.email,
                 first_name=event.data.first_name,
                 last_name=event.data.last_name,
-                password_hash=event.data.password_hash,
+                role=event.data.role,
                 created_at=event.timestamp,
             )
 
