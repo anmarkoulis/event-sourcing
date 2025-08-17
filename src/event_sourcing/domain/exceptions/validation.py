@@ -2,10 +2,10 @@
 
 from typing import Optional
 
-from .domain import DomainException
+from .domain import DomainError
 
 
-class ValidationError(DomainException):
+class ValidationError(DomainError):
     """Exception raised when validation fails."""
 
     def __init__(
@@ -22,7 +22,7 @@ class UserValidationError(ValidationError):
     """Exception raised when user validation fails."""
 
 
-class UsernameTooShort(UserValidationError):
+class UsernameTooShortError(UserValidationError):
     """Exception raised when username is too short."""
 
     def __init__(self, username: str, min_length: int = 3) -> None:
@@ -33,14 +33,14 @@ class UsernameTooShort(UserValidationError):
         )
 
 
-class PasswordRequired(UserValidationError):
+class PasswordRequiredError(UserValidationError):
     """Exception raised when password is not provided."""
 
     def __init__(self) -> None:
         super().__init__("Password is required", "password")
 
 
-class InvalidEmailFormat(UserValidationError):
+class InvalidEmailFormatError(UserValidationError):
     """Exception raised when email format is invalid."""
 
     def __init__(self, email: str) -> None:
@@ -49,21 +49,21 @@ class InvalidEmailFormat(UserValidationError):
         )
 
 
-class NoFieldsToUpdate(UserValidationError):
+class NoFieldsToUpdateError(UserValidationError):
     """Exception raised when no fields are provided for update."""
 
     def __init__(self) -> None:
         super().__init__("No fields provided for update", "update_fields")
 
 
-class NewPasswordRequired(UserValidationError):
+class NewPasswordRequiredError(UserValidationError):
     """Exception raised when new password is not provided."""
 
     def __init__(self) -> None:
         super().__init__("New password is required", "new_password")
 
 
-class PasswordMustBeDifferent(UserValidationError):
+class PasswordMustBeDifferentError(UserValidationError):
     """Exception raised when new password is same as current password."""
 
     def __init__(self) -> None:

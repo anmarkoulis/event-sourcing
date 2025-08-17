@@ -8,9 +8,9 @@ import pytest
 
 from event_sourcing.domain.aggregates.user import UserAggregate
 from event_sourcing.domain.exceptions import (
-    InvalidEmailFormat,
-    PasswordRequired,
-    UsernameTooShort,
+    InvalidEmailFormatError,
+    PasswordRequiredError,
+    UsernameTooShortError,
 )
 from event_sourcing.dto import EventDTO, EventFactory
 from event_sourcing.enums import EventType, HashingMethod
@@ -114,10 +114,10 @@ class TestUserAggregate:
         user_aggregate.create_user(**valid_user_data)
 
         # Try to create another user with same aggregate
-        from event_sourcing.domain.exceptions import UserAlreadyExists
+        from event_sourcing.domain.exceptions import UserAlreadyExistsError
 
         with pytest.raises(
-            UserAlreadyExists, match="User 'testuser' already exists"
+            UserAlreadyExistsError, match="User 'testuser' already exists"
         ):
             user_aggregate.create_user(**valid_user_data)
 
@@ -128,7 +128,7 @@ class TestUserAggregate:
         invalid_data = valid_user_data.copy()
         invalid_data["username"] = "ab"  # Less than 3 characters
 
-        with pytest.raises(UsernameTooShort):
+        with pytest.raises(UsernameTooShortError):
             user_aggregate.create_user(**invalid_data)
 
     def test_create_user_invalid_username_empty(
@@ -138,7 +138,7 @@ class TestUserAggregate:
         invalid_data = valid_user_data.copy()
         invalid_data["username"] = ""
 
-        with pytest.raises(UsernameTooShort):
+        with pytest.raises(UsernameTooShortError):
             user_aggregate.create_user(**invalid_data)
 
     def test_create_user_invalid_email_no_at(
@@ -148,7 +148,7 @@ class TestUserAggregate:
         invalid_data = valid_user_data.copy()
         invalid_data["email"] = "invalid-email"
 
-        with pytest.raises(InvalidEmailFormat):
+        with pytest.raises(InvalidEmailFormatError):
             user_aggregate.create_user(**invalid_data)
 
     def test_create_user_invalid_email_empty(
@@ -158,7 +158,7 @@ class TestUserAggregate:
         invalid_data = valid_user_data.copy()
         invalid_data["email"] = ""
 
-        with pytest.raises(InvalidEmailFormat):
+        with pytest.raises(InvalidEmailFormatError):
             user_aggregate.create_user(**invalid_data)
 
     def test_create_user_no_password(
@@ -168,7 +168,7 @@ class TestUserAggregate:
         invalid_data = valid_user_data.copy()
         invalid_data["password_hash"] = ""
 
-        with pytest.raises(PasswordRequired):
+        with pytest.raises(PasswordRequiredError):
             user_aggregate.create_user(**invalid_data)
 
     def test_update_user_success(
@@ -226,10 +226,10 @@ class TestUserAggregate:
         # First create a user
         user_aggregate.create_user(**valid_user_data)
 
-        from event_sourcing.domain.exceptions import NoFieldsToUpdate
+        from event_sourcing.domain.exceptions import NoFieldsToUpdateError
 
         with pytest.raises(
-            NoFieldsToUpdate, match="No fields provided for update"
+            NoFieldsToUpdateError, match="No fields provided for update"
         ):
             user_aggregate.update_user()
 
@@ -240,9 +240,9 @@ class TestUserAggregate:
         # First create a user
         user_aggregate.create_user(**valid_user_data)
 
-        from event_sourcing.domain.exceptions import InvalidEmailFormat
+        from event_sourcing.domain.exceptions import InvalidEmailFormatError
 
-        with pytest.raises(InvalidEmailFormat, match="invalid-email"):
+        with pytest.raises(InvalidEmailFormatError, match="invalid-email"):
             user_aggregate.update_user(email="invalid-email")
 
     def test_update_user_deleted_user(
@@ -256,10 +256,12 @@ class TestUserAggregate:
         user_aggregate.delete_user()
 
         # Try to update deleted user
-        from event_sourcing.domain.exceptions import CannotUpdateDeletedUser
+        from event_sourcing.domain.exceptions import (
+            CannotUpdateDeletedUserError,
+        )
 
         with pytest.raises(
-            CannotUpdateDeletedUser, match="Cannot update deleted user:"
+            CannotUpdateDeletedUserError, match="Cannot update deleted user:"
         ):
             user_aggregate.update_user(first_name="Updated")
 
@@ -293,10 +295,10 @@ class TestUserAggregate:
         # First create a user
         user_aggregate.create_user(**valid_user_data)
 
-        from event_sourcing.domain.exceptions import NewPasswordRequired
+        from event_sourcing.domain.exceptions import NewPasswordRequiredError
 
         with pytest.raises(
-            NewPasswordRequired, match="New password is required"
+            NewPasswordRequiredError, match="New password is required"
         ):
             user_aggregate.change_password("", HashingMethod.BCRYPT)
 
@@ -312,11 +314,11 @@ class TestUserAggregate:
 
         # Try to change password
         from event_sourcing.domain.exceptions import (
-            CannotChangePasswordForDeletedUser,
+            CannotChangePasswordForDeletedUserError,
         )
 
         with pytest.raises(
-            CannotChangePasswordForDeletedUser,
+            CannotChangePasswordForDeletedUserError,
             match="Cannot change password for deleted user:",
         ):
             user_aggregate.change_password(
@@ -353,10 +355,10 @@ class TestUserAggregate:
         user_aggregate.delete_user()
 
         # Try to delete again
-        from event_sourcing.domain.exceptions import UserAlreadyDeleted
+        from event_sourcing.domain.exceptions import UserAlreadyDeletedError
 
         with pytest.raises(
-            UserAlreadyDeleted, match="User .* is already deleted"
+            UserAlreadyDeletedError, match="User .* is already deleted"
         ):
             user_aggregate.delete_user()
 

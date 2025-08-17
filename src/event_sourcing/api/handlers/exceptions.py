@@ -9,18 +9,18 @@ from starlette.exceptions import HTTPException as StarletteHTTPException
 from starlette.responses import Response
 
 from event_sourcing.domain.exceptions import (
-    BusinessRuleViolation,
-    DomainException,
-    EmailAlreadyExists,
-    InvalidEmailFormat,
-    PasswordRequired,
-    ResourceConflict,
-    ResourceNotFound,
-    UserBusinessRuleViolation,
-    UserConflict,
-    UsernameAlreadyExists,
-    UsernameTooShort,
-    UserNotFound,
+    BusinessRuleViolationError,
+    DomainError,
+    EmailAlreadyExistsError,
+    InvalidEmailFormatError,
+    PasswordRequiredError,
+    ResourceConflictError,
+    ResourceNotFoundError,
+    UserBusinessRuleViolationError,
+    UserConflictError,
+    UsernameAlreadyExistsError,
+    UsernameTooShortError,
+    UserNotFoundError,
     UserValidationError,
     ValidationError,
 )
@@ -32,30 +32,34 @@ def configure_exception_handlers(app: FastAPI) -> None:
     """Configure exception handlers for the FastAPI application."""
 
     # Domain exception handlers
-    app.add_exception_handler(DomainException, handle_domain_exception)
+    app.add_exception_handler(DomainError, handle_domain_exception)
     app.add_exception_handler(ValidationError, handle_validation_error)
     app.add_exception_handler(
-        BusinessRuleViolation, handle_business_rule_violation
+        BusinessRuleViolationError, handle_business_rule_violation
     )
-    app.add_exception_handler(ResourceNotFound, handle_resource_not_found)
-    app.add_exception_handler(ResourceConflict, handle_resource_conflict)
+    app.add_exception_handler(ResourceNotFoundError, handle_resource_not_found)
+    app.add_exception_handler(ResourceConflictError, handle_resource_conflict)
 
     # User-specific exception handlers
     app.add_exception_handler(
         UserValidationError, handle_user_validation_error
     )
     app.add_exception_handler(
-        UserBusinessRuleViolation, handle_user_business_rule_violation
+        UserBusinessRuleViolationError, handle_user_business_rule_violation
     )
-    app.add_exception_handler(UserNotFound, handle_user_not_found)
-    app.add_exception_handler(UserConflict, handle_user_conflict)
+    app.add_exception_handler(UserNotFoundError, handle_user_not_found)
+    app.add_exception_handler(UserConflictError, handle_user_conflict)
     app.add_exception_handler(
-        UsernameAlreadyExists, handle_username_already_exists
+        UsernameAlreadyExistsError, handle_username_already_exists
     )
-    app.add_exception_handler(EmailAlreadyExists, handle_email_already_exists)
-    app.add_exception_handler(UsernameTooShort, handle_username_too_short)
-    app.add_exception_handler(PasswordRequired, handle_password_required)
-    app.add_exception_handler(InvalidEmailFormat, handle_invalid_email_format)
+    app.add_exception_handler(
+        EmailAlreadyExistsError, handle_email_already_exists
+    )
+    app.add_exception_handler(UsernameTooShortError, handle_username_too_short)
+    app.add_exception_handler(PasswordRequiredError, handle_password_required)
+    app.add_exception_handler(
+        InvalidEmailFormatError, handle_invalid_email_format
+    )
 
     # FastAPI built-in exception handlers
     app.add_exception_handler(
@@ -76,7 +80,7 @@ def configure_exception_handlers(app: FastAPI) -> None:
 
 
 async def handle_domain_exception(
-    request: Request, exc: DomainException
+    request: Request, exc: DomainError
 ) -> JSONResponse:
     """Handle generic domain exceptions."""
     logger.warning(
@@ -116,7 +120,7 @@ async def handle_validation_error(
 
 
 async def handle_business_rule_violation(
-    request: Request, exc: BusinessRuleViolation
+    request: Request, exc: BusinessRuleViolationError
 ) -> JSONResponse:
     """Handle business rule violations."""
     logger.warning(
@@ -137,7 +141,7 @@ async def handle_business_rule_violation(
 
 
 async def handle_resource_not_found(
-    request: Request, exc: ResourceNotFound
+    request: Request, exc: ResourceNotFoundError
 ) -> JSONResponse:
     """Handle resource not found errors."""
     logger.info(
@@ -161,7 +165,7 @@ async def handle_resource_not_found(
 
 
 async def handle_resource_conflict(
-    request: Request, exc: ResourceConflict
+    request: Request, exc: ResourceConflictError
 ) -> JSONResponse:
     """Handle resource conflicts."""
     logger.warning(
@@ -190,56 +194,56 @@ async def handle_user_validation_error(
 
 
 async def handle_user_business_rule_violation(
-    request: Request, exc: UserBusinessRuleViolation
+    request: Request, exc: UserBusinessRuleViolationError
 ) -> JSONResponse:
     """Handle user business rule violations."""
     return await handle_business_rule_violation(request, exc)
 
 
 async def handle_user_not_found(
-    request: Request, exc: UserNotFound
+    request: Request, exc: UserNotFoundError
 ) -> JSONResponse:
     """Handle user not found errors."""
     return await handle_resource_not_found(request, exc)
 
 
 async def handle_user_conflict(
-    request: Request, exc: UserConflict
+    request: Request, exc: UserConflictError
 ) -> JSONResponse:
     """Handle user conflicts."""
     return await handle_resource_conflict(request, exc)
 
 
 async def handle_username_already_exists(
-    request: Request, exc: UsernameAlreadyExists
+    request: Request, exc: UsernameAlreadyExistsError
 ) -> JSONResponse:
     """Handle username already exists errors."""
     return await handle_user_conflict(request, exc)
 
 
 async def handle_email_already_exists(
-    request: Request, exc: EmailAlreadyExists
+    request: Request, exc: EmailAlreadyExistsError
 ) -> JSONResponse:
     """Handle email already exists errors."""
     return await handle_user_conflict(request, exc)
 
 
 async def handle_username_too_short(
-    request: Request, exc: UsernameTooShort
+    request: Request, exc: UsernameTooShortError
 ) -> JSONResponse:
     """Handle username too short errors."""
     return await handle_user_validation_error(request, exc)
 
 
 async def handle_password_required(
-    request: Request, exc: PasswordRequired
+    request: Request, exc: PasswordRequiredError
 ) -> JSONResponse:
     """Handle password required errors."""
     return await handle_user_validation_error(request, exc)
 
 
 async def handle_invalid_email_format(
-    request: Request, exc: InvalidEmailFormat
+    request: Request, exc: InvalidEmailFormatError
 ) -> JSONResponse:
     """Handle invalid email format errors."""
     return await handle_user_validation_error(request, exc)

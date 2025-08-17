@@ -1,10 +1,10 @@
 """Domain exceptions package for business logic errors.
 
 This package contains all domain-specific exceptions organized by type:
-- domain: Base DomainException
+- domain: Base DomainError
 - validation: ValidationError and its children
-- business: BusinessRuleViolation and its children
-- resource: ResourceNotFound, ResourceConflict and their children
+- business: BusinessRuleViolationError and its children
+- resource: ResourceNotFoundError, ResourceConflictError and their children
 
 All exceptions are imported here to maintain backward compatibility.
 """
@@ -12,61 +12,61 @@ All exceptions are imported here to maintain backward compatibility.
 # Base domain exception
 # Business rule violation exceptions
 from .business import (
-    BusinessRuleViolation,
-    CannotChangePasswordForDeletedUser,
-    CannotUpdateDeletedUser,
-    UserAlreadyDeleted,
-    UserBusinessRuleViolation,
+    BusinessRuleViolationError,
+    CannotChangePasswordForDeletedUserError,
+    CannotUpdateDeletedUserError,
+    UserAlreadyDeletedError,
+    UserBusinessRuleViolationError,
 )
-from .domain import DomainException
+from .domain import DomainError
 
 # Resource exceptions
 from .resource import (
-    EmailAlreadyExists,
-    ResourceConflict,
-    ResourceNotFound,
-    UserAlreadyExists,
-    UserConflict,
-    UsernameAlreadyExists,
-    UserNotFound,
+    EmailAlreadyExistsError,
+    ResourceConflictError,
+    ResourceNotFoundError,
+    UserAlreadyExistsError,
+    UserConflictError,
+    UsernameAlreadyExistsError,
+    UserNotFoundError,
 )
 
 # Validation exceptions
 from .validation import (
-    InvalidEmailFormat,
-    NewPasswordRequired,
-    NoFieldsToUpdate,
-    PasswordMustBeDifferent,
-    PasswordRequired,
-    UsernameTooShort,
+    InvalidEmailFormatError,
+    NewPasswordRequiredError,
+    NoFieldsToUpdateError,
+    PasswordMustBeDifferentError,
+    PasswordRequiredError,
+    UsernameTooShortError,
     UserValidationError,
     ValidationError,
 )
 
 __all__ = [
     # Base
-    "DomainException",
+    "DomainError",
     # Validation
     "ValidationError",
     "UserValidationError",
-    "UsernameTooShort",
-    "PasswordRequired",
-    "InvalidEmailFormat",
-    "NoFieldsToUpdate",
-    "NewPasswordRequired",
-    "PasswordMustBeDifferent",
+    "UsernameTooShortError",
+    "PasswordRequiredError",
+    "InvalidEmailFormatError",
+    "NoFieldsToUpdateError",
+    "NewPasswordRequiredError",
+    "PasswordMustBeDifferentError",
     # Business
-    "BusinessRuleViolation",
-    "UserBusinessRuleViolation",
-    "CannotUpdateDeletedUser",
-    "CannotChangePasswordForDeletedUser",
-    "UserAlreadyDeleted",
+    "BusinessRuleViolationError",
+    "UserBusinessRuleViolationError",
+    "CannotUpdateDeletedUserError",
+    "CannotChangePasswordForDeletedUserError",
+    "UserAlreadyDeletedError",
     # Resource
-    "ResourceNotFound",
-    "ResourceConflict",
-    "UserNotFound",
-    "UserConflict",
-    "UsernameAlreadyExists",
-    "EmailAlreadyExists",
-    "UserAlreadyExists",
+    "ResourceNotFoundError",
+    "ResourceConflictError",
+    "UserNotFoundError",
+    "UserConflictError",
+    "UsernameAlreadyExistsError",
+    "EmailAlreadyExistsError",
+    "UserAlreadyExistsError",
 ]

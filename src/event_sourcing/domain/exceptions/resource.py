@@ -2,10 +2,10 @@
 
 from typing import Optional
 
-from .domain import DomainException
+from .domain import DomainError
 
 
-class ResourceNotFound(DomainException):
+class ResourceNotFoundError(DomainError):
     """Exception raised when a requested resource is not found."""
 
     def __init__(
@@ -20,7 +20,7 @@ class ResourceNotFound(DomainException):
         self.resource_id = resource_id
 
 
-class ResourceConflict(DomainException):
+class ResourceConflictError(DomainError):
     """Exception raised when there's a conflict with an existing resource."""
 
     def __init__(
@@ -34,7 +34,7 @@ class ResourceConflict(DomainException):
 
 
 # User-specific resource exceptions
-class UserNotFound(ResourceNotFound):
+class UserNotFoundError(ResourceNotFoundError):
     """Exception raised when a user is not found."""
 
     def __init__(
@@ -47,7 +47,7 @@ class UserNotFound(ResourceNotFound):
         self.user_id = user_id
 
 
-class UserConflict(ResourceConflict):
+class UserConflictError(ResourceConflictError):
     """Exception raised when there's a conflict with an existing user."""
 
     def __init__(
@@ -60,7 +60,7 @@ class UserConflict(ResourceConflict):
         self.conflict_field = conflict_field
 
 
-class UsernameAlreadyExists(UserConflict):
+class UsernameAlreadyExistsError(UserConflictError):
     """Exception raised when trying to create a user with an existing username."""
 
     def __init__(self, username: str) -> None:
@@ -71,7 +71,7 @@ class UsernameAlreadyExists(UserConflict):
         )
 
 
-class EmailAlreadyExists(UserConflict):
+class EmailAlreadyExistsError(UserConflictError):
     """Exception raised when trying to create a user with an existing email."""
 
     def __init__(self, email: str) -> None:
@@ -80,7 +80,7 @@ class EmailAlreadyExists(UserConflict):
         )
 
 
-class UserAlreadyExists(UserConflict):
+class UserAlreadyExistsError(UserConflictError):
     """Exception raised when trying to create a user that already exists."""
 
     def __init__(self, username: str) -> None:
