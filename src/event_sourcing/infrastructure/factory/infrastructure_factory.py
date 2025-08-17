@@ -1,5 +1,7 @@
+"""Factory for creating infrastructure components, command handlers, and query handlers."""
+
 import logging
-from typing import Any, Dict, Optional, Type
+from typing import Any, Dict, Optional
 
 from event_sourcing.infrastructure.database.session import DatabaseManager
 from event_sourcing.infrastructure.event_store import PostgreSQLEventStore
@@ -8,138 +10,22 @@ from event_sourcing.infrastructure.providers.email import (
     LoggingEmailProvider,
 )
 from event_sourcing.infrastructure.read_model import PostgreSQLReadModel
-from event_sourcing.infrastructure.unit_of_work import SQLAUnitOfWork
+
+from .command_handler_wrapper import CommandHandlerWrapper
+from .projection_wrapper import ProjectionWrapper
+from .session_manager import SessionManager
 
 logger = logging.getLogger(__name__)
 
 
-class SessionManager:
-    """Manages database session creation and lifecycle"""
-
-    def __init__(self, database_manager: DatabaseManager) -> None:
-        self.database_manager = database_manager
-        self._session: Optional[Any] = None
-
-    async def get_session(self) -> Any:
-        """Get or create a database session"""
-        if self._session is None:
-            self._session = await self.database_manager.get_session()
-        return self._session
-
-    async def close_session(self) -> None:
-        """Close the current session"""
-        if self._session:
-            await self._session.close()
-            self._session = None
-
-
-class CommandHandlerWrapper:
-    """Wrapper that manages session creation for command handlers"""
-
-    def __init__(
-        self, factory: "InfrastructureFactory", handler_class: Type
-    ) -> None:
-        self.factory = factory
-        self.handler_class = handler_class
-
-    async def _create_handler_with_session(self) -> tuple[Any, Any]:
-        """Create a fresh session and handler for this operation"""
-        session = await self.factory.session_manager.get_session()
-        uow = SQLAUnitOfWork(session)
-        event_store = PostgreSQLEventStore(session)
-
-        # Build constructor kwargs (all command handlers receive snapshot_store)
-        ctor_kwargs: Dict[str, Any] = {
-            "event_store": event_store,
-            "event_handler": self.factory.event_handler,
-            "unit_of_work": uow,
-        }
-
-        from event_sourcing.infrastructure.snapshot_store.psql_store import (
-            PsqlSnapshotStore,
-        )
-
-        logger.info("Creating snapshot store")
-        ctor_kwargs["snapshot_store"] = PsqlSnapshotStore(session)
-
-        # Add hashing service only for command handlers that need it
-        # Check if the handler class expects hashing_service parameter
-        import inspect
-
-        sig = inspect.signature(self.handler_class.__init__)
-        if "hashing_service" in sig.parameters:
-            from event_sourcing.infrastructure.security.hashing_service import (
-                BcryptHashingService,
-            )
-
-            ctor_kwargs["hashing_service"] = BcryptHashingService()
-
-        command_handler = self.handler_class(**ctor_kwargs)
-        return command_handler, session
-
-    async def handle(self, command: Any) -> Any:
-        """Handle the command with proper session management"""
-        logger.info(
-            f"Wrapper: Starting command handler for command: {type(command).__name__}"
-        )
-        command_handler, session = await self._create_handler_with_session()
-        try:
-            logger.info(f"Wrapper: Calling command handler")
-            result = await command_handler.handle(command)
-            logger.info(f"Wrapper: Command handler completed successfully")
-            return result
-        except Exception as e:
-            logger.error(f"Wrapper: Error in command handler: {e}")
-            raise
-        finally:
-            logger.info(f"Wrapper: Closing session")
-            await session.close()
-
-
-class ProjectionWrapper:
-    """Wrapper that manages session creation for projections"""
-
-    def __init__(
-        self, factory: "InfrastructureFactory", projection_class: Type
-    ) -> None:
-        self.factory = factory
-        self.projection_class = projection_class
-
-    async def _create_projection_with_session(self) -> tuple[Any, Any]:
-        """Create a fresh session and projection for this operation"""
-        session = await self.factory.session_manager.get_session()
-        read_model = PostgreSQLReadModel(session)
-
-        # Check if the projection class expects unit_of_work parameter
-        import inspect
-
-        sig = inspect.signature(self.projection_class.__init__)
-        if "unit_of_work" in sig.parameters:
-            uow = SQLAUnitOfWork(session)
-            projection = self.projection_class(
-                read_model=read_model,
-                unit_of_work=uow,
-            )
-        else:
-            projection = self.projection_class(read_model=read_model)
-
-        return projection, session
-
-    async def handle(self, event: Any) -> Any:
-        """Handle the event with proper session management"""
-        projection, session = await self._create_projection_with_session()
-        try:
-            # The projection will handle its own transaction via Unit of Work
-            return await projection.handle(event)
-        finally:
-            # Session is managed by the Unit of Work, just close it
-            await session.close()
-
-
 class InfrastructureFactory:
-    """Factory for creating infrastructure components, command handlers, and query handlers"""
+    """Factory for creating infrastructure components, command handlers, and query handlers."""
 
-    def __init__(self, database_url: str):
+    def __init__(self, database_url: str) -> None:
+        """Initialize InfrastructureFactory.
+
+        :param database_url: Database connection URL.
+        """
         self.database_url = database_url
         self._database_manager: Optional[DatabaseManager] = None
         self._event_handler: Optional[Any] = None
@@ -150,7 +36,10 @@ class InfrastructureFactory:
 
     @property
     def database_manager(self) -> DatabaseManager:
-        """Get or create database manager"""
+        """Get or create database manager.
+
+        :return: Database manager instance.
+        """
         if self._database_manager is None:
             logger.info("Creating database manager")
             self._database_manager = DatabaseManager(self.database_url)
@@ -158,14 +47,20 @@ class InfrastructureFactory:
 
     @property
     def session_manager(self) -> SessionManager:
-        """Get or create session manager"""
+        """Get or create session manager.
+
+        :return: Session manager instance.
+        """
         if self._session_manager is None:
             self._session_manager = SessionManager(self.database_manager)
         return self._session_manager
 
     @property
     def event_handler(self) -> Any:
-        """Get or create event handler"""
+        """Get or create event handler.
+
+        :return: Event handler instance.
+        """
         if self._event_handler is None:
             logger.info("Creating event handler")
             # Dynamic import to avoid circular dependency
@@ -182,7 +77,7 @@ class InfrastructureFactory:
         return self._event_handler
 
     def _initialize_email_providers(self) -> None:
-        """Initialize email providers by registering them with the factory"""
+        """Initialize email providers by registering them with the factory."""
         logger.info("Initializing email providers")
         EmailProviderFactory.register_provider("logging", LoggingEmailProvider)
 
@@ -203,7 +98,10 @@ class InfrastructureFactory:
         )
 
     def create_create_user_command_handler(self) -> Any:
-        """Create CreateUserCommandHandler with all dependencies"""
+        """Create CreateUserCommandHandler with all dependencies.
+
+        :return: Wrapped command handler.
+        """
         logger.info("Creating CreateUserCommandHandler")
         from event_sourcing.application.commands.handlers.user import (
             CreateUserCommandHandler,
@@ -212,7 +110,10 @@ class InfrastructureFactory:
         return CommandHandlerWrapper(self, CreateUserCommandHandler)
 
     def create_update_user_command_handler(self) -> Any:
-        """Create UpdateUserCommandHandler with all dependencies"""
+        """Create UpdateUserCommandHandler with all dependencies.
+
+        :return: Wrapped command handler.
+        """
         logger.info("Creating UpdateUserCommandHandler")
         from event_sourcing.application.commands.handlers.user import (
             UpdateUserCommandHandler,
@@ -220,10 +121,11 @@ class InfrastructureFactory:
 
         return CommandHandlerWrapper(self, UpdateUserCommandHandler)
 
-    # Removed: create_change_username_command_handler
-
     def create_change_password_command_handler(self) -> Any:
-        """Create ChangePasswordCommandHandler with all dependencies"""
+        """Create ChangePasswordCommandHandler with all dependencies.
+
+        :return: Wrapped command handler.
+        """
         logger.info("Creating ChangePasswordCommandHandler")
         from event_sourcing.application.commands.handlers.user import (
             ChangePasswordCommandHandler,
@@ -232,7 +134,10 @@ class InfrastructureFactory:
         return CommandHandlerWrapper(self, ChangePasswordCommandHandler)
 
     def create_delete_user_command_handler(self) -> Any:
-        """Create DeleteUserCommandHandler with all dependencies"""
+        """Create DeleteUserCommandHandler with all dependencies.
+
+        :return: Wrapped command handler.
+        """
         logger.info("Creating DeleteUserCommandHandler")
         from event_sourcing.application.commands.handlers.user import (
             DeleteUserCommandHandler,
@@ -240,13 +145,11 @@ class InfrastructureFactory:
 
         return CommandHandlerWrapper(self, DeleteUserCommandHandler)
 
-    # Removed: create_request_password_reset_command_handler
-
-    # Removed: create_complete_password_reset_command_handler
-
-    # User Projection Factory Methods
     def create_user_created_projection(self) -> Any:
-        """Create UserCreatedProjection with read model dependency"""
+        """Create UserCreatedProjection with read model dependency.
+
+        :return: Wrapped projection.
+        """
         logger.info("Creating UserCreatedProjection")
         # Dynamic import to avoid circular dependency
         from event_sourcing.application.projections.user import (
@@ -256,7 +159,10 @@ class InfrastructureFactory:
         return ProjectionWrapper(self, UserCreatedProjection)
 
     def create_user_updated_projection(self) -> Any:
-        """Create UserUpdatedProjection with read model dependency"""
+        """Create UserUpdatedProjection with read model dependency.
+
+        :return: Wrapped projection.
+        """
         logger.info("Creating UserUpdatedProjection")
         # Dynamic import to avoid circular dependency
         from event_sourcing.application.projections.user import (
@@ -266,7 +172,10 @@ class InfrastructureFactory:
         return ProjectionWrapper(self, UserUpdatedProjection)
 
     def create_user_deleted_projection(self) -> Any:
-        """Create UserDeletedProjection with read model dependency"""
+        """Create UserDeletedProjection with read model dependency.
+
+        :return: Wrapped projection.
+        """
         logger.info("Creating UserDeletedProjection")
         # Dynamic import to avoid circular dependency
         from event_sourcing.application.projections.user import (
@@ -275,16 +184,11 @@ class InfrastructureFactory:
 
         return ProjectionWrapper(self, UserDeletedProjection)
 
-    # Removed: create_username_changed_projection
-
-    # Removed: create_password_changed_projection
-
-    # Removed: create_password_reset_requested_projection
-
-    # Removed: create_password_reset_completed_projection
-
     def create_user_created_email_projection(self) -> Any:
-        """Create UserCreatedEmailProjection with email provider dependency"""
+        """Create UserCreatedEmailProjection with email provider dependency.
+
+        :return: Email projection instance.
+        """
         logger.info("Creating UserCreatedEmailProjection")
         # Dynamic import to avoid circular dependency
         from event_sourcing.application.projections.user import (
@@ -298,9 +202,11 @@ class InfrastructureFactory:
         projection = UserCreatedEmailProjection(email_provider=email_provider)
         return projection
 
-    # User Query Handler Factory Methods
     def create_get_user_query_handler(self) -> Any:
-        """Create GetUserQueryHandler with read model dependency"""
+        """Create GetUserQueryHandler with read model dependency.
+
+        :return: Wrapped query handler.
+        """
         logger.info("Creating GetUserQueryHandler")
         # Dynamic import to avoid circular dependency
         from event_sourcing.application.queries.handlers.user import (
@@ -313,14 +219,21 @@ class InfrastructureFactory:
                 self.factory = factory
 
             async def _create_handler_with_session(self) -> tuple[Any, Any]:
-                """Create a fresh session and handler for this operation"""
+                """Create a fresh session and handler for this operation.
+
+                :return: Tuple of (query_handler, session).
+                """
                 session = await self.factory.session_manager.get_session()
                 read_model = PostgreSQLReadModel(session)
                 query_handler = GetUserQueryHandler(read_model=read_model)
                 return query_handler, session
 
             async def handle(self, query: Any) -> Any:
-                """Handle the query with proper session management"""
+                """Handle the query with proper session management.
+
+                :param query: Query to handle.
+                :return: Result from query handler.
+                """
                 (
                     query_handler,
                     session,
@@ -333,7 +246,10 @@ class InfrastructureFactory:
         return QueryHandlerWrapper(self)
 
     def create_get_user_history_query_handler(self) -> Any:
-        """Create GetUserHistoryQueryHandler with event store dependency"""
+        """Create GetUserHistoryQueryHandler with event store dependency.
+
+        :return: Wrapped query handler.
+        """
         logger.info("Creating GetUserHistoryQueryHandler")
         # Dynamic import to avoid circular dependency
         from event_sourcing.application.queries.handlers.user import (
@@ -346,7 +262,10 @@ class InfrastructureFactory:
                 self.factory = factory
 
             async def _create_handler_with_session(self) -> tuple[Any, Any]:
-                """Create a fresh session and handler for this operation"""
+                """Create a fresh session and handler for this operation.
+
+                :return: Tuple of (query_handler, session).
+                """
                 session = await self.factory.session_manager.get_session()
                 event_store = PostgreSQLEventStore(session)
                 query_handler = GetUserHistoryQueryHandler(
@@ -355,7 +274,11 @@ class InfrastructureFactory:
                 return query_handler, session
 
             async def handle(self, query: Any) -> Any:
-                """Handle the query with proper session management"""
+                """Handle the query with proper session management.
+
+                :param query: Query to handle.
+                :return: Result from query handler.
+                """
                 (
                     query_handler,
                     session,
@@ -368,7 +291,10 @@ class InfrastructureFactory:
         return QueryHandlerWrapper(self)
 
     def create_list_users_query_handler(self) -> Any:
-        """Create ListUsersQueryHandler with read model dependency"""
+        """Create ListUsersQueryHandler with read model dependency.
+
+        :return: Wrapped query handler.
+        """
         logger.info("Creating ListUsersQueryHandler")
         # Dynamic import to avoid circular dependency
         from event_sourcing.application.queries.handlers.user import (
@@ -381,14 +307,21 @@ class InfrastructureFactory:
                 self.factory = factory
 
             async def _create_handler_with_session(self) -> tuple[Any, Any]:
-                """Create a fresh session and handler for this operation"""
+                """Create a fresh session and handler for this operation.
+
+                :return: Tuple of (query_handler, session).
+                """
                 session = await self.factory.session_manager.get_session()
                 read_model = PostgreSQLReadModel(session)
                 query_handler = ListUsersQueryHandler(read_model=read_model)
                 return query_handler, session
 
             async def handle(self, query: Any) -> Any:
-                """Handle the query with proper session management"""
+                """Handle the query with proper session management.
+
+                :param query: Query to handle.
+                :return: Result from query handler.
+                """
                 (
                     query_handler,
                     session,
@@ -400,16 +333,21 @@ class InfrastructureFactory:
 
         return QueryHandlerWrapper(self)
 
-    # Legacy methods for backward compatibility
     def create_process_crm_event_command_handler(self) -> Any:
-        """Legacy method - now redirects to user handlers"""
+        """Legacy method - now redirects to user handlers.
+
+        :return: Wrapped command handler.
+        """
         logger.warning(
             "ProcessCRMEventCommandHandler is deprecated, use user handlers instead"
         )
         return self.create_create_user_command_handler()
 
     def create_backfill_entity_type_command_handler(self) -> Any:
-        """Create BackfillEntityTypeCommandHandler (no dependencies needed)"""
+        """Create BackfillEntityTypeCommandHandler (no dependencies needed).
+
+        :return: Command handler instance.
+        """
         logger.info("Creating BackfillEntityTypeCommandHandler")
         # Dynamic import to avoid circular dependency
         from event_sourcing.application.commands.handlers.backfill_entity_type import (
@@ -419,7 +357,10 @@ class InfrastructureFactory:
         return BackfillEntityTypeCommandHandler()
 
     def create_backfill_specific_entity_command_handler(self) -> Any:
-        """Create BackfillSpecificEntityCommandHandler (no dependencies needed)"""
+        """Create BackfillSpecificEntityCommandHandler (no dependencies needed).
+
+        :return: Command handler instance.
+        """
         logger.info("Creating BackfillSpecificEntityCommandHandler")
         # Dynamic import to avoid circular dependency
         from event_sourcing.application.commands.handlers.backfill_specific_entity import (
@@ -428,23 +369,31 @@ class InfrastructureFactory:
 
         return BackfillSpecificEntityCommandHandler()
 
-    # Query Handler Factory Methods (legacy - will be updated for users)
     def create_get_client_query_handler(self) -> Any:
-        """Legacy method - placeholder for user queries"""
+        """Legacy method - placeholder for user queries.
+
+        :return: None (deprecated).
+        """
         logger.warning(
             "GetClientQueryHandler is deprecated, use user queries instead"
         )
         return None
 
     def create_search_clients_query_handler(self) -> Any:
-        """Legacy method - placeholder for user queries"""
+        """Legacy method - placeholder for user queries.
+
+        :return: None (deprecated).
+        """
         logger.warning(
             "SearchClientsQueryHandler is deprecated, use user queries instead"
         )
         return None
 
     def create_get_client_history_query_handler(self) -> Any:
-        """Legacy method - placeholder for user queries"""
+        """Legacy method - placeholder for user queries.
+
+        :return: None (deprecated).
+        """
         logger.warning(
             "GetClientHistoryQueryHandler is deprecated, use user queries instead"
         )
@@ -452,7 +401,10 @@ class InfrastructureFactory:
 
     @property
     def auth_service(self) -> Any:
-        """Get or create authentication service."""
+        """Get or create authentication service.
+
+        :return: Authentication service instance.
+        """
         if not hasattr(self, "_auth_service"):
             logger.info("Creating auth service")
 
@@ -475,7 +427,7 @@ class InfrastructureFactory:
         return self._auth_service
 
     async def close(self) -> None:
-        """Close all infrastructure components"""
+        """Close all infrastructure components."""
         logger.info("Closing infrastructure components")
 
         if self._database_manager:
