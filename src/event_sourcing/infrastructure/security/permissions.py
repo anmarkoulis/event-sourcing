@@ -7,10 +7,9 @@ from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 
 from event_sourcing.dto.user import UserDTO
 from event_sourcing.enums import Permission
-from event_sourcing.infrastructure.security.auth_service import (
-    AuthServiceInterface,
-)
-from event_sourcing.infrastructure.security.provider import get_auth_service
+
+from .provider import get_auth_service
+from .services import AuthServiceInterface
 
 # JWT security scheme - set auto_error=False to handle missing tokens manually
 security = HTTPBearer(auto_error=False)

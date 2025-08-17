@@ -6,7 +6,8 @@ from fastapi import Depends
 
 from event_sourcing.infrastructure.factory import InfrastructureFactory
 from event_sourcing.infrastructure.provider import get_infrastructure_factory
-from event_sourcing.infrastructure.security import AuthServiceInterface
+
+from .services import AuthServiceInterface
 
 
 def get_auth_service(
@@ -19,7 +20,7 @@ def get_auth_service(
     :param infrastructure_factory: Infrastructure factory.
     :return: Authentication service instance.
     """
-    return infrastructure_factory.auth_service
+    return infrastructure_factory.get_auth_service()  # type: ignore[no-any-return]
 
 
 # Type aliases for FastAPI dependency injection

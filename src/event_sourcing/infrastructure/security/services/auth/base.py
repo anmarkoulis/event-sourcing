@@ -1,4 +1,4 @@
-"""Authentication and authorization service interface."""
+"""Authentication service interface."""
 
 from abc import ABC, abstractmethod
 from typing import Optional

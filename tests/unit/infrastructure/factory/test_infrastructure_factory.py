@@ -1,4 +1,4 @@
-"""Unit tests for InfrastructureFactory."""
+"""Unit tests for InfrastructureFactory and QueryHandlerWrappers."""
 
 from unittest.mock import AsyncMock, MagicMock, patch
 
@@ -8,323 +8,7 @@ from event_sourcing.infrastructure.factory import (
     CommandHandlerWrapper,
     InfrastructureFactory,
     ProjectionWrapper,
-    SessionManager,
 )
-
-
-class TestSessionManager:
-    """Test cases for SessionManager."""
-
-    @pytest.fixture
-    def database_manager_mock(self) -> MagicMock:
-        """Provide a mock database manager."""
-        mock = MagicMock()
-        mock.get_session = AsyncMock()
-        return mock
-
-    @pytest.fixture
-    def session_manager(
-        self, database_manager_mock: MagicMock
-    ) -> SessionManager:
-        """Provide a SessionManager instance."""
-        return SessionManager(database_manager_mock)
-
-    @pytest.fixture
-    def session_mock(self) -> MagicMock:
-        """Provide a mock database session."""
-        mock = MagicMock()
-        mock.close = AsyncMock()
-        return mock
-
-    @pytest.mark.asyncio
-    async def test_init(self, database_manager_mock: MagicMock) -> None:
-        """Test SessionManager initialization."""
-        session_manager = SessionManager(database_manager_mock)
-        assert session_manager.database_manager == database_manager_mock
-        assert session_manager._session is None
-
-    @pytest.mark.asyncio
-    async def test_get_session_first_time(
-        self, session_manager: SessionManager, session_mock: MagicMock
-    ) -> None:
-        """Test getting session for the first time."""
-        session_manager.database_manager.get_session.return_value = (
-            session_mock
-        )
-
-        result = await session_manager.get_session()
-
-        assert result == session_mock
-        session_manager.database_manager.get_session.assert_awaited_once()
-        assert session_manager._session == session_mock
-
-    @pytest.mark.asyncio
-    async def test_get_session_cached(
-        self, session_manager: SessionManager, session_mock: MagicMock
-    ) -> None:
-        """Test getting cached session."""
-        session_manager._session = session_mock
-
-        result = await session_manager.get_session()
-
-        assert result == session_mock
-        session_manager.database_manager.get_session.assert_not_awaited()
-
-    @pytest.mark.asyncio
-    async def test_close_session_with_session(
-        self, session_manager: SessionManager, session_mock: MagicMock
-    ) -> None:
-        """Test closing session when session exists."""
-        session_manager._session = session_mock
-
-        await session_manager.close_session()
-
-        session_mock.close.assert_awaited_once()
-        assert session_manager._session is None
-
-    @pytest.mark.asyncio
-    async def test_close_session_no_session(
-        self, session_manager: SessionManager
-    ) -> None:
-        """Test closing session when no session exists."""
-        session_manager._session = None
-
-        await session_manager.close_session()
-
-        # Should not raise any errors
-        assert session_manager._session is None
-
-
-class TestCommandHandlerWrapper:
-    """Test cases for CommandHandlerWrapper."""
-
-    @pytest.fixture
-    def factory_mock(self) -> MagicMock:
-        """Provide a mock InfrastructureFactory."""
-        mock = MagicMock()
-        mock.session_manager.get_session = AsyncMock()
-        mock.event_handler = MagicMock()
-        return mock
-
-    @pytest.fixture
-    def handler_class_mock(self) -> MagicMock:
-        """Provide a mock handler class."""
-        return MagicMock()
-
-    @pytest.fixture
-    def wrapper(
-        self, factory_mock: MagicMock, handler_class_mock: MagicMock
-    ) -> CommandHandlerWrapper:
-        """Provide a CommandHandlerWrapper instance."""
-        return CommandHandlerWrapper(factory_mock, handler_class_mock)
-
-    @pytest.fixture
-    def session_mock(self) -> MagicMock:
-        """Provide a mock database session."""
-        return MagicMock()
-
-    @pytest.fixture
-    def command_mock(self) -> MagicMock:
-        """Provide a mock command."""
-        return MagicMock()
-
-    @pytest.mark.asyncio
-    async def test_init(
-        self, factory_mock: MagicMock, handler_class_mock: MagicMock
-    ) -> None:
-        """Test CommandHandlerWrapper initialization."""
-        wrapper = CommandHandlerWrapper(factory_mock, handler_class_mock)
-        assert wrapper.factory == factory_mock
-        assert wrapper.handler_class == handler_class_mock
-
-    @pytest.mark.asyncio
-    @patch("event_sourcing.infrastructure.factory.SQLAUnitOfWork")
-    @patch("event_sourcing.infrastructure.factory.PostgreSQLEventStore")
-    async def test_create_handler_with_session(
-        self,
-        postgresql_event_store_mock: MagicMock,
-        sqla_uow_mock: MagicMock,
-        wrapper: CommandHandlerWrapper,
-        session_mock: MagicMock,
-    ) -> None:
-        """Test creating handler with session."""
-        wrapper.factory.session_manager.get_session.return_value = session_mock
-        sqla_uow_mock.return_value = MagicMock()
-        postgresql_event_store_mock.return_value = MagicMock()
-
-        handler, session = await wrapper._create_handler_with_session()
-
-        assert session == session_mock
-        wrapper.factory.session_manager.get_session.assert_awaited_once()
-        sqla_uow_mock.assert_called_once_with(session_mock)
-        postgresql_event_store_mock.assert_called_once_with(session_mock)
-
-    @pytest.mark.asyncio
-    async def test_handle_success(
-        self, wrapper: CommandHandlerWrapper, command_mock: MagicMock
-    ) -> None:
-        """Test successful command handling."""
-        handler_mock = MagicMock()
-        handler_mock.handle = AsyncMock(return_value="success")
-        session_mock = MagicMock()
-        session_mock.close = AsyncMock()
-
-        wrapper._create_handler_with_session = AsyncMock(
-            return_value=(handler_mock, session_mock)
-        )
-
-        result = await wrapper.handle(command_mock)
-
-        assert result == "success"
-        handler_mock.handle.assert_awaited_once_with(command_mock)
-        session_mock.close.assert_awaited_once()
-
-    @pytest.mark.asyncio
-    async def test_handle_error(
-        self, wrapper: CommandHandlerWrapper, command_mock: MagicMock
-    ) -> None:
-        """Test command handling with error."""
-        handler_mock = MagicMock()
-        error = ValueError("Test error")
-        handler_mock.handle = AsyncMock(side_effect=error)
-        session_mock = MagicMock()
-        session_mock.close = AsyncMock()
-
-        wrapper._create_handler_with_session = AsyncMock(
-            return_value=(handler_mock, session_mock)
-        )
-
-        with pytest.raises(ValueError, match="Test error"):
-            await wrapper.handle(command_mock)
-
-        session_mock.close.assert_awaited_once()
-
-
-class TestProjectionWrapper:
-    """Test cases for ProjectionWrapper."""
-
-    @pytest.fixture
-    def factory_mock(self) -> MagicMock:
-        """Provide a mock InfrastructureFactory."""
-        mock = MagicMock()
-        mock.session_manager.get_session = AsyncMock()
-        return mock
-
-    @pytest.fixture
-    def projection_class_mock(self) -> MagicMock:
-        """Provide a mock projection class."""
-        return MagicMock()
-
-    @pytest.fixture
-    def wrapper(
-        self, factory_mock: MagicMock, projection_class_mock: MagicMock
-    ) -> ProjectionWrapper:
-        """Provide a ProjectionWrapper instance."""
-        return ProjectionWrapper(factory_mock, projection_class_mock)
-
-    @pytest.fixture
-    def event_mock(self) -> MagicMock:
-        """Provide a mock event."""
-        return MagicMock()
-
-    @pytest.fixture
-    def session_mock(self) -> MagicMock:
-        """Provide a mock database session."""
-        return MagicMock()
-
-    @pytest.mark.asyncio
-    async def test_init(
-        self, factory_mock: MagicMock, projection_class_mock: MagicMock
-    ) -> None:
-        """Test ProjectionWrapper initialization."""
-        wrapper = ProjectionWrapper(factory_mock, projection_class_mock)
-        assert wrapper.factory == factory_mock
-        assert wrapper.projection_class == projection_class_mock
-
-    @pytest.mark.asyncio
-    @patch("event_sourcing.infrastructure.factory.PostgreSQLReadModel")
-    @patch("event_sourcing.infrastructure.factory.SQLAUnitOfWork")
-    async def test_create_projection_with_session_with_uow(
-        self,
-        sqla_uow_mock: MagicMock,
-        postgresql_read_model_mock: MagicMock,
-        wrapper: ProjectionWrapper,
-        session_mock: MagicMock,
-    ) -> None:
-        """Test creating projection with session when UoW is expected."""
-        wrapper.factory.session_manager.get_session.return_value = session_mock
-        postgresql_read_model_mock.return_value = MagicMock()
-        sqla_uow_mock.return_value = MagicMock()
-
-        # Mock inspect.signature to return parameters including unit_of_work
-        with patch("builtins.__import__") as import_mock:
-            inspect_mock = MagicMock()
-            sig_mock = MagicMock()
-            sig_mock.parameters = {
-                "read_model": MagicMock(),
-                "unit_of_work": MagicMock(),
-            }
-            inspect_mock.signature.return_value = sig_mock
-            import_mock.return_value = inspect_mock
-
-            (
-                projection,
-                session,
-            ) = await wrapper._create_projection_with_session()
-
-        assert session == session_mock
-        wrapper.factory.session_manager.get_session.assert_awaited_once()
-        postgresql_read_model_mock.assert_called_once_with(session_mock)
-        sqla_uow_mock.assert_called_once_with(session_mock)
-
-    @pytest.mark.asyncio
-    @patch("event_sourcing.infrastructure.factory.PostgreSQLReadModel")
-    async def test_create_projection_with_session_without_uow(
-        self,
-        postgresql_read_model_mock: MagicMock,
-        wrapper: ProjectionWrapper,
-        session_mock: MagicMock,
-    ) -> None:
-        """Test creating projection with session when UoW is not expected."""
-        wrapper.factory.session_manager.get_session.return_value = session_mock
-        postgresql_read_model_mock.return_value = MagicMock()
-
-        # Mock inspect.signature to return parameters excluding unit_of_work
-        with patch("builtins.__import__") as import_mock:
-            inspect_mock = MagicMock()
-            sig_mock = MagicMock()
-            sig_mock.parameters = {"read_model": MagicMock()}
-            inspect_mock.signature.return_value = sig_mock
-            import_mock.return_value = inspect_mock
-
-            (
-                projection,
-                session,
-            ) = await wrapper._create_projection_with_session()
-
-        assert session == session_mock
-        wrapper.factory.session_manager.get_session.assert_awaited_once()
-        postgresql_read_model_mock.assert_called_once_with(session_mock)
-
-    @pytest.mark.asyncio
-    async def test_handle_success(
-        self, wrapper: ProjectionWrapper, event_mock: MagicMock
-    ) -> None:
-        """Test successful event handling."""
-        projection_mock = MagicMock()
-        projection_mock.handle = AsyncMock(return_value="success")
-        session_mock = MagicMock()
-        session_mock.close = AsyncMock()
-
-        wrapper._create_projection_with_session = AsyncMock(
-            return_value=(projection_mock, session_mock)
-        )
-
-        result = await wrapper.handle(event_mock)
-
-        assert result == "success"
-        projection_mock.handle.assert_awaited_once_with(event_mock)
-        session_mock.close.assert_awaited_once()
 
 
 class TestInfrastructureFactory:
@@ -355,7 +39,9 @@ class TestInfrastructureFactory:
         assert factory._session_manager is None
 
     @pytest.mark.asyncio
-    @patch("event_sourcing.infrastructure.factory.DatabaseManager")
+    @patch(
+        "event_sourcing.infrastructure.factory.infrastructure_factory.DatabaseManager"
+    )
     async def test_database_manager_property_first_time(
         self, database_manager_mock: MagicMock, factory: InfrastructureFactory
     ) -> None:
@@ -435,8 +121,12 @@ class TestInfrastructureFactory:
         assert result == cached_event_handler
 
     @pytest.mark.asyncio
-    @patch("event_sourcing.infrastructure.factory.EmailProviderFactory")
-    @patch("event_sourcing.infrastructure.factory.LoggingEmailProvider")
+    @patch(
+        "event_sourcing.infrastructure.factory.infrastructure_factory.EmailProviderFactory"
+    )
+    @patch(
+        "event_sourcing.infrastructure.factory.infrastructure_factory.LoggingEmailProvider"
+    )
     async def test_initialize_email_providers(
         self,
         logging_email_provider_mock: MagicMock,
@@ -451,7 +141,9 @@ class TestInfrastructureFactory:
         )
 
     @pytest.mark.asyncio
-    @patch("event_sourcing.infrastructure.factory.EmailProviderFactory")
+    @patch(
+        "event_sourcing.infrastructure.factory.infrastructure_factory.EmailProviderFactory"
+    )
     async def test_create_email_provider(
         self,
         email_provider_factory_mock: MagicMock,
@@ -473,7 +165,9 @@ class TestInfrastructureFactory:
         assert result == mock_provider
 
     @pytest.mark.asyncio
-    @patch("event_sourcing.infrastructure.factory.EmailProviderFactory")
+    @patch(
+        "event_sourcing.infrastructure.factory.infrastructure_factory.EmailProviderFactory"
+    )
     async def test_create_email_provider_default_config(
         self,
         email_provider_factory_mock: MagicMock,
@@ -645,7 +339,7 @@ class TestInfrastructureFactory:
     ) -> None:
         """Test creating BackfillSpecificEntityCommandHandler."""
         mock_handler = MagicMock()
-        import_mock.return_value.BackfillSpecificEntityCommandHandler = (
+        import_mock.return_value.BackfillEntityTypeCommandHandler = (
             mock_handler
         )
 

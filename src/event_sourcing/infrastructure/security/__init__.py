@@ -1,19 +1,17 @@
 """Security module for authentication and authorization."""
 
-from .auth_service import (
-    AuthServiceInterface,
-    TokenData,
-)
-from .hashing_service import (
-    BcryptHashingService,
-    HashingServiceInterface,
-)
-from .jwt_auth_service import JWTAuthService
 from .permissions import (
     CreateUserPermissionDep,
     DeleteUserPermissionDep,
     ReadUserPermissionDep,
     UpdateUserPermissionDep,
+)
+from .services import (
+    AuthServiceInterface,
+    BcryptHashingService,
+    HashingServiceInterface,
+    JWTAuthService,
+    TokenData,
 )
 
 __all__ = [

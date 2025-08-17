@@ -9,7 +9,7 @@ from event_sourcing.domain.aggregates.user import UserAggregate
 from event_sourcing.dto.snapshot import UserSnapshotDTO
 from event_sourcing.enums import AggregateTypeEnum
 from event_sourcing.infrastructure.event_store import EventStore
-from event_sourcing.infrastructure.security.hashing_service import (
+from event_sourcing.infrastructure.security import (
     HashingServiceInterface,
 )
 from event_sourcing.infrastructure.snapshot_store.base import SnapshotStore
