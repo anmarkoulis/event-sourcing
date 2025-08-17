@@ -12,8 +12,8 @@ from event_sourcing.application.commands.user.create_user import (
 )
 from event_sourcing.application.events.handlers.base import EventHandler
 from event_sourcing.domain.exceptions import (
-    EmailAlreadyExists,
-    UsernameAlreadyExists,
+    EmailAlreadyExistsError,
+    UsernameAlreadyExistsError,
 )
 from event_sourcing.enums import AggregateTypeEnum, EventType
 from event_sourcing.infrastructure.event_store import EventStore
@@ -158,7 +158,7 @@ class TestCreateUserCommandHandler:
             ]
         )
 
-        with pytest.raises(UsernameAlreadyExists):
+        with pytest.raises(UsernameAlreadyExistsError):
             await handler.handle(create_user_command)
 
         event_store_mock.append_to_stream.assert_not_called()
@@ -177,7 +177,7 @@ class TestCreateUserCommandHandler:
             ]
         )
 
-        with pytest.raises(EmailAlreadyExists):
+        with pytest.raises(EmailAlreadyExistsError):
             await handler.handle(create_user_command)
 
         event_store_mock.append_to_stream.assert_not_called()

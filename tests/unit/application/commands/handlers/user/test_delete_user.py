@@ -276,11 +276,11 @@ class TestDeleteUserCommandHandler:
         snapshot_store_mock = handler.snapshot_store
         snapshot_store_mock.get.return_value = None
 
-        # Now the aggregate will raise UserNotFound when no events exist
-        from event_sourcing.domain.exceptions import UserNotFound
+        # Now the aggregate will raise UserNotFoundError when no events exist
+        from event_sourcing.domain.exceptions import UserNotFoundError
 
         with pytest.raises(
-            UserNotFound,
+            UserNotFoundError,
             match="User 11111111-1111-1111-1111-111111111111 not found",
         ):
             await handler.handle(delete_user_command)

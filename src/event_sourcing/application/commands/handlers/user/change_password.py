@@ -74,9 +74,9 @@ class ChangePasswordCommandHandler(CommandHandler[ChangePasswordCommand]):
         # Verify the old password and hash the new password
         # First check if user exists
         if not user.exists():
-            from event_sourcing.domain.exceptions import UserNotFound
+            from event_sourcing.domain.exceptions import UserNotFoundError
 
-            raise UserNotFound(f"User {command.user_id} not found")
+            raise UserNotFoundError(f"User {command.user_id} not found")
 
         if not self.hashing_service.verify_password(
             command.old_password, user.password_hash

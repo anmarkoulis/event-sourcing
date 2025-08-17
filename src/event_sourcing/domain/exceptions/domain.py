@@ -3,7 +3,7 @@
 from typing import Any, Dict, Optional
 
 
-class DomainException(Exception):
+class DomainError(Exception):
     """Base exception for all domain-related errors."""
 
     def __init__(

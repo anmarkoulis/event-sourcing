@@ -2,10 +2,10 @@
 
 from typing import Optional
 
-from .domain import DomainException
+from .domain import DomainError
 
 
-class BusinessRuleViolation(DomainException):
+class BusinessRuleViolationError(DomainError):
     """Exception raised when business rules are violated."""
 
     def __init__(
@@ -18,11 +18,11 @@ class BusinessRuleViolation(DomainException):
         self.rule_name = rule_name
 
 
-class UserBusinessRuleViolation(BusinessRuleViolation):
+class UserBusinessRuleViolationError(BusinessRuleViolationError):
     """Exception raised when user business rules are violated."""
 
 
-class CannotUpdateDeletedUser(UserBusinessRuleViolation):
+class CannotUpdateDeletedUserError(UserBusinessRuleViolationError):
     """Exception raised when trying to update a deleted user."""
 
     def __init__(self, user_id: str) -> None:
@@ -33,7 +33,7 @@ class CannotUpdateDeletedUser(UserBusinessRuleViolation):
         )
 
 
-class CannotChangePasswordForDeletedUser(UserBusinessRuleViolation):
+class CannotChangePasswordForDeletedUserError(UserBusinessRuleViolationError):
     """Exception raised when trying to change password for a deleted user."""
 
     def __init__(self, user_id: str) -> None:
@@ -44,7 +44,7 @@ class CannotChangePasswordForDeletedUser(UserBusinessRuleViolation):
         )
 
 
-class UserAlreadyDeleted(UserBusinessRuleViolation):
+class UserAlreadyDeletedError(UserBusinessRuleViolationError):
     """Exception raised when trying to delete an already deleted user."""
 
     def __init__(self, user_id: str) -> None:
