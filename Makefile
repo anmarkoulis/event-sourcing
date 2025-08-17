@@ -1,6 +1,12 @@
+# Environment variable for container vs local execution
+# Check if we're actually in a dev container by looking for dev container environment variables
+DEV_CONTAINER := $(shell if [ -n "$$DEV_CONTAINER_ID" ] || [ -n "$$REMOTE_CONTAINERS" ] || [ -f /.dockerenv ]; then echo true; else echo false; fi)
+
 # Help generator
 help: ## Display this help.
 	@echo "Please use 'make <target>' where <target> is one of the following:"
+	@echo "Current mode: $(if $(filter true,$(DEV_CONTAINER)),Dev Container,Host - Docker Compose)"
+	@echo "DEV_CONTAINER value: $(DEV_CONTAINER)"
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf "\033[36m%-30s\033[0m %s\n", $$1, $$2}'
 
 # Development commands
@@ -12,7 +18,7 @@ uv: ## Run UV commands in the container
 	docker compose run ${exec_args} --rm  \
 		fastapi sh -c " \
 		uv ${args} \
-	"
+		"
 
 up: ## Run compose
 	docker compose up -d
@@ -45,33 +51,61 @@ install-pre-commit: ## Install pre-commit hooks that run on Docker
 	chmod ug+x "$(PWD)/.git/hooks/commit-msg"
 
 test: ## Run the tests
+ifeq ($(DEV_CONTAINER),true)
+	pytest --cov --cov-report=term --cov-report=html --cov-report=xml --cov-report=json ${args}
+else
 	docker compose run ${exec_args} --rm fastapi sh -c " \
                 set -e; \
 		pytest --cov --cov-report=term --cov-report=html --cov-report=xml --cov-report=json ${args}; \
 	"
+endif
 
-bash: ## Open bash
+bash: ## Open bash (container) or shell (local)
+ifeq ($(DEV_CONTAINER),true)
+	bash
+else
 	docker compose run ${exec_args} --rm fastapi bash
+endif
 
 make-migrations: ## Create migrations
+ifeq ($(DEV_CONTAINER),true)
+	alembic -c src/event_sourcing/infrastructure/database/alembic/alembic.ini revision --autogenerate
+else
 	docker compose run ${exec_args} --rm fastapi alembic -c /app/src/event_sourcing/infrastructure/database/alembic/alembic.ini revision --autogenerate
+endif
 
 migrate: ## Apply migrations
+ifeq ($(DEV_CONTAINER),true)
+	alembic -c src/event_sourcing/infrastructure/database/alembic/alembic.ini upgrade head
+else
 	docker compose run ${exec_args} --rm migrator alembic -c /app/src/event_sourcing/infrastructure/database/alembic/alembic.ini upgrade head
-
-rollback: ## Rollback migrations
-	docker compose run ${exec_args} --rm migrator alembic -c /app/src/event_sourcing/infrastructure/database/alembic/alembic.ini downgrade ${args}
+endif
 
 dbshell: ## Open PSQL shell
 	docker compose exec postgres psql -U admin -d event_sourcing
 
 command: ## Run CLI commands (e.g., make command args="users create-admin --help")
+ifeq ($(DEV_CONTAINER),true)
+	python -m event_sourcing.cli $(args)
+else
 	docker compose run ${exec_args} --rm fastapi python -m event_sourcing.cli $(args)
+endif
 
 localstack: ## Open a shell on localstack
 	docker compose exec localstack bash
 
 shell: ## Open Python shell with enhanced experience
+ifeq ($(DEV_CONTAINER),true)
+	python -c 'from event_sourcing.main import app; from event_sourcing.config import settings' && \
+	ipython -i -c '\
+from event_sourcing.main import app; \
+from event_sourcing.config import settings; \
+from event_sourcing.db.models import *; \
+from event_sourcing.db.session import async_session; \
+from event_sourcing.config.celery_app import app as celery_app; \
+session = async_session(); \
+print(\"\"\"\nFastAPI Shell Plus\n\nAvailable imports:\n  - app: FastAPI application\n  - settings: Application settings\n  - celery_app: Celery application\n\nAvailable instances:\n  - session: Active database session\n\"\"\")'
+else
 	docker compose run ${exec_args} --rm fastapi sh -c " \
 		python -c 'from event_sourcing.main import app; from event_sourcing.config import settings' && \
 		ipython -i -c '\
@@ -83,6 +117,7 @@ from event_sourcing.config.celery_app import app as celery_app; \
 session = async_session(); \
 print(\"\"\"\nFastAPI Shell Plus\n\nAvailable imports:\n  - app: FastAPI application\n  - settings: Application settings\n  - celery_app: Celery application\n\nAvailable instances:\n  - session: Active database session\n\"\"\")' \
 	"
+endif
 
 # Presentation commands
 install-marp: ## Install marp-cli globally
