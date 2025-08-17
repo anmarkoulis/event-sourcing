@@ -9,7 +9,7 @@ from sqlalchemy.ext.asyncio import AsyncEngine
 from sqlalchemy.schema import SchemaItem
 
 from event_sourcing.config.settings import settings
-from event_sourcing.infrastructure.database.base import Base  # noqa
+from event_sourcing.infrastructure.database.base import BaseModel  # noqa
 
 # Import all models so Alembic can detect them
 from event_sourcing.infrastructure.database.models import (  # noqa
@@ -29,7 +29,7 @@ dictConfig(settings.LOGGING_CONFIG)
 
 # add your model's MetaData object here
 # for 'autogenerate' support
-target_metadata = Base.metadata
+target_metadata = BaseModel.metadata
 
 # other values from the config, defined by the needs of env.py,
 # can be acquired:

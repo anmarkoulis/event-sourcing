@@ -1,18 +1,9 @@
 import re
-from typing import TYPE_CHECKING
 
-from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import DeclarativeBase, declared_attr
 
-if TYPE_CHECKING:
-    from sqlalchemy.orm import DeclarativeBase
 
-    Base = DeclarativeBase
-else:
-    Base = declarative_base()
-
-
-class BaseModel(Base):
+class BaseModel(DeclarativeBase):
     """Base model with common fields"""
 
     __abstract__ = True

@@ -15,7 +15,7 @@ from sqlalchemy.ext.asyncio import (
 
 from event_sourcing.application.events.handlers.base import EventHandler
 from event_sourcing.config.settings import settings
-from event_sourcing.infrastructure.database.base import Base
+from event_sourcing.infrastructure.database.base import BaseModel
 from event_sourcing.infrastructure.event_store import EventStore
 from event_sourcing.infrastructure.snapshot_store.base import SnapshotStore
 from event_sourcing.infrastructure.unit_of_work.base import BaseUnitOfWork
@@ -54,8 +54,8 @@ async def db_engine() -> Any:
         pool_pre_ping=True,
     )
     async with engine.begin() as conn:
-        await conn.run_sync(Base.metadata.drop_all)
-        await conn.run_sync(Base.metadata.create_all)
+        await conn.run_sync(BaseModel.metadata.drop_all)
+        await conn.run_sync(BaseModel.metadata.create_all)
     yield engine
 
 
