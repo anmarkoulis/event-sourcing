@@ -147,6 +147,8 @@ USER root
 RUN  apt-get update \
 # Install git in order to be able to run pre-commit inside the container
 && apt-get install -y git=1:2.39.5-0+deb12u2 --no-install-recommends \
+# Install make for running make commands inside the container
+&& apt-get install -y make=4.3-4.1 --no-install-recommends \
  # Install wget in order to retrieve hadolint
 && apt-get install -y wget2=1.99.1-2.2 --no-install-recommends \
 # Install hadolint

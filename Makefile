@@ -96,26 +96,12 @@ localstack: ## Open a shell on localstack
 
 shell: ## Open Python shell with enhanced experience
 ifeq ($(DEV_CONTAINER),true)
-	python -c 'from event_sourcing.main import app; from event_sourcing.config import settings' && \
-	ipython -i -c '\
-from event_sourcing.main import app; \
-from event_sourcing.config import settings; \
-from event_sourcing.db.models import *; \
-from event_sourcing.db.session import async_session; \
-from event_sourcing.config.celery_app import app as celery_app; \
-session = async_session(); \
-print(\"\"\"\nFastAPI Shell Plus\n\nAvailable imports:\n  - app: FastAPI application\n  - settings: Application settings\n  - celery_app: Celery application\n\nAvailable instances:\n  - session: Active database session\n\"\"\")'
+	python -c 'from event_sourcing.main import app; from event_sourcing.config.settings import Settings' && \
+	ipython -i -c 'from event_sourcing.main import app; from event_sourcing.config.settings import Settings; from event_sourcing.infrastructure.database.models import *; from event_sourcing.infrastructure.database.session import DatabaseManager, AsyncDBContextManager; from event_sourcing.config.celery_app import app as celery_app; from sqlalchemy import select; import asyncio; settings = Settings(); db_manager = DatabaseManager(settings.DATABASE_URL); print("FastAPI Shell Plus - Available imports: app, settings, celery_app"); print("Database manager ready: db_manager"); print("Models available: EventStream, UserEventStream, User, UserSnapshot"); print("Example query: async with AsyncDBContextManager(db_manager) as session: result = await session.execute(select(User).limit(5))")'
 else
 	docker compose run ${exec_args} --rm fastapi sh -c " \
-		python -c 'from event_sourcing.main import app; from event_sourcing.config import settings' && \
-		ipython -i -c '\
-from event_sourcing.main import app; \
-from event_sourcing.config import settings; \
-from event_sourcing.db.models import *; \
-from event_sourcing.db.session import async_session; \
-from event_sourcing.config.celery_app import app as celery_app; \
-session = async_session(); \
-print(\"\"\"\nFastAPI Shell Plus\n\nAvailable imports:\n  - app: FastAPI application\n  - settings: Application settings\n  - celery_app: Celery application\n\nAvailable instances:\n  - session: Active database session\n\"\"\")' \
+		python -c 'from event_sourcing.main import app; from event_sourcing.config.settings import Settings' && \
+		ipython -i -c 'from event_sourcing.main import app; from event_sourcing.config.settings import Settings; from event_sourcing.infrastructure.database.models import *; from event_sourcing.infrastructure.database.session import DatabaseManager, AsyncDBContextManager; from event_sourcing.config.celery_app import app as celery_app; from sqlalchemy import select; import asyncio; settings = Settings(); db_manager = DatabaseManager(settings.DATABASE_URL); print(\"FastAPI Shell Plus - Available imports: app, settings, celery_app\"); print(\"Database manager ready: db_manager\"); print(\"Models available: EventStream, UserEventStream, User, UserSnapshot\"); print(\"Example query: async with AsyncDBContextManager(db_manager) as session: result = await session.execute(select(User).limit(5))\")' \
 	"
 endif
 
