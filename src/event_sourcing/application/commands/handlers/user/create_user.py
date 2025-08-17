@@ -46,10 +46,10 @@ class CreateUserCommandHandler(CommandHandler[CreateUserCommand]):
         # If we find any USER_CREATED events with this username, it's not unique
         for event in existing_events:
             if event.event_type == "USER_CREATED":
-                logger.info(f"Username {username} already exists")
+                logger.debug(f"Username {username} already exists")
                 return False
 
-        logger.info(f"Username {username} is unique")
+        logger.debug(f"Username {username} is unique")
         return True
 
     async def _validate_email_uniqueness(self, email: str) -> bool:
@@ -63,14 +63,14 @@ class CreateUserCommandHandler(CommandHandler[CreateUserCommand]):
         # If we find any USER_CREATED events with this email, it's not unique
         for event in existing_events:
             if event.event_type == "USER_CREATED":
-                logger.info(f"Email {email} already exists")
+                logger.debug(f"Email {email} already exists")
                 return False
 
-        logger.info(f"Email {email} is unique")
+        logger.debug(f"Email {email} is unique")
         return True
 
     async def handle(self, command: CreateUserCommand) -> None:
-        logger.info(f"Creating user: {command.username}")
+        logger.debug(f"Creating user: {command.username}")
 
         # Validate uniqueness before creating the user
         if not await self._validate_username_uniqueness(command.username):
@@ -92,7 +92,7 @@ class CreateUserCommandHandler(CommandHandler[CreateUserCommand]):
         hashing_method = self.hashing_service.get_hashing_method()
 
         user = UserAggregate(command.user_id)
-        logger.info(f"User: {user}")
+        logger.debug(f"User: {user}")
 
         new_events = user.create_user(
             username=command.username,
@@ -103,7 +103,7 @@ class CreateUserCommandHandler(CommandHandler[CreateUserCommand]):
             hashing_method=hashing_method,
             role=command.role,
         )
-        logger.info(f"New events: {new_events}")
+        logger.debug(f"New events: {new_events}")
 
         async with self.unit_of_work:
             await self.event_store.append_to_stream(
@@ -123,4 +123,4 @@ class CreateUserCommandHandler(CommandHandler[CreateUserCommand]):
                     )
                 )
 
-        logger.info(f"Created user: {command.username}")
+        logger.debug(f"Created user: {command.username}")

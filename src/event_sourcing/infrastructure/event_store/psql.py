@@ -35,7 +35,7 @@ class PostgreSQLEventStore(EventStore):
         end_time: Optional[datetime] = None,
     ) -> List[EventDTO]:
         """Get events for an aggregate in chronological order with optional time filtering"""
-        logger.info(
+        logger.debug(
             f"Getting events for aggregate {aggregate_id} of type {aggregate_type}"
         )
 
@@ -50,16 +50,16 @@ class PostgreSQLEventStore(EventStore):
         # Add revision/time filters if provided
         if start_revision is not None:
             query = query.where(UserEventStream.revision > start_revision)
-            logger.info(f"Filtering events with revision > {start_revision}")
+            logger.debug(f"Filtering events with revision > {start_revision}")
 
         # Add time filters if provided
         if start_time:
             query = query.where(UserEventStream.timestamp >= start_time)
-            logger.info(f"Filtering events from {start_time}")
+            logger.debug(f"Filtering events from {start_time}")
 
         if end_time:
             query = query.where(UserEventStream.timestamp <= end_time)
-            logger.info(f"Filtering events until {end_time}")
+            logger.debug(f"Filtering events until {end_time}")
 
         query = query.order_by(UserEventStream.revision.asc())
 
@@ -85,7 +85,7 @@ class PostgreSQLEventStore(EventStore):
             )
             event_dtos.append(event_dto)
 
-        logger.info(
+        logger.debug(
             f"Retrieved {len(event_dtos)} events for aggregate {aggregate_id}"
         )
         return event_dtos
@@ -97,7 +97,7 @@ class PostgreSQLEventStore(EventStore):
         events: List[EventDTO],
     ) -> None:
         """Append events to the stream for an aggregate (no commit - handled by UoW)"""
-        logger.info(
+        logger.debug(
             f"Appending {len(events)} events to aggregate stream {aggregate_id} of type {aggregate_type}"
         )
 
@@ -116,7 +116,7 @@ class PostgreSQLEventStore(EventStore):
                 continue
 
             event_ids_in_this_call.add(event.id)
-            logger.info(
+            logger.debug(
                 f"Adding event to session: ID={event.id}, Type={event.event_type}, Revision={event.revision}, Object ID={id(event)}"
             )
             event_model = UserEventStream(
@@ -129,9 +129,9 @@ class PostgreSQLEventStore(EventStore):
                 data=event.data.model_dump(),  # Convert Pydantic model to dict
             )
             self.session.add(event_model)
-            logger.info(f"Event model added to session: {event_model}")
+            logger.debug(f"Event model added to session: {event_model}")
 
-        logger.info(
+        logger.debug(
             f"Events added to session for aggregate stream {aggregate_id}"
         )
 
@@ -141,7 +141,7 @@ class PostgreSQLEventStore(EventStore):
         query_params: dict,
     ) -> List[EventDTO]:
         """Search events by aggregate type and query parameters"""
-        logger.info(
+        logger.debug(
             f"Searching events for aggregate type {aggregate_type} with params: {query_params}"
         )
 
@@ -217,6 +217,8 @@ class PostgreSQLEventStore(EventStore):
             )
             event_dtos.append(event_dto)
 
-        logger.info(f"Event DTOs: {event_dtos}")
-        logger.info(f"Found {len(event_dtos)} events matching search criteria")
+        logger.debug(f"Event DTOs: {event_dtos}")
+        logger.debug(
+            f"Found {len(event_dtos)} events matching search criteria"
+        )
         return event_dtos

@@ -31,7 +31,7 @@ class DatabaseManager:
     async def close(self) -> None:
         """Close the database engine"""
         await self.engine.dispose()
-        logger.info("Database engine closed")
+        logger.debug("Database engine closed")
 
 
 class AsyncDBContextManager:

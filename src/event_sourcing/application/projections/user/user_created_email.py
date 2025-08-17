@@ -48,7 +48,7 @@ class UserCreatedEmailProjection(Projection):
             )
 
             if success:
-                logger.info(
+                logger.debug(
                     "Welcome email sent successfully to user: %s",
                     event.aggregate_id,
                 )

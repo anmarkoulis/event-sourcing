@@ -144,7 +144,7 @@ async def handle_resource_not_found(
     request: Request, exc: ResourceNotFoundError
 ) -> JSONResponse:
     """Handle resource not found errors."""
-    logger.info(
+    logger.debug(
         f"Resource not found: {exc.message}",
         extra={
             "resource_type": exc.resource_type,
@@ -282,7 +282,7 @@ async def handle_http_exception(
     request: Request, exc: StarletteHTTPException
 ) -> Response:
     """Handle HTTP exceptions."""
-    logger.info(f"HTTP exception: {exc.status_code} - {exc.detail}")
+    logger.debug(f"HTTP exception: {exc.status_code} - {exc.detail}")
 
     return JSONResponse(
         status_code=exc.status_code,

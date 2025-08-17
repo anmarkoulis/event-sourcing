@@ -55,24 +55,24 @@ class UserAggregate(Aggregate):
     ) -> List[EventDTO]:
         """Create a new user"""
         # Business rule: Cannot create user if already exists
-        logger.info(f"Creating user: {username}")
-        logger.info(f"User: {self.username}")
+        logger.debug(f"Creating user: {username}")
+        logger.debug(f"User: {self.username}")
         if self.username is not None:
-            logger.info(f"User already exists: {self.username}")
+            logger.debug(f"User already exists: {self.username}")
             from event_sourcing.domain.exceptions import UserAlreadyExistsError
 
             raise UserAlreadyExistsError(username)
 
         # Business rule: Username must be unique (in real app, check against DB)
         if not username or len(username) < 3:
-            logger.info(f"Username must be at least 3 characters: {username}")
+            logger.debug(f"Username must be at least 3 characters: {username}")
             from event_sourcing.domain.exceptions import UsernameTooShortError
 
             raise UsernameTooShortError(username)
 
         # Business rule: Email must be valid format
         if not email or "@" not in email:
-            logger.info(f"Invalid email format: {email}")
+            logger.debug(f"Invalid email format: {email}")
             from event_sourcing.domain.exceptions import (
                 InvalidEmailFormatError,
             )
@@ -81,13 +81,13 @@ class UserAggregate(Aggregate):
 
         # Business rule: Password must be provided
         if not password_hash:
-            logger.info(f"Password is required: {password_hash}")
+            logger.debug(f"Password is required: {password_hash}")
             from event_sourcing.domain.exceptions import PasswordRequiredError
 
             raise PasswordRequiredError()
 
         # Create the event
-        logger.info(f"Creating USER_CREATED event for user: {username}")
+        logger.debug(f"Creating USER_CREATED event for user: {username}")
         event = EventFactory.create_user_created(
             aggregate_id=self.aggregate_id,
             username=username,
@@ -99,11 +99,11 @@ class UserAggregate(Aggregate):
             role=role,
             revision=self._get_next_revision(),
         )
-        logger.info(f"Event: {event}")
+        logger.debug(f"Event: {event}")
         # Apply the event to the aggregate
         self.apply(event)
 
-        logger.info(f"Created user: {username}")
+        logger.debug(f"Created user: {username}")
         return [event]
 
     def update_user(
@@ -153,7 +153,7 @@ class UserAggregate(Aggregate):
         # Apply the event to the aggregate
         self.apply(event)
 
-        logger.info(f"Updated user: {self.username}")
+        logger.debug(f"Updated user: {self.username}")
         return [event]
 
     # Removed: change_username (username is immutable in this simplified model)
@@ -205,7 +205,7 @@ class UserAggregate(Aggregate):
         # Apply the event to the aggregate
         self.apply(event)
 
-        logger.info(f"Changed password for user: {self.username}")
+        logger.debug(f"Changed password for user: {self.username}")
         return [event]
 
     # Removed: request_password_reset
@@ -237,12 +237,12 @@ class UserAggregate(Aggregate):
         # Apply the event to the aggregate
         self.apply(event)
 
-        logger.info(f"Deleted user: {self.username}")
+        logger.debug(f"Deleted user: {self.username}")
         return [event]
 
     def apply(self, event: EventDTO) -> None:
         """Apply a domain event to the user aggregate state"""
-        logger.info(f"Applying event: {event}")
+        logger.debug(f"Applying event: {event}")
         # Track the event for business logic validation
         self.events.append(event)
         # Maintain last applied revision

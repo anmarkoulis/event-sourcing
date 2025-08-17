@@ -31,7 +31,7 @@ class UpdateUserCommandHandler(CommandHandler[UpdateUserCommand]):
         self.unit_of_work = unit_of_work
 
     async def handle(self, command: UpdateUserCommand) -> None:
-        logger.info(f"Updating user: {command.user_id}")
+        logger.debug(f"Updating user: {command.user_id}")
 
         snapshot_dto = (
             await self.snapshot_store.get(
@@ -83,4 +83,4 @@ class UpdateUserCommandHandler(CommandHandler[UpdateUserCommand]):
                     )
                 )
 
-        logger.info(f"Updated user: {command.user_id}")
+        logger.debug(f"Updated user: {command.user_id}")

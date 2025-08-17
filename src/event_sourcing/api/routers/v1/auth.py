@@ -27,7 +27,7 @@ async def login(
     user = await auth_service.authenticate_user(
         login_data.username, login_data.password
     )
-    logger.info(f"User: {user}")
+    logger.debug(f"User: {user}")
 
     if not user:
         raise HTTPException(

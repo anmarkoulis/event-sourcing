@@ -36,7 +36,7 @@ class ChangePasswordCommandHandler(CommandHandler[ChangePasswordCommand]):
         self.hashing_service = hashing_service
 
     async def handle(self, command: ChangePasswordCommand) -> None:
-        logger.info(f"Changing password for user: {command.user_id}")
+        logger.debug(f"Changing password for user: {command.user_id}")
 
         # Try snapshot (read-only); example assumes you have a snapshot store
         # injected elsewhere. For now, we keep logic ready for start_revision.
@@ -113,4 +113,4 @@ class ChangePasswordCommandHandler(CommandHandler[ChangePasswordCommand]):
                     )
                 )
 
-        logger.info(f"Changed password for user: {command.user_id}")
+        logger.debug(f"Changed password for user: {command.user_id}")

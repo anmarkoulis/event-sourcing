@@ -18,7 +18,7 @@ async def configure_lifespan(_: FastAPI) -> AsyncIterator[None]:
     """
     Configures the application's lifespan (e.g., for caching, lifecycle tasks).
     """
-    logger.info("Starting application...")
+    logger.debug("Starting application...")
 
     # Initialize infrastructure factory
     database_url = settings.DATABASE_URL
@@ -26,7 +26,7 @@ async def configure_lifespan(_: FastAPI) -> AsyncIterator[None]:
     infrastructure_factory = InfrastructureFactory(database_url)
     lifespan_context["infrastructure_factory"] = infrastructure_factory
 
-    logger.info("Infrastructure factory initialized")
+    logger.debug("Infrastructure factory initialized")
 
     # Initialize cache
     FastAPICache.init(InMemoryBackend())
@@ -35,6 +35,6 @@ async def configure_lifespan(_: FastAPI) -> AsyncIterator[None]:
         yield
     finally:
         # Cleanup
-        logger.info("Shutting down application...")
+        logger.debug("Shutting down application...")
         await infrastructure_factory.close()
-        logger.info("Application shutdown complete")
+        logger.debug("Application shutdown complete")

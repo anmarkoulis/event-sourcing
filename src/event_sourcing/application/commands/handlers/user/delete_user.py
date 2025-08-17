@@ -31,7 +31,7 @@ class DeleteUserCommandHandler(CommandHandler[DeleteUserCommand]):
         self.unit_of_work = unit_of_work
 
     async def handle(self, command: DeleteUserCommand) -> None:
-        logger.info(f"Deleting user: {command.user_id}")
+        logger.debug(f"Deleting user: {command.user_id}")
 
         snapshot_dto = (
             await self.snapshot_store.get(
@@ -79,4 +79,4 @@ class DeleteUserCommandHandler(CommandHandler[DeleteUserCommand]):
                     )
                 )
 
-        logger.info(f"Deleted user: {command.user_id}")
+        logger.debug(f"Deleted user: {command.user_id}")

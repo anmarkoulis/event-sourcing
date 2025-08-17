@@ -26,7 +26,7 @@ class SyncEventHandler(EventHandler):
 
     async def dispatch(self, events: List[EventDTO]) -> None:
         """Process events synchronously by directly calling handlers"""
-        logger.info(f"Processing {len(events)} events synchronously")
+        logger.debug(f"Processing {len(events)} events synchronously")
 
         for event in events:
             try:
@@ -37,14 +37,14 @@ class SyncEventHandler(EventHandler):
 
                 # Call all handlers for this event type
                 for handler_name in handler_functions:
-                    logger.info(
+                    logger.debug(
                         f"Processing event {event.id} with handler {handler_name}"
                     )
 
                     try:
                         # Import and call the handler function
                         await self._call_handler(handler_name, event)
-                        logger.info(
+                        logger.debug(
                             f"Successfully processed event {event.id} with handler {handler_name}"
                         )
                     except Exception as e:

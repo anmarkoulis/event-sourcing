@@ -15,6 +15,7 @@ from event_sourcing.cli.handlers.exception import cli_error_handler
 from event_sourcing.config.settings import settings
 from event_sourcing.enums import AggregateTypeEnum, Role
 from event_sourcing.infrastructure.provider import get_infrastructure_factory
+from event_sourcing.utils import log_typer_command
 
 logger = logging.getLogger(__name__)
 env = Env()
@@ -74,6 +75,7 @@ def create_admin(
 
 
 @cli_error_handler
+@log_typer_command
 async def create_admin_user(
     username: str,
     password: str,
@@ -145,5 +147,7 @@ async def create_admin_user(
     # Execute the command
     await command_handler.handle(command)
 
+    # Note: No manual logging needed - the decorator handles it!
+    # The decorator will log the start, completion, and any failures
     typer.echo(f"✅ Admin user '{username}' created successfully!")
     typer.echo(f"User ID: {command.user_id}")

@@ -21,7 +21,7 @@ class EmailProviderFactory:
         :param provider_class: Provider class to register.
         """
         cls._providers[provider_name.lower()] = provider_class
-        logger.info(f"Registered email provider: {provider_name}")
+        logger.debug(f"Registered email provider: {provider_name}")
 
     @classmethod
     def create_provider(
@@ -38,7 +38,7 @@ class EmailProviderFactory:
         if not provider_class:
             raise ValueError(f"Unknown email provider: {provider_name}")
 
-        logger.info(f"Creating email provider: {provider_name}")
+        logger.debug(f"Creating email provider: {provider_name}")
         # All registered providers take config as constructor parameter
         provider_instance = provider_class(config or {})  # type: ignore[call-arg]
         return provider_instance

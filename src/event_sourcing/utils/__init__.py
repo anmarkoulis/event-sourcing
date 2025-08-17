@@ -1,3 +1,5 @@
-from .sync_error_logger import sync_error_logger
+"""Utility modules for the event sourcing package."""
 
-__all__ = ["sync_error_logger"]
+from .logging_decorators import log_celery_task, log_typer_command
+
+__all__ = ["log_celery_task", "log_typer_command"]
