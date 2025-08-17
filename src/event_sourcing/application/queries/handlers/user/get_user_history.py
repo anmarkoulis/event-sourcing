@@ -31,7 +31,7 @@ class GetUserHistoryQueryHandler(
             )
 
             if not events:
-                logger.info(
+                logger.debug(
                     f"No events found for user {query.user_id} up to {query.timestamp}"
                 )
                 return None
@@ -54,7 +54,7 @@ class GetUserHistoryQueryHandler(
                 or user_aggregate.created_at,
             )
 
-            logger.info(
+            logger.debug(
                 f"Reconstructed user state at {query.timestamp}: {user_dto}"
             )
             return user_dto

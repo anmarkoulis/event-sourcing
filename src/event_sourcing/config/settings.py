@@ -12,7 +12,7 @@ env = Env()
 def get_logging_config(log_level: str, log_format: str = "json") -> dict:
     return {
         "version": 1,
-        "disable_existing_loggers": True,
+        "disable_existing_loggers": False,  # Changed from True to False
         "formatters": {
             "verbose": {
                 "format": "{levelname} {asctime} {process} {thread} "
@@ -29,6 +29,12 @@ def get_logging_config(log_level: str, log_format: str = "json") -> dict:
         },
         "loggers": {
             "event_sourcing": {
+                "handlers": ["event_sourcing"],
+                "level": log_level,
+                "propagate": False,
+            },
+            # Add specific logger for API middlewares
+            "event_sourcing.api.middlewares": {
                 "handlers": ["event_sourcing"],
                 "level": log_level,
                 "propagate": False,

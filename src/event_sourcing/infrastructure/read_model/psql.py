@@ -21,7 +21,7 @@ class PostgreSQLReadModel(ReadModel):
 
     async def save_user(self, user_data: UserReadModelData) -> None:
         """Save user to read model"""
-        logger.info(f"Saving user {user_data.aggregate_id} to read model")
+        logger.debug(f"Saving user {user_data.aggregate_id} to read model")
 
         if not user_data.aggregate_id:
             raise ValueError("aggregate_id is required")
@@ -65,11 +65,11 @@ class PostgreSQLReadModel(ReadModel):
             self.session.add(user_model)
 
         # Note: No commit here - UoW will handle it
-        logger.info(f"User {user_data.aggregate_id} saved to session")
+        logger.debug(f"User {user_data.aggregate_id} saved to session")
 
     async def get_user(self, user_id: str) -> Optional[UserDTO]:
         """Get a specific user by ID"""
-        logger.info(f"Getting user {user_id}")
+        logger.debug(f"Getting user {user_id}")
 
         query = select(User).where(
             User.id == user_id,
@@ -80,7 +80,7 @@ class PostgreSQLReadModel(ReadModel):
         user_model = result.scalar_one_or_none()
 
         if not user_model:
-            logger.info(f"User {user_id} not found")
+            logger.debug(f"User {user_id} not found")
             return None
 
         user_dto = UserDTO(
@@ -94,7 +94,7 @@ class PostgreSQLReadModel(ReadModel):
             updated_at=user_model.updated_at,
         )
 
-        logger.info(f"Retrieved user {user_id}")
+        logger.debug(f"Retrieved user {user_id}")
         return user_dto
 
     async def get_user_by_username(self, username: str) -> Optional[UserDTO]:
@@ -103,7 +103,7 @@ class PostgreSQLReadModel(ReadModel):
         :param username: Username to search for.
         :return: User DTO if found, None otherwise.
         """
-        logger.info(f"Getting user by username: {username}")
+        logger.debug(f"Getting user by username: {username}")
 
         query = select(User).where(
             User.username == username,
@@ -114,7 +114,7 @@ class PostgreSQLReadModel(ReadModel):
         user_model = result.scalar_one_or_none()
 
         if not user_model:
-            logger.info(f"User with username {username} not found")
+            logger.debug(f"User with username {username} not found")
             return None
 
         user_dto = UserDTO(
@@ -128,12 +128,12 @@ class PostgreSQLReadModel(ReadModel):
             updated_at=user_model.updated_at,
         )
 
-        logger.info(f"Retrieved user by username: {username}")
+        logger.debug(f"Retrieved user by username: {username}")
         return user_dto
 
     async def delete_user(self, user_id: str) -> None:
         """Delete user from read model"""
-        logger.info(f"Deleting user {user_id} from read model")
+        logger.debug(f"Deleting user {user_id} from read model")
 
         await self._delete_user_with_session(user_id)
 
@@ -148,7 +148,7 @@ class PostgreSQLReadModel(ReadModel):
         if user:
             user.deleted_at = datetime.now(timezone.utc)
             # Note: No commit here - UoW will handle it
-            logger.info(f"User {user_id} marked for deletion in session")
+            logger.debug(f"User {user_id} marked for deletion in session")
         else:
             logger.warning(f"User {user_id} not found for deletion")
 
@@ -160,7 +160,7 @@ class PostgreSQLReadModel(ReadModel):
         email: Optional[str] = None,
     ) -> Tuple[List[UserDTO], int]:
         """List users with pagination and optional filtering"""
-        logger.info(f"Listing users: page={page}, page_size={page_size}")
+        logger.debug(f"Listing users: page={page}, page_size={page_size}")
 
         # Build base query - exclude deleted users
         base_query = select(User).where(User.deleted_at.is_(None))
@@ -168,11 +168,11 @@ class PostgreSQLReadModel(ReadModel):
         # Add filters if provided
         if username:
             base_query = base_query.where(User.username.ilike(f"%{username}%"))
-            logger.info(f"Filtering by username: {username}")
+            logger.debug(f"Filtering by username: {username}")
 
         if email:
             base_query = base_query.where(User.email.ilike(f"%{email}%"))
-            logger.info(f"Filtering by email: {email}")
+            logger.debug(f"Filtering by email: {email}")
 
         # Count total matching users
         count_query = select(func.count()).select_from(base_query.subquery())
@@ -200,7 +200,7 @@ class PostgreSQLReadModel(ReadModel):
             for user in users
         ]
 
-        logger.info(
+        logger.debug(
             f"Retrieved {len(user_dtos)} users out of {total_count} total"
         )
         return user_dtos, total_count

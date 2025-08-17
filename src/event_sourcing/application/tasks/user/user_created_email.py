@@ -8,37 +8,26 @@ from event_sourcing.infrastructure.event_store.deserializer import (
     deserialize_event,
 )
 from event_sourcing.infrastructure.provider import get_infrastructure_factory
+from event_sourcing.utils import log_celery_task
 
 logger = logging.getLogger(__name__)
 
 
 @app.task(name="process_user_created_email_task")
+@log_celery_task
 def process_user_created_email_task(event: Dict[str, Any]) -> None:
     """Celery task for processing USER_CREATED events and sending welcome emails"""
-    try:
-        logger.info(
-            f"Starting Celery task for USER_CREATED email projection: {event.get('id', 'unknown')}"
-        )
+    # Deserialize the event from dictionary to typed event DTO
+    event_dto = deserialize_event(event)
+    logger.debug(
+        f"Deserialized event: ID={event_dto.id}, Type={event_dto.event_type}"
+    )
 
-        # Deserialize the event from dictionary to typed event DTO
-        event_dto = deserialize_event(event)
-        logger.info(
-            f"Deserialized event: ID={event_dto.id}, Type={event_dto.event_type}"
-        )
+    # Get infrastructure factory using the same function as FastAPI
+    factory = get_infrastructure_factory()
 
-        # Get infrastructure factory using the same function as FastAPI
-        factory = get_infrastructure_factory()
+    # Get email projection
+    projection = factory.create_user_created_email_projection()
 
-        # Get email projection
-        projection = factory.create_user_created_email_projection()
-
-        # Process the event
-        async_to_sync(projection.handle)(event_dto)
-
-        logger.info(
-            f"Successfully processed USER_CREATED email projection for user {event_dto.aggregate_id}"
-        )
-
-    except Exception as e:
-        logger.error(f"Error processing USER_CREATED email projection: {e}")
-        raise
+    # Process the event
+    async_to_sync(projection.handle)(event_dto)

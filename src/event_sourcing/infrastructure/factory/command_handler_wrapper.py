@@ -47,7 +47,7 @@ class CommandHandlerWrapper:
             PsqlSnapshotStore,
         )
 
-        logger.info("Creating snapshot store")
+        logger.debug("Creating snapshot store")
         ctor_kwargs["snapshot_store"] = PsqlSnapshotStore(session)
 
         # Add hashing service only for command handlers that need it
@@ -69,18 +69,18 @@ class CommandHandlerWrapper:
         :param command: Command to handle.
         :return: Result from command handler.
         """
-        logger.info(
+        logger.debug(
             f"Wrapper: Starting command handler for command: {type(command).__name__}"
         )
         command_handler, session = await self._create_handler_with_session()
         try:
-            logger.info(f"Wrapper: Calling command handler")
+            logger.debug(f"Wrapper: Calling command handler")
             result = await command_handler.handle(command)
-            logger.info(f"Wrapper: Command handler completed successfully")
+            logger.debug(f"Wrapper: Command handler completed successfully")
             return result
         except Exception as e:
             logger.error(f"Wrapper: Error in command handler: {e}")
             raise
         finally:
-            logger.info(f"Wrapper: Closing session")
+            logger.debug(f"Wrapper: Closing session")
             await session.close()

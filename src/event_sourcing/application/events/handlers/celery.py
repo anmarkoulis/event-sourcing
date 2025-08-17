@@ -14,7 +14,7 @@ class CeleryEventHandler(EventHandler):
 
     async def dispatch(self, events: List[EventDTO]) -> None:
         """Dispatch events to Celery tasks"""
-        logger.info(f"Dispatching {len(events)} events to Celery tasks")
+        logger.debug(f"Dispatching {len(events)} events to Celery tasks")
 
         for event in events:
             try:
@@ -26,7 +26,7 @@ class CeleryEventHandler(EventHandler):
 
                 # Send to all tasks for this event type
                 for task_name in task_names:
-                    logger.info(
+                    logger.debug(
                         f"Dispatching event {event.id} to task {task_name}"
                     )
 
@@ -36,7 +36,7 @@ class CeleryEventHandler(EventHandler):
                         args=[event_dict],
                     )
 
-                    logger.info(
+                    logger.debug(
                         f"Successfully dispatched event {event.id} to task {task_name}"
                     )
 

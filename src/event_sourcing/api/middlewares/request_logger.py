@@ -23,7 +23,7 @@ class RequestLoggingMiddleware(BaseHTTPMiddleware):
             body = None
 
         logger.info(
-            "Incoming request",
+            f"Incoming {request.method} request to {request.url}",
             extra={
                 "method": request.method,
                 "url": str(request.url),
@@ -36,7 +36,7 @@ class RequestLoggingMiddleware(BaseHTTPMiddleware):
         response: Response = await call_next(request)
 
         logger.info(
-            "Response status",
+            f"Response status {response.status_code} for {request.method} request to {request.url}",
             extra={
                 "status_code": response.status_code,
                 "headers": dict(response.headers),

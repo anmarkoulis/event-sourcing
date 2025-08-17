@@ -34,7 +34,7 @@ class AggregateRegistry:
     ) -> None:
         """Register an aggregate class"""
         cls._aggregates[aggregate_type] = aggregate_class
-        logger.info(
+        logger.debug(
             f"Registered aggregate class: {aggregate_type} -> {aggregate_class.__name__}"
         )
 

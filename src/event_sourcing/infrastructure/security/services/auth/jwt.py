@@ -85,9 +85,9 @@ class JWTAuthService(AuthServiceInterface):
 
         # Add scopes based on user role
         if "role" in data:
-            logger.info(f"Creating JWT with role: {data['role']}")
+            logger.debug(f"Creating JWT with role: {data['role']}")
             scopes = self._get_scopes_for_role(data["role"])
-            logger.info(f"Generated scopes: {scopes}")
+            logger.debug(f"Generated scopes: {scopes}")
             to_encode["scopes"] = scopes
         else:
             logger.warning("No role found in JWT data")
@@ -239,7 +239,7 @@ class JWTAuthService(AuthServiceInterface):
                 updated_at=user_aggregate.updated_at,
             )
 
-            logger.info(f"User authenticated successfully: {username}")
+            logger.debug(f"User authenticated successfully: {username}")
             return user_dto
 
         except Exception as e:

@@ -45,7 +45,7 @@ class InfrastructureFactory:
         :return: Database manager instance.
         """
         if self._database_manager is None:
-            logger.info("Creating database manager")
+            logger.debug("Creating database manager")
             self._database_manager = DatabaseManager(self.database_url)
         return self._database_manager
 
@@ -66,7 +66,7 @@ class InfrastructureFactory:
         :return: Event handler instance.
         """
         if self._event_handler is None:
-            logger.info("Creating event handler")
+            logger.debug("Creating event handler")
             # Dynamic import to avoid circular dependency
             from event_sourcing.application.events.handlers import (
                 CeleryEventHandler,
@@ -82,7 +82,7 @@ class InfrastructureFactory:
 
     def _initialize_email_providers(self) -> None:
         """Initialize email providers by registering them with the factory."""
-        logger.info("Initializing email providers")
+        logger.debug("Initializing email providers")
         EmailProviderFactory.register_provider("logging", LoggingEmailProvider)
 
     def create_email_provider(
@@ -96,7 +96,7 @@ class InfrastructureFactory:
         :param config: Optional configuration for the provider.
         :return: Email provider instance.
         """
-        logger.info(f"Creating email provider: {provider_name}")
+        logger.debug(f"Creating email provider: {provider_name}")
         return EmailProviderFactory.create_provider(
             provider_name, config or {}
         )
@@ -106,7 +106,7 @@ class InfrastructureFactory:
 
         :return: Wrapped command handler.
         """
-        logger.info("Creating CreateUserCommandHandler")
+        logger.debug("Creating CreateUserCommandHandler")
         from event_sourcing.application.commands.handlers.user import (
             CreateUserCommandHandler,
         )
@@ -118,7 +118,7 @@ class InfrastructureFactory:
 
         :return: Wrapped command handler.
         """
-        logger.info("Creating UpdateUserCommandHandler")
+        logger.debug("Creating UpdateUserCommandHandler")
         from event_sourcing.application.commands.handlers.user import (
             UpdateUserCommandHandler,
         )
@@ -130,7 +130,7 @@ class InfrastructureFactory:
 
         :return: Wrapped command handler.
         """
-        logger.info("Creating ChangePasswordCommandHandler")
+        logger.debug("Creating ChangePasswordCommandHandler")
         from event_sourcing.application.commands.handlers.user import (
             ChangePasswordCommandHandler,
         )
@@ -142,7 +142,7 @@ class InfrastructureFactory:
 
         :return: Wrapped command handler.
         """
-        logger.info("Creating DeleteUserCommandHandler")
+        logger.debug("Creating DeleteUserCommandHandler")
         from event_sourcing.application.commands.handlers.user import (
             DeleteUserCommandHandler,
         )
@@ -154,7 +154,7 @@ class InfrastructureFactory:
 
         :return: Wrapped projection.
         """
-        logger.info("Creating UserCreatedProjection")
+        logger.debug("Creating UserCreatedProjection")
         # Dynamic import to avoid circular dependency
         from event_sourcing.application.projections.user import (
             UserCreatedProjection,
@@ -167,7 +167,7 @@ class InfrastructureFactory:
 
         :return: Wrapped projection.
         """
-        logger.info("Creating UserUpdatedProjection")
+        logger.debug("Creating UserUpdatedProjection")
         # Dynamic import to avoid circular dependency
         from event_sourcing.application.projections.user import (
             UserUpdatedProjection,
@@ -180,7 +180,7 @@ class InfrastructureFactory:
 
         :return: Wrapped projection.
         """
-        logger.info("Creating UserDeletedProjection")
+        logger.debug("Creating UserDeletedProjection")
         # Dynamic import to avoid circular dependency
         from event_sourcing.application.projections.user import (
             UserDeletedProjection,
@@ -193,7 +193,7 @@ class InfrastructureFactory:
 
         :return: Email projection instance.
         """
-        logger.info("Creating UserCreatedEmailProjection")
+        logger.debug("Creating UserCreatedEmailProjection")
         # Dynamic import to avoid circular dependency
         from event_sourcing.application.projections.user import (
             UserCreatedEmailProjection,
@@ -211,7 +211,7 @@ class InfrastructureFactory:
 
         :return: Wrapped query handler.
         """
-        logger.info("Creating GetUserQueryHandler")
+        logger.debug("Creating GetUserQueryHandler")
         # Dynamic import to avoid circular dependency
         from event_sourcing.application.queries.handlers.user import (
             GetUserQueryHandler,
@@ -254,7 +254,7 @@ class InfrastructureFactory:
 
         :return: Wrapped query handler.
         """
-        logger.info("Creating GetUserHistoryQueryHandler")
+        logger.debug("Creating GetUserHistoryQueryHandler")
         # Dynamic import to avoid circular dependency
         from event_sourcing.application.queries.handlers.user import (
             GetUserHistoryQueryHandler,
@@ -299,7 +299,7 @@ class InfrastructureFactory:
 
         :return: Wrapped query handler.
         """
-        logger.info("Creating ListUsersQueryHandler")
+        logger.debug("Creating ListUsersQueryHandler")
         # Dynamic import to avoid circular dependency
         from event_sourcing.application.queries.handlers.user import (
             ListUsersQueryHandler,
@@ -352,7 +352,7 @@ class InfrastructureFactory:
 
         :return: Command handler instance.
         """
-        logger.info("Creating BackfillEntityTypeCommandHandler")
+        logger.debug("Creating BackfillEntityTypeCommandHandler")
         # Dynamic import to avoid circular dependency
         from event_sourcing.application.commands.handlers.backfill_entity_type import (
             BackfillEntityTypeCommandHandler,
@@ -365,7 +365,7 @@ class InfrastructureFactory:
 
         :return: Command handler instance.
         """
-        logger.info("Creating BackfillSpecificEntityCommandHandler")
+        logger.debug("Creating BackfillSpecificEntityCommandHandler")
         # Dynamic import to avoid circular dependency
         from event_sourcing.application.commands.handlers.backfill_specific_entity import (
             BackfillSpecificEntityCommandHandler,
@@ -409,9 +409,9 @@ class InfrastructureFactory:
         :return: Authentication service instance.
         """
         if self._auth_service is None:
-            logger.info("Creating auth service")
+            logger.debug("Creating auth service")
 
-            logger.info("Using JWT authentication service")
+            logger.debug("Using JWT authentication service")
             from event_sourcing.infrastructure.security import (
                 BcryptHashingService,
                 JWTAuthService,
@@ -432,7 +432,7 @@ class InfrastructureFactory:
 
     async def close(self) -> None:
         """Close all infrastructure components."""
-        logger.info("Closing infrastructure components")
+        logger.debug("Closing infrastructure components")
 
         if self._database_manager:
             await self._database_manager.close()
@@ -440,4 +440,4 @@ class InfrastructureFactory:
         self._event_handler = None
         self._session_manager = None
 
-        logger.info("Infrastructure components closed")
+        logger.debug("Infrastructure components closed")

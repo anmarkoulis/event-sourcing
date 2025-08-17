@@ -47,7 +47,7 @@ class UserUpdatedProjection(Projection):
                 await self.read_model.save_user(user_data)
                 # UoW will handle commit/rollback
 
-            logger.info(f"Updated user read model for: {event.aggregate_id}")
+            logger.debug(f"Updated user read model for: {event.aggregate_id}")
 
         except Exception as e:
             logger.error(f"Error in UserUpdatedProjection: {e}")

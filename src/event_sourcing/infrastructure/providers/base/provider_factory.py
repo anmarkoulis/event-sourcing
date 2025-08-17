@@ -17,7 +17,7 @@ class CRMProviderFactory:
     ) -> None:
         """Register a provider class with the factory"""
         cls._providers[provider_name.lower()] = provider_class
-        logger.info(f"Registered CRM provider: {provider_name}")
+        logger.debug(f"Registered CRM provider: {provider_name}")
 
     @classmethod
     def create_provider(
@@ -28,7 +28,7 @@ class CRMProviderFactory:
         if not provider_class:
             raise ValueError(f"Unknown CRM provider: {provider_name}")
 
-        logger.info(f"Creating CRM provider: {provider_name}")
+        logger.debug(f"Creating CRM provider: {provider_name}")
         # All registered providers take config as constructor parameter
         provider_instance: CRMProviderInterface = provider_class(config)  # type: ignore
         return provider_instance

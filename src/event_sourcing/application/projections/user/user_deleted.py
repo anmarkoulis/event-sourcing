@@ -26,7 +26,7 @@ class UserDeletedProjection(Projection):
                 await self.read_model.delete_user(str(event.aggregate_id))
                 # UoW will handle commit/rollback
 
-            logger.info(f"Deleted user read model for: {event.aggregate_id}")
+            logger.debug(f"Deleted user read model for: {event.aggregate_id}")
 
         except Exception as e:
             logger.error(f"Error in UserDeletedProjection: {e}")
