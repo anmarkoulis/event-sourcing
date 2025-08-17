@@ -15,17 +15,8 @@ import typer
 from event_sourcing.domain.exceptions import (
     BusinessRuleViolationError,
     DomainError,
-    EmailAlreadyExistsError,
-    InvalidEmailFormatError,
-    PasswordRequiredError,
     ResourceConflictError,
     ResourceNotFoundError,
-    UserBusinessRuleViolationError,
-    UserConflictError,
-    UsernameAlreadyExistsError,
-    UsernameTooShortError,
-    UserNotFoundError,
-    UserValidationError,
     ValidationError,
 )
 
@@ -38,21 +29,12 @@ logger = logging.getLogger(__name__)
 EXIT_CODES = {
     # Validation errors - 1 (general error)
     ValidationError: 1,
-    UserValidationError: 1,
-    UsernameTooShortError: 1,
-    PasswordRequiredError: 1,
-    InvalidEmailFormatError: 1,
     # Business rule violations - 1 (business logic error)
     BusinessRuleViolationError: 1,
-    UserBusinessRuleViolationError: 1,
     # Resource not found - 2 (not found)
     ResourceNotFoundError: 2,
-    UserNotFoundError: 2,
     # Resource conflicts - 3 (conflict)
     ResourceConflictError: 3,
-    UserConflictError: 3,
-    UsernameAlreadyExistsError: 3,
-    EmailAlreadyExistsError: 3,
     # Domain errors - 1 (general domain error)
     DomainError: 1,
     # Generic exceptions - 1 (unexpected error)
@@ -62,18 +44,9 @@ EXIT_CODES = {
 # User-friendly error messages
 ERROR_MESSAGES = {
     ValidationError: "Validation error occurred",
-    UserValidationError: "User validation error occurred",
-    UsernameTooShortError: "Username is too short",
-    PasswordRequiredError: "Password is required",  # pragma: allowlist secret
-    InvalidEmailFormatError: "Invalid email format",
     BusinessRuleViolationError: "Business rule violation occurred",
-    UserBusinessRuleViolationError: "User business rule violation occurred",
     ResourceNotFoundError: "Resource not found",
-    UserNotFoundError: "User not found",
     ResourceConflictError: "Resource conflict occurred",
-    UserConflictError: "User conflict occurred",
-    UsernameAlreadyExistsError: "Username already exists",
-    EmailAlreadyExistsError: "Email already exists",
     DomainError: "Domain error occurred",
     Exception: "An unexpected error occurred",
 }
@@ -238,18 +211,9 @@ def _is_expected_exception(exc: Exception) -> bool:
     """
     expected_types = {
         ValidationError,
-        UserValidationError,
-        UsernameTooShortError,
-        PasswordRequiredError,
-        InvalidEmailFormatError,
         BusinessRuleViolationError,
-        UserBusinessRuleViolationError,
         ResourceNotFoundError,
-        UserNotFoundError,
         ResourceConflictError,
-        UserConflictError,
-        UsernameAlreadyExistsError,
-        EmailAlreadyExistsError,
         DomainError,
     }
 

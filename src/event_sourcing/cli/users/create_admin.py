@@ -62,7 +62,7 @@ def create_admin(
 
     # Run the async function
     asyncio.run(
-        _create_admin_user(
+        create_admin_user(
             username=admin_username,
             password=admin_password,
             email=admin_email,
@@ -74,7 +74,7 @@ def create_admin(
 
 
 @cli_error_handler
-async def _create_admin_user(
+async def create_admin_user(
     username: str,
     password: str,
     email: str,
