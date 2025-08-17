@@ -11,6 +11,7 @@ from environs import Env
 from event_sourcing.application.commands.user.create_user import (
     CreateUserCommand,
 )
+from event_sourcing.cli.handlers.exception import cli_error_handler
 from event_sourcing.config.settings import settings
 from event_sourcing.enums import AggregateTypeEnum, Role
 from event_sourcing.infrastructure.provider import get_infrastructure_factory
@@ -18,10 +19,7 @@ from event_sourcing.infrastructure.provider import get_infrastructure_factory
 logger = logging.getLogger(__name__)
 env = Env()
 
-app = typer.Typer()
 
-
-@app.command()
 def create_admin(
     username: Optional[str] = typer.Option(
         None, "--username", "-u", help="Admin username"
@@ -75,6 +73,7 @@ def create_admin(
     )
 
 
+@cli_error_handler
 async def _create_admin_user(
     username: str,
     password: str,
@@ -85,17 +84,25 @@ async def _create_admin_user(
 ) -> None:
     """Create an admin user asynchronously."""
 
-    try:
-        # Get infrastructure factory
-        factory = get_infrastructure_factory()
+    # Get infrastructure factory
+    factory = get_infrastructure_factory()
 
-        # Create command handler
-        command_handler = factory.create_create_user_command_handler()
+    # Create command handler
+    command_handler = factory.create_create_user_command_handler()
 
-        # Check if user already exists
-        if not force:
+    # Check if user already exists
+    if not force:
+        # Get a fresh session from the factory and create event store
+        session = await factory.session_manager.get_session()
+        try:
+            from event_sourcing.infrastructure.event_store import (
+                PostgreSQLEventStore,
+            )
+
+            event_store = PostgreSQLEventStore(session)
+
             # Search for existing users with this username
-            existing_events = await factory.event_store.search_events(
+            existing_events = await event_store.search_events(
                 aggregate_type=AggregateTypeEnum.USER,
                 query_params={"username": username},
             )
@@ -109,7 +116,7 @@ async def _create_admin_user(
                     raise typer.Exit(1)
 
             # Search for existing users with this email
-            existing_events = await factory.event_store.search_events(
+            existing_events = await event_store.search_events(
                 aggregate_type=AggregateTypeEnum.USER,
                 query_params={"email": email},
             )
@@ -118,32 +125,25 @@ async def _create_admin_user(
                 if event.event_type == "USER_CREATED":
                     typer.echo(f"❌ User with email '{email}' already exists!")
                     typer.echo(
-                        "Use --force flag to create anyway or choose a different email."
+                        "Use --force flag to create anyway or choose a different username."
                     )
                     raise typer.Exit(1)
+        finally:
+            await session.close()
 
-        # Create the command
-        command = CreateUserCommand(
-            user_id=uuid.uuid4(),
-            username=username,
-            email=email,
-            first_name=first_name,
-            last_name=last_name,
-            password=password,
-            role=Role.ADMIN,
-        )
+    # Create the command
+    command = CreateUserCommand(
+        user_id=uuid.uuid4(),
+        username=username,
+        email=email,
+        first_name=first_name,
+        last_name=last_name,
+        password=password,
+        role=Role.ADMIN,
+    )
 
-        # Execute the command
-        await command_handler.handle(command)
+    # Execute the command
+    await command_handler.handle(command)
 
-        typer.echo(f"✅ Admin user '{username}' created successfully!")
-        typer.echo(f"User ID: {command.user_id}")
-
-    except Exception as e:
-        logger.error(f"Error creating admin user: {e}")
-        typer.echo(f"❌ Failed to create admin user: {e}")
-        raise typer.Exit(1)
-
-
-if __name__ == "__main__":
-    app()
+    typer.echo(f"✅ Admin user '{username}' created successfully!")
+    typer.echo(f"User ID: {command.user_id}")

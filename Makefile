@@ -65,11 +65,8 @@ rollback: ## Rollback migrations
 dbshell: ## Open PSQL shell
 	docker compose exec postgres psql -U admin -d event_sourcing
 
-command: ## Run typer commands
-	docker compose run ${exec_args} --rm fastapi python $(command)
-
-swaggerhub: ## Generate SwaggerHub documentation
-	docker compose run ${exec_args} --rm fastapi python /app/src/event_sourcing/commands/generate_swagger.py test.yaml
+command: ## Run CLI commands (e.g., make command args="users create-admin --help")
+	docker compose run ${exec_args} --rm fastapi python -m event_sourcing.cli $(args)
 
 localstack: ## Open a shell on localstack
 	docker compose exec localstack bash
