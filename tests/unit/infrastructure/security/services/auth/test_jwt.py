@@ -10,10 +10,8 @@ from fastapi import HTTPException
 from event_sourcing.dto.user import UserDTO
 from event_sourcing.enums import Role
 from event_sourcing.infrastructure.event_store import EventStore
-from event_sourcing.infrastructure.security.hashing_service import (
+from event_sourcing.infrastructure.security import (
     BcryptHashingService,
-)
-from event_sourcing.infrastructure.security.jwt_auth_service import (
     JWTAuthService,
 )
 

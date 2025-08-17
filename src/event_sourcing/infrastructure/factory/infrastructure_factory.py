@@ -1,7 +1,7 @@
 """Factory for creating infrastructure components, command handlers, and query handlers."""
 
 import logging
-from typing import Any, Dict, Optional
+from typing import TYPE_CHECKING, Any, Dict, Optional
 
 from event_sourcing.infrastructure.database.session import DatabaseManager
 from event_sourcing.infrastructure.event_store import PostgreSQLEventStore
@@ -14,6 +14,9 @@ from event_sourcing.infrastructure.read_model import PostgreSQLReadModel
 from .command_handler_wrapper import CommandHandlerWrapper
 from .projection_wrapper import ProjectionWrapper
 from .session_manager import SessionManager
+
+if TYPE_CHECKING:
+    from event_sourcing.infrastructure.security import AuthServiceInterface
 
 logger = logging.getLogger(__name__)
 
@@ -30,6 +33,7 @@ class InfrastructureFactory:
         self._database_manager: Optional[DatabaseManager] = None
         self._event_handler: Optional[Any] = None
         self._session_manager: Optional[SessionManager] = None
+        self._auth_service: Optional["AuthServiceInterface"] = None
 
         # Initialize email providers
         self._initialize_email_providers()
@@ -399,13 +403,12 @@ class InfrastructureFactory:
         )
         return None
 
-    @property
-    def auth_service(self) -> Any:
+    def get_auth_service(self) -> "AuthServiceInterface":
         """Get or create authentication service.
 
         :return: Authentication service instance.
         """
-        if not hasattr(self, "_auth_service"):
+        if self._auth_service is None:
             logger.info("Creating auth service")
 
             logger.info("Using JWT authentication service")
@@ -424,6 +427,7 @@ class InfrastructureFactory:
             # Store factory reference for dynamic event store creation
             self._auth_service._factory = self
 
+        # At this point, mypy knows _auth_service is not None
         return self._auth_service
 
     async def close(self) -> None:

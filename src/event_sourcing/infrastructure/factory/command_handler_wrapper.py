@@ -54,7 +54,7 @@ class CommandHandlerWrapper:
         # Check if the handler class expects hashing_service parameter
         sig = inspect.signature(self.handler_class.__init__)
         if "hashing_service" in sig.parameters:
-            from event_sourcing.infrastructure.security.hashing_service import (
+            from event_sourcing.infrastructure.security import (
                 BcryptHashingService,
             )
 

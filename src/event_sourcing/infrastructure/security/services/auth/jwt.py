@@ -2,7 +2,7 @@
 
 import logging
 import uuid
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import Any, Optional
 
 import jwt
@@ -18,10 +18,10 @@ from event_sourcing.domain.aggregates.user import UserAggregate
 from event_sourcing.dto.user import UserDTO
 from event_sourcing.enums import AggregateTypeEnum, Role
 from event_sourcing.infrastructure.event_store import EventStore
-from event_sourcing.infrastructure.security.auth_service import (
+from event_sourcing.infrastructure.security.services.auth.base import (
     AuthServiceInterface,
 )
-from event_sourcing.infrastructure.security.hashing_service import (
+from event_sourcing.infrastructure.security.services.hashing.base import (
     HashingServiceInterface,
 )
 
@@ -78,7 +78,7 @@ class JWTAuthService(AuthServiceInterface):
         :return: JWT token string.
         """
         to_encode = data.copy()
-        expire = datetime.utcnow() + timedelta(
+        expire = datetime.now(timezone.utc) + timedelta(
             minutes=self.access_token_expire_minutes
         )
         to_encode.update({"exp": expire})

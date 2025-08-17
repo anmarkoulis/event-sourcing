@@ -58,15 +58,39 @@ alwaysApply: true
 
 ## Import Rules
 
+### Import Strategy
+**Outside Package (External Imports):**
+- Import from the top level of the package: `from event_sourcing.infrastructure.security import AuthServiceInterface`
+- Use absolute imports for all external dependencies
+- This provides a clean, stable API interface
+
+**Inside Package (Internal Imports):**
+- Use relative imports: `from .services import AuthServiceInterface`
+- Import from the nearest `__init__.py` that exposes the needed symbols
+- Avoid deep nested imports like `from .services.auth import AuthServiceInterface`
+
+### Import Hierarchy
+1. **Top Level**: `from event_sourcing.infrastructure.security import AuthServiceInterface`
+2. **Package Level**: `from .services import AuthServiceInterface` (preferred for internal)
+3. **Module Level**: `from .services.auth import AuthServiceInterface` (avoid when possible)
+
+### Best Practices
+- Use `__init__.py` files to expose public APIs
+- Import from the highest level that provides the needed symbols
+- Keep imports shallow and readable
+- Use relative imports (`.`) for same-package imports
+- Use absolute imports for cross-package dependencies
+
 ### Organization
-- Use absolute imports
 - Group imports:
   1. Standard library
   2. Third-party packages
-  3. Local application
+  3. Local application (absolute imports)
+  4. Local application (relative imports)
 - Maximum line length: 79 characters
 - Include trailing commas
 - Combine as imports when possible
+- Import from the top level and not from nested where possible
 
 ### Forbidden Imports
 - `regsub`
