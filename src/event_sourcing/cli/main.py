@@ -2,7 +2,7 @@
 
 import typer
 
-from .create_admin import app as create_admin_app
+from .users import users_app
 
 app = typer.Typer(
     name="event-sourcing",
@@ -10,8 +10,8 @@ app = typer.Typer(
     add_completion=False,
 )
 
-# Add subcommands
-app.add_typer(create_admin_app, name="create-admin", help="Create admin user")
+# Add users package to main app
+app.add_typer(users_app)
 
 if __name__ == "__main__":
     app()
