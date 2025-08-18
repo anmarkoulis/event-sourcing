@@ -126,7 +126,7 @@ style: |
 
   /* Blockquotes */
   blockquote {
-    border-left: 3px solid #FFD43B;
+    border-left: 3px solid #FF6B35;
     color: #6C757D;
     padding-left: 0.8em;
     margin: 0.8em 0;
@@ -135,11 +135,11 @@ style: |
 
   /* Lists - more compact */
   ul li::marker {
-    color: #FFD43B;
+    color: #FF6B35;
   }
 
   ol li::marker {
-    color: #FFD43B;
+    color: #FF6B35;
   }
 
   /* Lead section styling */
@@ -213,7 +213,7 @@ style: |
   h2 {
     margin-top: 0.8em;
     margin-bottom: 0.4em;
-    color: #306998;
+    color: #FF6B35;
   }
 
       /* Better content spacing - optimized */
@@ -234,6 +234,18 @@ style: |
   /* Blockquote spacing - optimized */
   blockquote {
     margin: 0.5em 0;
+  }
+
+  /* Key characteristics styling */
+  .key-characteristics {
+    color: #FF6B35;
+    font-weight: 600;
+  }
+
+  /* Emphasis text */
+  .emphasis {
+    color: #FF6B35;
+    font-weight: 500;
   }
 
   /* Table styling */
@@ -272,7 +284,7 @@ style: |
     content: '▶';
     position: absolute;
     left: 0;
-    color: #FFD43B;
+    color: #FF6B35;
     font-size: 0.65em;
   }
 
