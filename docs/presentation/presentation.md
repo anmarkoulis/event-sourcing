@@ -52,31 +52,58 @@ style: |
     margin-bottom: 0.4em;
   }
 
-  /* Code styling - more compact */
+    /* Enhanced Code styling with Python syntax colors */
   code {
     font-family: 'JetBrains Mono', 'Fira Code', 'Consolas', monospace;
     font-size: 0.8em;
-    background-color: #F8F9FA;
+    background: linear-gradient(135deg, #F8F9FA 0%, #FFFFFF 100%);
     color: #2D2D2D;
     border: 1px solid #E9ECEF;
-    border-radius: 4px;
-    padding: 0.15em 0.3em;
+    border-radius: 6px;
+    padding: 0.2em 0.4em;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+    position: relative;
   }
 
-  pre {
-    background-color: #F8F9FA;
-    border: 1px solid #E9ECEF;
-    border-radius: 6px;
-    padding: 0.8em;
-    overflow-x: auto;
-    margin: 0.5em 0;
+  /* Inline code with subtle highlight */
+  code:not(pre code) {
+    background: linear-gradient(135deg, #F1F3F4 0%, #E8EAED 100%);
+    border: 1px solid #DADCE0;
+    color: #1F2937;
+    font-weight: 500;
   }
+
+  /* Code blocks with enhanced styling */
+  pre {
+    background: linear-gradient(135deg, #F8F9FA 0%, #FFFFFF 100%);
+    border: 1px solid #E9ECEF;
+    border-radius: 8px;
+    padding: 1.2em;
+    overflow-x: auto;
+    margin: 0.8em 0;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+    position: relative;
+    border-left: 4px solid #306998;
+  }
+
+
 
   pre code {
     background: none;
     border: none;
     padding: 0;
+    box-shadow: none;
+    font-size: 0.85em;
+    line-height: 1.5;
   }
+
+  /* Python syntax highlighting colors */
+  pre code .keyword { color: #306998; font-weight: 600; }  /* def, class, if, etc. */
+  pre code .function { color: #FF6B35; font-weight: 500; }  /* function names */
+  pre code .string { color: #28A745; }  /* strings */
+  pre code .number { color: #6F42C1; }  /* numbers */
+  pre code .comment { color: #6C757D; font-style: italic; }  /* comments */
+  pre code .operator { color: #DC3545; font-weight: 500; }  /* +, -, *, /, etc. */
 
   /* Emphasis and highlights */
   strong {
@@ -150,13 +177,45 @@ style: |
     display: block !important;
   }
 
-  /* Custom slide backgrounds */
-  section.title-slide {
-    background: linear-gradient(135deg, #FFFFFF 0%, #F8F9FA 100%);
+    /* Minimal Visual Hierarchy */
+
+  /* Simple backgrounds */
+  section {
+    background: #FFFFFF;
   }
 
-  section.content-slide {
-    background: #FFFFFF;
+  /* Clean title styling */
+  h1 {
+    border-bottom: 2px solid #FFD43B;
+    padding-bottom: 0.2em;
+    margin-bottom: 0.8em;
+  }
+
+  /* Simple section headers */
+  h2 {
+    margin-top: 1em;
+    margin-bottom: 0.5em;
+    color: #306998;
+  }
+
+  /* Better content spacing */
+  section > * + * {
+    margin-top: 0.6em;
+  }
+
+  /* Code block spacing */
+  pre {
+    margin: 0.8em 0;
+  }
+
+  /* List spacing */
+  ul, ol {
+    margin: 0.6em 0;
+  }
+
+  /* Blockquote spacing */
+  blockquote {
+    margin: 0.8em 0;
   }
 
   /* Table styling */
@@ -212,19 +271,7 @@ style: |
     color: #FFC107;
   }
 
-  /* Code block language indicators */
-  pre[data-lang]::before {
-    content: attr(data-lang);
-    position: absolute;
-    top: 0.4em;
-    right: 0.8em;
-    font-size: 0.65em;
-    color: #6C757D;
-    background: #E9ECEF;
-    padding: 0.15em 0.4em;
-    border-radius: 3px;
-    text-transform: uppercase;
-  }
+
 ---
 
 # How I Learned to Stop Worrying and Love Raw Events
@@ -291,7 +338,6 @@ event_type: USER_DELETED
 version: 1
 timestamp: 2024-03-15T16:47:23Z
 revision: 5
-
 data:
   deleted_by: admin@company.com
   reason: User requested account deletion
