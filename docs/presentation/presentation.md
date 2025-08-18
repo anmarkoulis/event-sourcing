@@ -309,9 +309,9 @@ style: |
 ## Event Sourcing & CQRS with FastAPI and Celery
 
 **Antonis Markoulis** | Senior Staff Engineer @ Orfium
-**PyCon Athens 2025**
+**PyCon Greece 2025**
 
-<!--Hello everybody! I'm excited to be presenting at PyCon Athens. This is the first PyCon in Greece, so it's truly an honor to be part of this inaugural event.
+<!--Hello everybody! I'm excited to be presenting at PyCon Greece. This is the first PyCon in Greece, so it's truly an honor to be part of this inaugural event.
 
 I'm Antonis Markoulis, a Senior Staff Engineer at Orfium where I focus on elevating technical standards across the organization and engineering teams. I've been coding in Python professionally for over 10 years, and I'm passionate about building robust, scalable systems.
 
