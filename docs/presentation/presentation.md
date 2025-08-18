@@ -71,6 +71,7 @@ style: |
     border: 1px solid #DADCE0;
     color: #1F2937;
     font-weight: 500;
+    padding: 0.15em 0.3em;
   }
 
   /* Code blocks with enhanced styling */
@@ -78,9 +79,9 @@ style: |
     background: linear-gradient(135deg, #F8F9FA 0%, #FFFFFF 100%);
     border: 1px solid #E9ECEF;
     border-radius: 8px;
-    padding: 1.2em;
+    padding: 0.8em;
     overflow-x: auto;
-    margin: 0.8em 0;
+    margin: 0.5em 0;
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
     position: relative;
     border-left: 4px solid #306998;
@@ -198,24 +199,24 @@ style: |
     color: #306998;
   }
 
-  /* Better content spacing */
+    /* Better content spacing */
   section > * + * {
-    margin-top: 0.6em;
+    margin-top: 0.4em;
   }
 
   /* Code block spacing */
   pre {
-    margin: 0.8em 0;
+    margin: 0.5em 0;
   }
 
   /* List spacing */
   ul, ol {
-    margin: 0.6em 0;
+    margin: 0.4em 0;
   }
 
   /* Blockquote spacing */
   blockquote {
-    margin: 0.8em 0;
+    margin: 0.6em 0;
   }
 
   /* Table styling */
