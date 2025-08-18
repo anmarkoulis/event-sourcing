@@ -30,7 +30,9 @@ WORKDIR $PYSETUP_PATH
 # Activate the virtual environment by setting environment variables
 # This is equivalent to 'source $VENV_PATH/bin/activate'
 ENV PATH="$VENV_PATH/bin:$PATH" \
-    VIRTUAL_ENV="$VENV_PATH"
+    VIRTUAL_ENV="$VENV_PATH" \
+    PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true \
+    PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium
 
 # APT robustness configuration (disable HTTP pipelining, avoid caches, add retries)
 RUN set -eux; \
@@ -149,6 +151,18 @@ RUN  apt-get update \
 && apt-get install -y git=1:2.39.5-0+deb12u2 --no-install-recommends \
 # Install make for running make commands inside the container
 && apt-get install -y make=4.3-4.1 --no-install-recommends \
+# Install Node.js and npm for presentation tools
+&& apt-get install -y curl=7.88.1-10+deb12u12 --no-install-recommends \
+&& curl -fsSL https://deb.nodesource.com/setup_20.x -o /tmp/nodesource_setup.sh \
+&& bash /tmp/nodesource_setup.sh \
+&& apt-get install -y nodejs=20.19.4-1nodesource1 --no-install-recommends \
+# Install Chromium for mermaid-cli diagram generation
+&& apt-get install -y chromium=139.0.7258.127-1~deb12u1 --no-install-recommends \
+# Install presentation tools globally
+&& npm install -g @marp-team/marp-cli@4.2.3 @mermaid-js/mermaid-cli@11.9.0 \
+# Set Puppeteer to use system Chromium
+&& echo 'export PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true' >> /etc/environment \
+&& echo 'export PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium' >> /etc/environment \
  # Install wget in order to retrieve hadolint
 && apt-get install -y wget2=1.99.1-2.2 --no-install-recommends \
 # Install hadolint
