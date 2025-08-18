@@ -157,7 +157,7 @@ RUN  apt-get update \
 && bash /tmp/nodesource_setup.sh \
 && apt-get install -y nodejs=20.19.4-1nodesource1 --no-install-recommends \
 # Install Chromium for mermaid-cli diagram generation
-&& apt-get install -y chromium=139.0.7258.127-1~deb12u1 --no-install-recommends \
+&& apt-get install -y chromium=138.0.7204.183-1~deb12u1 --no-install-recommends \
 # Install presentation tools globally
 && npm install -g @marp-team/marp-cli@4.2.3 @mermaid-js/mermaid-cli@11.9.0 \
 # Set Puppeteer to use system Chromium

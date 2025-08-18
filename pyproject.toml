@@ -22,7 +22,7 @@ dependencies = [
     "psycopg2==2.9.10",
     "pydantic[email]==2.11.7",
     "pydantic-settings==2.10.1",
-    "pyjwt[crypto]==2.9.0",
+    "pyjwt[crypto]==2.10.1",
     "python-multipart==0.0.20",
     "pyyaml==6.0.2",
     "requests==2.32.4",
