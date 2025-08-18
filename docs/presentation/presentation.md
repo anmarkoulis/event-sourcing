@@ -3,63 +3,305 @@ marp: true
 theme: beam
 class: invert
 paginate: true
-header: "PyCon Athens 2025"
 footer: "Event Sourcing & CQRS with FastAPI and Celery"
 style: |
+  @import url('https://fonts.googleapis.com/css2?family=Google+Sans:wght@400;500;700&display=swap');
+
   section {
+    font-family: 'Google Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
     font-size: 1.3em;
-    background-color: #1E1E1E;
-    color: #E0E0E0;
-    line-height: 1.4;
+    background-color: #FFFFFF;
+    color: #2D2D2D;
+    line-height: 1.5;
+    padding: 2em;
   }
+
+  /* Logo positioning - balanced size */
+  section::before {
+    content: '';
+    position: absolute;
+    top: 0.5em;
+    left: 0.5em;
+    width: 85px;
+    height: 42px;
+    background-image: url('images/logo.png');
+    background-size: contain;
+    background-repeat: no-repeat;
+    background-position: left center;
+    z-index: 10;
+  }
+
+  /* Title styling - more compact */
   h1 {
+    font-family: 'Google Sans', sans-serif;
     font-size: 1.8em;
-    color: #FFD43B;
-    border-bottom: 2px solid #306998;
-  }
-  h2 {
+    font-weight: 700;
     color: #306998;
+    border-bottom: 2px solid #FFD43B;
+    margin-top: 0.8em;
+    margin-bottom: 0.4em;
+    padding-bottom: 0.2em;
   }
+
+  h2 {
+    font-family: 'Google Sans', sans-serif;
+    font-size: 1.3em;
+    font-weight: 500;
+    color: #306998;
+    margin-top: 0.8em;
+    margin-bottom: 0.4em;
+  }
+
+    /* Enhanced Code styling with Python syntax colors */
   code {
+    font-family: 'JetBrains Mono', 'Fira Code', 'Consolas', monospace;
     font-size: 0.8em;
-    background-color: #2D2D2D;
-    color: #E0E0E0;
+    background: linear-gradient(135deg, #F8F9FA 0%, #FFFFFF 100%);
+    color: #2D2D2D;
+    border: 1px solid #E9ECEF;
+    border-radius: 6px;
+    padding: 0.2em 0.4em;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+    position: relative;
   }
+
+  /* Inline code with subtle highlight */
+  code:not(pre code) {
+    background: linear-gradient(135deg, #F1F3F4 0%, #E8EAED 100%);
+    border: 1px solid #DADCE0;
+    color: #1F2937;
+    font-weight: 500;
+    padding: 0.15em 0.3em;
+  }
+
+  /* Code blocks with enhanced styling */
   pre {
-    background-color: #2D2D2D;
+    background: linear-gradient(135deg, #F8F9FA 0%, #FFFFFF 100%);
+    border: 1px solid #E9ECEF;
+    border-radius: 8px;
+    padding: 0.8em;
+    overflow-x: auto;
+    margin: 0.5em 0;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+    position: relative;
+    border-left: 4px solid #306998;
   }
+
+
+
+  pre code {
+    background: none;
+    border: none;
+    padding: 0;
+    box-shadow: none;
+    font-size: 0.85em;
+    line-height: 1.5;
+  }
+
+  /* Python syntax highlighting colors */
+  pre code .keyword { color: #306998; font-weight: 600; }  /* def, class, if, etc. */
+  pre code .function { color: #FF6B35; font-weight: 500; }  /* function names */
+  pre code .string { color: #28A745; }  /* strings */
+  pre code .number { color: #6F42C1; }  /* numbers */
+  pre code .comment { color: #6C757D; font-style: italic; }  /* comments */
+  pre code .operator { color: #DC3545; font-weight: 500; }  /* +, -, *, /, etc. */
+
+  /* Emphasis and highlights */
   strong {
-    color: #FFD43B;
+    color: #306998;
+    font-weight: 700;
   }
+
+  /* Links */
   a {
     color: #306998;
+    text-decoration: none;
+    border-bottom: 1px solid #FFD43B;
   }
+
+  a:hover {
+    color: #FFD43B;
+    border-bottom-color: #FFD43B;
+  }
+
+  /* Blockquotes */
   blockquote {
-    border-left-color: #306998;
-    color: #A0A0A0;
+    border-left: 3px solid #FF6B35;
+    color: #6C757D;
+    padding-left: 0.8em;
+    margin: 0.8em 0;
+    font-style: italic;
   }
+
+  /* Lists - more compact */
   ul li::marker {
-    color: #FFD43B;
+    color: #FF6B35;
   }
+
   ol li::marker {
-    color: #FFD43B;
+    color: #FF6B35;
   }
-  section.lead h1 {
-    font-size: 2.5em;
-  }
-  section.lead h2 {
-    font-size: 1.8em;
-  }
+
+  /* Lead section styling */
   section.lead {
     text-align: center;
+    background: linear-gradient(135deg, #FFFFFF 0%, #F8F9FA 100%);
   }
-  /* Target the specific event-sourcing-flow image */
-  img[src*="event-sourcing-flow"] {
-    transform: scale(1.4) !important;
-    transform-origin: center !important;
-    margin: 2em 0 !important;
-    margin-left: 9em !important;
+
+  section.lead h1 {
+    font-size: 2.5em;
+    color: #306998;
+    border: none;
+    margin-top: 1.5em;
   }
+
+  section.lead h2 {
+    font-size: 1.6em;
+    color: #6C757D;
+    font-weight: 400;
+  }
+
+  /* Image styling - enhanced with shadows */
+  img {
+    max-width: 100%;
+    height: auto;
+    border-radius: 8px;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12), 0 2px 8px rgba(0, 0, 0, 0.08);
+    margin: 0.5em 0;
+    image-rendering: -webkit-optimize-contrast;
+    image-rendering: crisp-edges;
+    image-rendering: pixelated;
+    border: 1px solid #E9ECEF;
+    transition: box-shadow 0.2s ease-in-out;
+  }
+
+  /* Enhanced shadows for specific diagrams */
+  img[src*="event-sourcing-flow"],
+  img[src*="event-stream-sequence"],
+  img[src*="debugging-superpowers"] {
+    margin: 1.5em auto;
+    display: block;
+    max-width: 90%;
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.15), 0 3px 12px rgba(0, 0, 0, 0.1);
+    border: 1px solid #DADCE0;
+  }
+
+  /* Specific image positioning without scaling */
+  img[src*="event-sourcing-flow"],
+  img[src*="event-stream-sequence"],
+  img[src*="debugging-superpowers"] {
+    margin: 1.5em auto;
+    display: block;
+    max-width: 90%;
+  }
+
+    /* Minimal Visual Hierarchy */
+
+  /* Simple backgrounds */
+  section {
+    background: #FFFFFF;
+  }
+
+    /* Clean title styling - optimized */
+  h1 {
+    border-bottom: 2px solid #FFD43B;
+    padding-bottom: 0.15em;
+    margin-bottom: 0.6em;
+  }
+
+  /* Simple section headers - optimized */
+  h2 {
+    margin-top: 0.8em;
+    margin-bottom: 0.4em;
+    color: #FF6B35;
+  }
+
+      /* Better content spacing - optimized */
+  section > * + * {
+    margin-top: 0.35em;
+  }
+
+  /* Code block spacing - optimized */
+  pre {
+    margin: 0.4em 0;
+  }
+
+  /* List spacing - optimized */
+  ul, ol {
+    margin: 0.35em 0;
+  }
+
+  /* Blockquote spacing - optimized */
+  blockquote {
+    margin: 0.5em 0;
+  }
+
+  /* Key characteristics styling */
+  .key-characteristics {
+    color: #FF6B35;
+    font-weight: 600;
+  }
+
+  /* Emphasis text */
+  .emphasis {
+    color: #FF6B35;
+    font-weight: 500;
+  }
+
+  /* Table styling */
+  table {
+    border-collapse: collapse;
+    width: 100%;
+    margin: 0.8em 0;
+  }
+
+  th, td {
+    border: 1px solid #E9ECEF;
+    padding: 0.6em;
+    text-align: left;
+  }
+
+  th {
+    background-color: #F8F9FA;
+    color: #306998;
+    font-weight: 600;
+  }
+
+  /* Custom bullet points - optimized */
+  ul {
+    list-style: none;
+    padding-left: 0;
+    margin: 0.4em 0;
+  }
+
+  ul li {
+    position: relative;
+    padding-left: 1em;
+    margin-bottom: 0.2em;
+  }
+
+  ul li::before {
+    content: '▶';
+    position: absolute;
+    left: 0;
+    color: #FF6B35;
+    font-size: 0.65em;
+  }
+
+  /* Success/Error indicators */
+  .success {
+    color: #28A745;
+  }
+
+  .error {
+    color: #DC3545;
+  }
+
+  .warning {
+    color: #FFC107;
+  }
+
+
 ---
 
 # How I Learned to Stop Worrying and Love Raw Events
@@ -67,9 +309,9 @@ style: |
 ## Event Sourcing & CQRS with FastAPI and Celery
 
 **Antonis Markoulis** | Senior Staff Engineer @ Orfium
-**PyCon Athens 2025**
+**PyCon Greece 2025**
 
-<!--Hello everybody! I'm excited to be presenting at PyCon Athens. This is the first PyCon in Greece, so it's truly an honor to be part of this inaugural event.
+<!--Hello everybody! I'm excited to be presenting at PyCon Greece. This is the first PyCon in Greece, so it's truly an honor to be part of this inaugural event.
 
 I'm Antonis Markoulis, a Senior Staff Engineer at Orfium where I focus on elevating technical standards across the organization and engineering teams. I've been coding in Python professionally for over 10 years, and I'm passionate about building robust, scalable systems.
 
@@ -126,7 +368,6 @@ event_type: USER_DELETED
 version: 1
 timestamp: 2024-03-15T16:47:23Z
 revision: 5
-
 data:
   deleted_by: admin@company.com
   reason: User requested account deletion
