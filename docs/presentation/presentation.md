@@ -3,62 +3,227 @@ marp: true
 theme: beam
 class: invert
 paginate: true
-header: "PyCon Athens 2025"
 footer: "Event Sourcing & CQRS with FastAPI and Celery"
 style: |
+  @import url('https://fonts.googleapis.com/css2?family=Google+Sans:wght@400;500;700&display=swap');
+
   section {
+    font-family: 'Google Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
     font-size: 1.3em;
-    background-color: #1E1E1E;
-    color: #E0E0E0;
-    line-height: 1.4;
+    background-color: #FFFFFF;
+    color: #2D2D2D;
+    line-height: 1.5;
+    padding: 2em;
   }
+
+  /* Logo positioning - smaller and more compact */
+  section::before {
+    content: '';
+    position: absolute;
+    top: 0.5em;
+    left: 0.5em;
+    width: 80px;
+    height: 40px;
+    background-image: url('images/logo.png');
+    background-size: contain;
+    background-repeat: no-repeat;
+    background-position: left center;
+    z-index: 10;
+  }
+
+  /* Title styling - more compact */
   h1 {
+    font-family: 'Google Sans', sans-serif;
     font-size: 1.8em;
-    color: #FFD43B;
-    border-bottom: 2px solid #306998;
-  }
-  h2 {
+    font-weight: 700;
     color: #306998;
+    border-bottom: 2px solid #FFD43B;
+    margin-top: 0.8em;
+    margin-bottom: 0.4em;
+    padding-bottom: 0.2em;
   }
+
+  h2 {
+    font-family: 'Google Sans', sans-serif;
+    font-size: 1.3em;
+    font-weight: 500;
+    color: #306998;
+    margin-top: 0.8em;
+    margin-bottom: 0.4em;
+  }
+
+  /* Code styling - more compact */
   code {
+    font-family: 'JetBrains Mono', 'Fira Code', 'Consolas', monospace;
     font-size: 0.8em;
-    background-color: #2D2D2D;
-    color: #E0E0E0;
+    background-color: #F8F9FA;
+    color: #2D2D2D;
+    border: 1px solid #E9ECEF;
+    border-radius: 4px;
+    padding: 0.15em 0.3em;
   }
+
   pre {
-    background-color: #2D2D2D;
+    background-color: #F8F9FA;
+    border: 1px solid #E9ECEF;
+    border-radius: 6px;
+    padding: 0.8em;
+    overflow-x: auto;
+    margin: 0.5em 0;
   }
+
+  pre code {
+    background: none;
+    border: none;
+    padding: 0;
+  }
+
+  /* Emphasis and highlights */
   strong {
-    color: #FFD43B;
+    color: #306998;
+    font-weight: 700;
   }
+
+  /* Links */
   a {
     color: #306998;
+    text-decoration: none;
+    border-bottom: 1px solid #FFD43B;
   }
+
+  a:hover {
+    color: #FFD43B;
+    border-bottom-color: #FFD43B;
+  }
+
+  /* Blockquotes */
   blockquote {
-    border-left-color: #306998;
-    color: #A0A0A0;
+    border-left: 3px solid #FFD43B;
+    color: #6C757D;
+    padding-left: 0.8em;
+    margin: 0.8em 0;
+    font-style: italic;
   }
+
+  /* Lists - more compact */
   ul li::marker {
     color: #FFD43B;
   }
+
   ol li::marker {
     color: #FFD43B;
   }
-  section.lead h1 {
-    font-size: 2.5em;
-  }
-  section.lead h2 {
-    font-size: 1.8em;
-  }
+
+  /* Lead section styling */
   section.lead {
     text-align: center;
+    background: linear-gradient(135deg, #FFFFFF 0%, #F8F9FA 100%);
   }
+
+  section.lead h1 {
+    font-size: 2.5em;
+    color: #306998;
+    border: none;
+    margin-top: 1.5em;
+  }
+
+  section.lead h2 {
+    font-size: 1.6em;
+    color: #6C757D;
+    font-weight: 400;
+  }
+
+  /* Image styling */
+  img {
+    max-width: 100%;
+    height: auto;
+    border-radius: 6px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+    margin: 0.5em 0;
+  }
+
   /* Target the specific event-sourcing-flow image */
   img[src*="event-sourcing-flow"] {
-    transform: scale(1.4) !important;
+    transform: scale(1.1) !important;
     transform-origin: center !important;
-    margin: 2em 0 !important;
-    margin-left: 9em !important;
+    margin: 1.5em auto !important;
+    display: block !important;
+  }
+
+  /* Custom slide backgrounds */
+  section.title-slide {
+    background: linear-gradient(135deg, #FFFFFF 0%, #F8F9FA 100%);
+  }
+
+  section.content-slide {
+    background: #FFFFFF;
+  }
+
+  /* Table styling */
+  table {
+    border-collapse: collapse;
+    width: 100%;
+    margin: 0.8em 0;
+  }
+
+  th, td {
+    border: 1px solid #E9ECEF;
+    padding: 0.6em;
+    text-align: left;
+  }
+
+  th {
+    background-color: #F8F9FA;
+    color: #306998;
+    font-weight: 600;
+  }
+
+  /* Custom bullet points - more compact */
+  ul {
+    list-style: none;
+    padding-left: 0;
+    margin: 0.5em 0;
+  }
+
+  ul li {
+    position: relative;
+    padding-left: 1.2em;
+    margin-bottom: 0.3em;
+  }
+
+  ul li::before {
+    content: '▶';
+    position: absolute;
+    left: 0;
+    color: #FFD43B;
+    font-size: 0.7em;
+  }
+
+  /* Success/Error indicators */
+  .success {
+    color: #28A745;
+  }
+
+  .error {
+    color: #DC3545;
+  }
+
+  .warning {
+    color: #FFC107;
+  }
+
+  /* Code block language indicators */
+  pre[data-lang]::before {
+    content: attr(data-lang);
+    position: absolute;
+    top: 0.4em;
+    right: 0.8em;
+    font-size: 0.65em;
+    color: #6C757D;
+    background: #E9ECEF;
+    padding: 0.15em 0.4em;
+    border-radius: 3px;
+    text-transform: uppercase;
   }
 ---
 
