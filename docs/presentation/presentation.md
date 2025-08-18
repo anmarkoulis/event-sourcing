@@ -161,21 +161,38 @@ style: |
     font-weight: 400;
   }
 
-  /* Image styling */
+  /* Image styling - enhanced with shadows */
   img {
     max-width: 100%;
     height: auto;
-    border-radius: 6px;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+    border-radius: 8px;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12), 0 2px 8px rgba(0, 0, 0, 0.08);
     margin: 0.5em 0;
+    image-rendering: -webkit-optimize-contrast;
+    image-rendering: crisp-edges;
+    image-rendering: pixelated;
+    border: 1px solid #E9ECEF;
+    transition: box-shadow 0.2s ease-in-out;
   }
 
-  /* Target the specific event-sourcing-flow image */
-  img[src*="event-sourcing-flow"] {
-    transform: scale(1.1) !important;
-    transform-origin: center !important;
-    margin: 1.5em auto !important;
-    display: block !important;
+  /* Enhanced shadows for specific diagrams */
+  img[src*="event-sourcing-flow"],
+  img[src*="event-stream-sequence"],
+  img[src*="debugging-superpowers"] {
+    margin: 1.5em auto;
+    display: block;
+    max-width: 90%;
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.15), 0 3px 12px rgba(0, 0, 0, 0.1);
+    border: 1px solid #DADCE0;
+  }
+
+  /* Specific image positioning without scaling */
+  img[src*="event-sourcing-flow"],
+  img[src*="event-stream-sequence"],
+  img[src*="debugging-superpowers"] {
+    margin: 1.5em auto;
+    display: block;
+    max-width: 90%;
   }
 
     /* Minimal Visual Hierarchy */
