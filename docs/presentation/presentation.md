@@ -16,14 +16,14 @@ style: |
     padding: 2em;
   }
 
-  /* Logo positioning - smaller and more compact */
+  /* Logo positioning - balanced size */
   section::before {
     content: '';
     position: absolute;
     top: 0.5em;
     left: 0.5em;
-    width: 80px;
-    height: 40px;
+    width: 85px;
+    height: 42px;
     background-image: url('images/logo.png');
     background-size: contain;
     background-repeat: no-repeat;
@@ -185,38 +185,38 @@ style: |
     background: #FFFFFF;
   }
 
-  /* Clean title styling */
+    /* Clean title styling - optimized */
   h1 {
     border-bottom: 2px solid #FFD43B;
-    padding-bottom: 0.2em;
-    margin-bottom: 0.8em;
+    padding-bottom: 0.15em;
+    margin-bottom: 0.6em;
   }
 
-  /* Simple section headers */
+  /* Simple section headers - optimized */
   h2 {
-    margin-top: 1em;
-    margin-bottom: 0.5em;
+    margin-top: 0.8em;
+    margin-bottom: 0.4em;
     color: #306998;
   }
 
-    /* Better content spacing */
+      /* Better content spacing - optimized */
   section > * + * {
-    margin-top: 0.4em;
+    margin-top: 0.35em;
   }
 
-  /* Code block spacing */
+  /* Code block spacing - optimized */
   pre {
-    margin: 0.5em 0;
-  }
-
-  /* List spacing */
-  ul, ol {
     margin: 0.4em 0;
   }
 
-  /* Blockquote spacing */
+  /* List spacing - optimized */
+  ul, ol {
+    margin: 0.35em 0;
+  }
+
+  /* Blockquote spacing - optimized */
   blockquote {
-    margin: 0.6em 0;
+    margin: 0.5em 0;
   }
 
   /* Table styling */
@@ -238,17 +238,17 @@ style: |
     font-weight: 600;
   }
 
-  /* Custom bullet points - more compact */
+  /* Custom bullet points - optimized */
   ul {
     list-style: none;
     padding-left: 0;
-    margin: 0.5em 0;
+    margin: 0.4em 0;
   }
 
   ul li {
     position: relative;
-    padding-left: 1.2em;
-    margin-bottom: 0.3em;
+    padding-left: 1em;
+    margin-bottom: 0.2em;
   }
 
   ul li::before {
@@ -256,7 +256,7 @@ style: |
     position: absolute;
     left: 0;
     color: #FFD43B;
-    font-size: 0.7em;
+    font-size: 0.65em;
   }
 
   /* Success/Error indicators */
