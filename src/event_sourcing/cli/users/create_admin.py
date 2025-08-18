@@ -13,6 +13,11 @@ from event_sourcing.application.commands.user.create_user import (
 )
 from event_sourcing.cli.handlers.exception import cli_error_handler
 from event_sourcing.config.settings import settings
+from event_sourcing.domain.exceptions import (
+    EmailAlreadyExistsError,
+    UserAlreadyExistsError,
+    UsernameAlreadyExistsError,
+)
 from event_sourcing.enums import AggregateTypeEnum, Role
 from event_sourcing.infrastructure.provider import get_infrastructure_factory
 from event_sourcing.utils import log_typer_command
@@ -111,11 +116,11 @@ async def create_admin_user(
 
             for event in existing_events:
                 if event.event_type == "USER_CREATED":
-                    typer.echo(f"❌ User '{username}' already exists!")
+                    typer.echo(f"⚠️  User '{username}' already exists!")
                     typer.echo(
-                        "Use --force flag to create anyway or choose a different username."
+                        "Admin user creation skipped - user already exists."
                     )
-                    raise typer.Exit(1)
+                    return
 
             # Search for existing users with this email
             existing_events = await event_store.search_events(
@@ -125,11 +130,11 @@ async def create_admin_user(
 
             for event in existing_events:
                 if event.event_type == "USER_CREATED":
-                    typer.echo(f"❌ User with email '{email}' already exists!")
+                    typer.echo(f"⚠️  User with email '{email}' already exists!")
                     typer.echo(
-                        "Use --force flag to create anyway or choose a different username."
+                        "Admin user creation skipped - user already exists."
                     )
-                    raise typer.Exit(1)
+                    return
         finally:
             await session.close()
 
@@ -144,10 +149,24 @@ async def create_admin_user(
         role=Role.ADMIN,
     )
 
-    # Execute the command
-    await command_handler.handle(command)
+    # Execute the command with exception handling for domain errors
+    try:
+        await command_handler.handle(command)
+        typer.echo(f"✅ Admin user '{username}' created successfully!")
+        typer.echo(f"User ID: {command.user_id}")
+    except (
+        UsernameAlreadyExistsError,
+        EmailAlreadyExistsError,
+        UserAlreadyExistsError,
+    ) as e:
+        # Handle domain exceptions about duplicate users gracefully
+        if isinstance(e, UsernameAlreadyExistsError):
+            typer.echo(f"⚠️  User '{username}' already exists!")
+        elif isinstance(e, EmailAlreadyExistsError):
+            typer.echo(f"⚠️  User with email '{email}' already exists!")
+        elif isinstance(e, UserAlreadyExistsError):
+            typer.echo(f"⚠️  User '{username}' already exists!")
 
-    # Note: No manual logging needed - the decorator handles it!
-    # The decorator will log the start, completion, and any failures
-    typer.echo(f"✅ Admin user '{username}' created successfully!")
-    typer.echo(f"User ID: {command.user_id}")
+        typer.echo("Admin user creation skipped - user already exists.")
+        # Don't raise an exception, just return gracefully
+        return

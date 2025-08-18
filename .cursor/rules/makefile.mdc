@@ -1,0 +1,13 @@
+---
+description: Use Makefile commands
+alwaysApply: true
+---
+
+## Makefile rules
+
+- When AI has to run a CLI command that already exists in the Makefile, run the `make` command. Example:
+
+  - Instead of `python -m pytest`, use `make test`
+  - Instead of `docker compose build fastapi`, use `make build`
+
+- Makefiles have higher priority than the virtual environment rules. If a command is defined in the Makefile, there is no need for an active virtual environment.
