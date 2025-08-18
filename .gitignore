@@ -273,3 +273,8 @@ tags
 
 # Core
 core
+
+# Presentation Generated
+docs/presentation/presentation.pptx
+docs/presentation/other_docs/
+docs/presentation/diagrams/generated/
