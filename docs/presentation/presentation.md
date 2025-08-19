@@ -53,16 +53,19 @@ style: |
     z-index: 5;
   }
 
-  /* h5 styling - same as h1 but without absolute positioning */
+  /* h5 styling - subtle background with accent */
   h5 {
+    background: #F8F9FA;
+    border: 2px solid #E9ECEF;
+    border-top: 4px solid #FFD43B;
+    padding: 0.6em 1em;
+    border-radius: 8px;
+    text-align: center;
     font-family: 'Google Sans', sans-serif;
     font-size: 1.8em;
     font-weight: 700;
     color: #306998;
-    border-bottom: 2px solid #FFD43B;
-    margin-top: 0.8em;
-    margin-bottom: 0.4em;
-    padding-bottom: 0.2em;
+    margin: 1em 0;
   }
 
   /* Adjust content positioning to account for absolute positioned titles */
