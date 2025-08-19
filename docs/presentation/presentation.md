@@ -9,7 +9,7 @@ style: |
 
   section {
     font-family: 'Google Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-    font-size: 1.3em;
+    font-size: 1.1em;
     background-color: #FFFFFF;
     color: #2D2D2D;
     line-height: 1.5;
@@ -34,7 +34,7 @@ style: |
   /* Title styling - more compact */
   h1 {
     font-family: 'Google Sans', sans-serif;
-    font-size: 1.8em;
+    font-size: 2.2em;
     font-weight: 700;
     color: #306998;
     border-bottom: 2px solid #FFD43B;
@@ -62,7 +62,7 @@ style: |
     border-radius: 8px;
     text-align: center;
     font-family: 'Google Sans', sans-serif;
-    font-size: 1.8em;
+    font-size: 2.2em;
     font-weight: 700;
     color: #306998;
     margin: 1em 0;
@@ -119,11 +119,39 @@ style: |
 
   h2 {
     font-family: 'Google Sans', sans-serif;
-    font-size: 1.3em;
+    font-size: 1.6em;
     font-weight: 500;
     color: #306998;
     margin-top: 0.8em;
     margin-bottom: 0.4em;
+  }
+
+  /* Subsection headers */
+  h3 {
+    font-family: 'Google Sans', sans-serif;
+    font-size: 1.3em;
+    font-weight: 500;
+    color: #FF6B35;
+    margin-top: 0.6em;
+    margin-bottom: 0.3em;
+  }
+
+  /* Minor subsection headers */
+  h4 {
+    font-family: 'Google Sans', sans-serif;
+    font-size: 1.1em;
+    font-weight: 500;
+    color: #6C757D;
+    margin-top: 0.5em;
+    margin-bottom: 0.25em;
+  }
+
+  /* Main content paragraphs */
+  p {
+    font-size: 1.0em;
+    line-height: 1.6;
+    margin: 0.5em 0;
+    color: #2D2D2D;
   }
 
     /* Enhanced Code styling with Python syntax colors */
@@ -306,6 +334,12 @@ style: |
     margin: 0.35em 0;
   }
 
+  ol li {
+    font-size: 1.0em;
+    line-height: 1.5;
+    margin-bottom: 0.2em;
+  }
+
   /* Blockquote spacing - optimized */
   blockquote {
     margin: 0.5em 0;
@@ -334,6 +368,8 @@ style: |
     border: 1px solid #E9ECEF;
     padding: 0.6em;
     text-align: left;
+    font-size: 0.95em;
+    line-height: 1.4;
   }
 
   th {
@@ -353,6 +389,8 @@ style: |
     position: relative;
     padding-left: 1em;
     margin-bottom: 0.2em;
+    font-size: 1.0em;
+    line-height: 1.5;
   }
 
   ul li::before {
