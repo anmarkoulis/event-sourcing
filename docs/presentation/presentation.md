@@ -53,6 +53,18 @@ style: |
     z-index: 5;
   }
 
+  /* h5 styling - same as h1 but without absolute positioning */
+  h5 {
+    font-family: 'Google Sans', sans-serif;
+    font-size: 1.8em;
+    font-weight: 700;
+    color: #306998;
+    border-bottom: 2px solid #FFD43B;
+    margin-top: 0.8em;
+    margin-bottom: 0.4em;
+    padding-bottom: 0.2em;
+  }
+
   /* Adjust content positioning to account for absolute positioned titles */
   section:not(.lead) {
     padding-top: 0em;
@@ -332,7 +344,7 @@ style: |
 
 ---
 
-# How I Learned to Stop Worrying and Love Raw Events
+##### How I Learned to Stop Worrying and Love Raw Events
 
 ## Event Sourcing & CQRS with FastAPI and Celery
 
