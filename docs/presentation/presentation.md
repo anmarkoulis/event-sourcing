@@ -1,8 +1,7 @@
 ---
 marp: true
-theme: beam
 class: invert
-paginate: true
+paginate:
 footer: "Event Sourcing & CQRS with FastAPI and Celery"
 style: |
   @import url('https://fonts.googleapis.com/css2?family=Google+Sans:wght@400;500;700&display=swap');
@@ -84,6 +83,50 @@ style: |
   /* First slide content positioning */
   section.lead {
     padding-top: 2em;
+  }
+
+  /* Contact links styling for Thank You slide */
+  .contact-links {
+    margin: 2em 0;
+  }
+
+  .contact-item {
+    display: flex;
+    align-items: center;
+    margin: 1em 0;
+    padding: 1em;
+    background: #F8F9FA;
+    border-radius: 8px;
+    border-left: 4px solid #FF6B35;
+    transition: all 0.2s ease;
+  }
+
+  .contact-item:hover {
+    background: #E9ECEF;
+    transform: translateX(5px);
+  }
+
+  .contact-item .icon {
+    width: 24px;
+    height: 24px;
+    margin-right: 1em;
+    flex-shrink: 0;
+  }
+
+  .contact-item strong {
+    color: #306998;
+    margin-right: 0.5em;
+  }
+
+  .contact-item a {
+    color: #4A90E2;
+    text-decoration: none;
+    border-bottom: 1px solid transparent;
+    transition: border-color 0.2s ease;
+  }
+
+  .contact-item a:hover {
+    border-bottom-color: #4A90E2;
   }
 
   h2 {
@@ -936,11 +979,27 @@ The Python ecosystem is incredibly powerful for distributed systems. FastAPI, Ce
 
 **Let's Connect!**
 
-**GitHub**: github.com/anmarkoulis
-**LinkedIn**: linkedin.com/in/anmarkoulis
-**Dev.to**: dev.to/markoulis
+<div class="contact-links">
+  <div class="contact-item">
+    <img src="images/github.svg" alt="GitHub" class="icon">
+    <strong>GitHub</strong>: <a href="https://github.com/anmarkoulis" target="_blank">github.com/anmarkoulis</a>
+  </div>
 
-**📚 Full Implementation**: github.com/anmarkoulis/event-sourcing
+  <div class="contact-item">
+    <img src="images/linkedin.svg" alt="LinkedIn" class="icon">
+    <strong>LinkedIn</strong>: <a href="https://linkedin.com/in/anmarkoulis" target="_blank">linkedin.com/in/anmarkoulis</a>
+  </div>
+
+  <div class="contact-item">
+    <img src="https://media2.dev.to/dynamic/image/quality=100/https://dev-to-uploads.s3.amazonaws.com/uploads/logos/resized_logo_UQww2soKuUsjaOGNB38o.png" alt="Dev.to" class="icon">
+    <strong>Dev.to</strong>: <a href="https://dev.to/markoulis" target="_blank">dev.to/markoulis</a>
+  </div>
+
+  <div class="contact-item">
+    <img src="images/github.svg" alt="GitHub" class="icon">
+    <strong>Full Implementation</strong>: <a href="https://github.com/anmarkoulis/event-sourcing" target="_blank">github.com/anmarkoulis/event-sourcing</a>
+  </div>
+</div>
 
 <!--
 Thank you all for your attention. I hope I've convinced you that raw events are worth loving.
