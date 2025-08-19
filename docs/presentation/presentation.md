@@ -2,6 +2,7 @@
 marp: true
 class: invert
 paginate: true
+highlight: false
 footer: "Event Sourcing & CQRS with FastAPI and Celery"
 style: |
   @import url('https://fonts.googleapis.com/css2?family=Google+Sans:wght@400;500;700&display=swap');
@@ -171,13 +172,25 @@ style: |
     line-height: 1.5;
   }
 
-  /* Python syntax highlighting colors */
-  pre code .keyword { color: #306998; font-weight: 600; }  /* def, class, if, etc. */
-  pre code .function { color: #FF6B35; font-weight: 500; }  /* function names */
-  pre code .string { color: #28A745; }  /* strings */
-  pre code .number { color: #6F42C1; }  /* numbers */
-  pre code .comment { color: #6C757D; font-style: italic; }  /* comments */
-  pre code .operator { color: #DC3545; font-weight: 500; }  /* +, -, *, /, etc. */
+  /* Python syntax highlighting colors - VS Code Light Theme */
+  pre code .hljs-keyword { color: #0000FF !important; font-weight: 600; }  /* def, class, if, etc. */
+  pre code .hljs-title { color: #795E26 !important; font-weight: 500; }  /* function names */
+  pre code .hljs-string { color: #A31515 !important; }  /* strings */
+  pre code .hljs-literal { color: #098658 !important; }  /* numbers */
+  pre code .hljs-comment { color: #008000 !important; font-style: italic; }  /* comments */
+  pre code .hljs-punctuation { color: #000000 !important; }  /* operators */
+  pre code .hljs-type { color: #0000FF !important; }  /* type hints like Dict, List, str */
+  pre code .hljs-built_in { color: #0000FF !important; }  /* built-ins like None, True, False */
+
+  /* Additional classes for complete coverage */
+  pre code .hljs-variable { color: #000000 !important; }  /* variable names like self, command, events */
+  pre code .hljs-params { color: #000000 !important; }  /* function parameters */
+  pre code .hljs-property { color: #000000 !important; }  /* object properties like self.event_store */
+  pre code .hljs-attr { color: #000000 !important; }  /* attributes */
+  pre code .hljs-name { color: #000000 !important; }  /* general names */
+
+  /* Fallback - force all code to be visible */
+  pre code { color: #1E1E1E !important; }
 
   /* Emphasis and highlights */
   strong {
