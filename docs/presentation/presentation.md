@@ -1,7 +1,7 @@
 ---
 marp: true
 class: invert
-paginate:
+paginate: true
 footer: "Event Sourcing & CQRS with FastAPI and Celery"
 style: |
   @import url('https://fonts.googleapis.com/css2?family=Google+Sans:wght@400;500;700&display=swap');
@@ -52,8 +52,8 @@ style: |
     z-index: 5;
   }
 
-  /* h5 styling - subtle background with accent */
-  h5 {
+  /* Lead h1 styling - subtle background with accent */
+  section.lead h1 {
     background: #F8F9FA;
     border: 2px solid #E9ECEF;
     border-top: 4px solid #FFD43B;
@@ -68,21 +68,8 @@ style: |
   }
 
   /* Adjust content positioning to account for absolute positioned titles */
-  section:not(.lead) {
+  section {
     padding-top: 5em;
-  }
-
-  /* Special styling for first slide - override absolute positioning */
-  section.lead h1 {
-    position: static;
-    text-align: center;
-    margin-top: 1.5em;
-    margin-bottom: 0.4em;
-  }
-
-  /* First slide content positioning */
-  section.lead {
-    padding-top: 2em;
   }
 
   /* Contact links styling for Thank You slide */
@@ -228,24 +215,13 @@ style: |
     color: #FF6B35;
   }
 
-  /* Lead section styling */
-  section.lead {
-    text-align: center;
-    background: linear-gradient(135deg, #FFFFFF 0%, #F8F9FA 100%);
+
+  /* Disable pagination for first slide only */
+  section.lead::after {
+    display: none;
   }
 
-  section.lead h1 {
-    font-size: 2.5em;
-    color: #306998;
-    border: none;
-    margin-top: 1.5em;
-  }
 
-  section.lead h2 {
-    font-size: 1.6em;
-    color: #6C757D;
-    font-weight: 400;
-  }
 
   /* Image styling - enhanced with shadows */
   img {
@@ -390,7 +366,9 @@ style: |
 
 ---
 
-##### How I Learned to Stop Worrying and Love Raw Events
+<!-- _class: lead -->
+
+# How I Learned to Stop Worrying and Love Raw Events
 
 ## Event Sourcing & CQRS with FastAPI and Celery
 
