@@ -70,7 +70,7 @@ style: |
 
   /* Adjust content positioning to account for absolute positioned titles */
   section:not(.lead) {
-    padding-top: 0em;
+    padding-top: 5em;
   }
 
   /* Special styling for first slide - override absolute positioning */
