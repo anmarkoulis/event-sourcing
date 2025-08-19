@@ -172,15 +172,15 @@ style: |
     line-height: 1.5;
   }
 
-  /* Python syntax highlighting colors - VS Code Light Theme */
-  pre code .hljs-keyword { color: #0000FF !important; font-weight: 600; }  /* def, class, if, etc. */
-  pre code .hljs-title { color: #795E26 !important; font-weight: 500; }  /* function names */
-  pre code .hljs-string { color: #A31515 !important; }  /* strings */
-  pre code .hljs-literal { color: #098658 !important; }  /* numbers */
-  pre code .hljs-comment { color: #008000 !important; font-style: italic; }  /* comments */
-  pre code .hljs-punctuation { color: #000000 !important; }  /* operators */
-  pre code .hljs-type { color: #0000FF !important; }  /* type hints like Dict, List, str */
-  pre code .hljs-built_in { color: #0000FF !important; }  /* built-ins like None, True, False */
+  /* Python syntax highlighting colors - Presentation Theme */
+  pre code .hljs-keyword { color: #306998 !important; font-weight: 600; }  /* def, class, if, etc. */
+  pre code .hljs-title { color: #FF6B35 !important; font-weight: 500; }  /* function names */
+  pre code .hljs-string { color: #28A745 !important; }  /* strings */
+  pre code .hljs-literal { color: #6F42C1 !important; }  /* numbers */
+  pre code .hljs-comment { color: #6C757D !important; font-style: italic; }  /* comments */
+  pre code .hljs-punctuation { color: #2D2D2D !important; }  /* operators */
+  pre code .hljs-type { color: #306998 !important; }  /* type hints like Dict, List, str */
+  pre code .hljs-built_in { color: #306998 !important; }  /* built-ins like None, True, False */
 
   /* Additional classes for complete coverage */
   pre code .hljs-variable { color: #000000 !important; }  /* variable names like self, command, events */
