@@ -1,8 +1,8 @@
 ---
 marp: true
-theme: beam
 class: invert
 paginate: true
+highlight: false
 footer: "Event Sourcing & CQRS with FastAPI and Celery"
 style: |
   @import url('https://fonts.googleapis.com/css2?family=Google+Sans:wght@400;500;700&display=swap');
@@ -41,6 +41,80 @@ style: |
     margin-top: 0.8em;
     margin-bottom: 0.4em;
     padding-bottom: 0.2em;
+  }
+
+  /* Consistent title positioning for all slides except first */
+  section:not(.lead) h1 {
+    position: absolute;
+    top: 2em;
+    left: 1em;
+    right: 1em;
+    margin: 0;
+    z-index: 5;
+  }
+
+  /* Lead h1 styling - subtle background with accent */
+  section.lead h1 {
+    background: #F8F9FA;
+    border: 2px solid #E9ECEF;
+    border-top: 4px solid #FFD43B;
+    padding: 0.6em 1em;
+    border-radius: 8px;
+    text-align: center;
+    font-family: 'Google Sans', sans-serif;
+    font-size: 1.8em;
+    font-weight: 700;
+    color: #306998;
+    margin: 1em 0;
+  }
+
+  /* Adjust content positioning to account for absolute positioned titles */
+  section {
+    padding-top: 5em;
+  }
+
+  /* Contact links styling for Thank You slide */
+  .contact-links {
+    margin: 2em 0;
+  }
+
+  .contact-item {
+    display: flex;
+    align-items: center;
+    margin: 1em 0;
+    padding: 1em;
+    background: #F8F9FA;
+    border-radius: 8px;
+    border-left: 4px solid #FF6B35;
+    transition: all 0.2s ease;
+  }
+
+  .contact-item:hover {
+    background: #E9ECEF;
+    transform: translateX(5px);
+  }
+
+  .contact-item .icon {
+    width: 24px;
+    height: 24px;
+    margin-right: 1em;
+    flex-shrink: 0;
+  }
+
+  .contact-item strong {
+    color: #306998;
+    margin-right: 0.5em;
+  }
+
+  .contact-item a {
+    color: #4A90E2;
+    text-decoration: none;
+    border-bottom: 1px solid transparent;
+    transition: border-color 0.2s ease;
+  }
+
+  .contact-item a:hover {
+    border-bottom-color: #4A90E2;
   }
 
   h2 {
@@ -98,13 +172,25 @@ style: |
     line-height: 1.5;
   }
 
-  /* Python syntax highlighting colors */
-  pre code .keyword { color: #306998; font-weight: 600; }  /* def, class, if, etc. */
-  pre code .function { color: #FF6B35; font-weight: 500; }  /* function names */
-  pre code .string { color: #28A745; }  /* strings */
-  pre code .number { color: #6F42C1; }  /* numbers */
-  pre code .comment { color: #6C757D; font-style: italic; }  /* comments */
-  pre code .operator { color: #DC3545; font-weight: 500; }  /* +, -, *, /, etc. */
+  /* Python syntax highlighting colors - Presentation Theme */
+  pre code .hljs-keyword { color: #306998 !important; font-weight: 600; }  /* def, class, if, etc. */
+  pre code .hljs-title { color: #FF6B35 !important; font-weight: 500; }  /* function names */
+  pre code .hljs-string { color: #28A745 !important; }  /* strings */
+  pre code .hljs-literal { color: #6F42C1 !important; }  /* numbers */
+  pre code .hljs-comment { color: #6C757D !important; font-style: italic; }  /* comments */
+  pre code .hljs-punctuation { color: #2D2D2D !important; }  /* operators */
+  pre code .hljs-type { color: #306998 !important; }  /* type hints like Dict, List, str */
+  pre code .hljs-built_in { color: #306998 !important; }  /* built-ins like None, True, False */
+
+  /* Additional classes for complete coverage */
+  pre code .hljs-variable { color: #000000 !important; }  /* variable names like self, command, events */
+  pre code .hljs-params { color: #000000 !important; }  /* function parameters */
+  pre code .hljs-property { color: #000000 !important; }  /* object properties like self.event_store */
+  pre code .hljs-attr { color: #000000 !important; }  /* attributes */
+  pre code .hljs-name { color: #000000 !important; }  /* general names */
+
+  /* Fallback - force all code to be visible */
+  pre code { color: #1E1E1E !important; }
 
   /* Emphasis and highlights */
   strong {
@@ -142,24 +228,13 @@ style: |
     color: #FF6B35;
   }
 
-  /* Lead section styling */
-  section.lead {
-    text-align: center;
-    background: linear-gradient(135deg, #FFFFFF 0%, #F8F9FA 100%);
+
+  /* Disable pagination for first slide only */
+  section.lead::after {
+    display: none;
   }
 
-  section.lead h1 {
-    font-size: 2.5em;
-    color: #306998;
-    border: none;
-    margin-top: 1.5em;
-  }
 
-  section.lead h2 {
-    font-size: 1.6em;
-    color: #6C757D;
-    font-weight: 400;
-  }
 
   /* Image styling - enhanced with shadows */
   img {
@@ -303,6 +378,8 @@ style: |
 
 
 ---
+
+<!-- _class: lead -->
 
 # How I Learned to Stop Worrying and Love Raw Events
 
@@ -893,11 +970,27 @@ The Python ecosystem is incredibly powerful for distributed systems. FastAPI, Ce
 
 **Let's Connect!**
 
-**GitHub**: github.com/anmarkoulis
-**LinkedIn**: linkedin.com/in/anmarkoulis
-**Dev.to**: dev.to/markoulis
+<div class="contact-links">
+  <div class="contact-item">
+    <img src="images/github.svg" alt="GitHub" class="icon">
+    <strong>GitHub</strong>: <a href="https://github.com/anmarkoulis" target="_blank">github.com/anmarkoulis</a>
+  </div>
 
-**📚 Full Implementation**: github.com/anmarkoulis/event-sourcing
+  <div class="contact-item">
+    <img src="images/linkedin.svg" alt="LinkedIn" class="icon">
+    <strong>LinkedIn</strong>: <a href="https://linkedin.com/in/anmarkoulis" target="_blank">linkedin.com/in/anmarkoulis</a>
+  </div>
+
+  <div class="contact-item">
+    <img src="https://media2.dev.to/dynamic/image/quality=100/https://dev-to-uploads.s3.amazonaws.com/uploads/logos/resized_logo_UQww2soKuUsjaOGNB38o.png" alt="Dev.to" class="icon">
+    <strong>Dev.to</strong>: <a href="https://dev.to/markoulis" target="_blank">dev.to/markoulis</a>
+  </div>
+
+  <div class="contact-item">
+    <img src="images/github.svg" alt="GitHub" class="icon">
+    <strong>Full Implementation</strong>: <a href="https://github.com/anmarkoulis/event-sourcing" target="_blank">github.com/anmarkoulis/event-sourcing</a>
+  </div>
+</div>
 
 <!--
 Thank you all for your attention. I hope I've convinced you that raw events are worth loving.
