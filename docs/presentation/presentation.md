@@ -1011,22 +1011,22 @@ The Python ecosystem is incredibly powerful for distributed systems. FastAPI, Ce
 <div class="contact-links">
   <div class="contact-item">
     <img src="images/github.svg" alt="GitHub" class="icon">
-    <strong>GitHub</strong>: <a href="https://github.com/anmarkoulis" target="_blank">github.com/anmarkoulis</a>
+    <strong>GitHub</strong><a href="https://github.com/anmarkoulis" target="_blank">github.com/anmarkoulis</a>
   </div>
 
   <div class="contact-item">
     <img src="images/linkedin.svg" alt="LinkedIn" class="icon">
-    <strong>LinkedIn</strong>: <a href="https://linkedin.com/in/anmarkoulis" target="_blank">linkedin.com/in/anmarkoulis</a>
+    <strong>LinkedIn</strong><a href="https://linkedin.com/in/anmarkoulis" target="_blank">linkedin.com/in/anmarkoulis</a>
   </div>
 
   <div class="contact-item">
     <img src="https://media2.dev.to/dynamic/image/quality=100/https://dev-to-uploads.s3.amazonaws.com/uploads/logos/resized_logo_UQww2soKuUsjaOGNB38o.png" alt="Dev.to" class="icon">
-    <strong>Dev.to</strong>: <a href="https://dev.to/markoulis" target="_blank">dev.to/markoulis</a>
+    <strong>Dev.to</strong><a href="https://dev.to/markoulis" target="_blank">dev.to/markoulis</a>
   </div>
 
   <div class="contact-item">
     <img src="images/github.svg" alt="GitHub" class="icon">
-    <strong>Full Implementation</strong>: <a href="https://github.com/anmarkoulis/event-sourcing" target="_blank">github.com/anmarkoulis/event-sourcing</a>
+    <strong>Full Implementation</strong><a href="https://github.com/anmarkoulis/event-sourcing" target="_blank">github.com/anmarkoulis/event-sourcing</a>
   </div>
 </div>
 
