@@ -43,6 +43,34 @@ style: |
     padding-bottom: 0.2em;
   }
 
+  /* Consistent title positioning for all slides except first */
+  section:not(.lead) h1 {
+    position: absolute;
+    top: 2em;
+    left: 1em;
+    right: 1em;
+    margin: 0;
+    z-index: 5;
+  }
+
+  /* Adjust content positioning to account for absolute positioned titles */
+  section:not(.lead) {
+    padding-top: 0em;
+  }
+
+  /* Special styling for first slide - override absolute positioning */
+  section.lead h1 {
+    position: static;
+    text-align: center;
+    margin-top: 1.5em;
+    margin-bottom: 0.4em;
+  }
+
+  /* First slide content positioning */
+  section.lead {
+    padding-top: 2em;
+  }
+
   h2 {
     font-family: 'Google Sans', sans-serif;
     font-size: 1.3em;
