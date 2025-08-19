@@ -739,13 +739,20 @@ The Unit of Work pattern (`async with self.uow:`) is crucial here - it ensures t
 class UserAggregate(Aggregate):
     """User domain aggregate - encapsulates user business logic"""
 
-    def change_password(self, new_password_hash: str) -> List[EventDTO]:
-        """Change user's password"""
-        # Business rules and event creation logic here
-        pass
+    def change_password(self, current_password: str, new_password: str) -> List[EventDTO]:
+        if not self._verify_password(current_password):
+            raise InvalidPasswordError("Current password is incorrect")
+
+        if len(new_password) < 8:
+            raise ValidationError("Password must be at least 8 characters")
+
+        return [PasswordChangedEvent(
+            aggregate_id=self.id,
+            changed_at=datetime.utcnow(),
+            password_hash=hash_password(new_password)
+        )]
 
     def apply(self, event: EventDTO) -> None:
-        """Apply a domain event to the user aggregate state"""
         if event.event_type == EventType.PASSWORD_CHANGED:
             self._apply_password_changed_event(event)
         # ... other event types
