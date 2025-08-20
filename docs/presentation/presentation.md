@@ -704,16 +704,17 @@ The beauty is in the simplicity: commands and queries are just Pydantic models, 
 ```python
 class ChangePasswordCommandHandler(CommandHandler[ChangePasswordCommand]):
     async def handle(self, command: ChangePasswordCommand) -> None:
-        # Retrieve all events for this aggregate
+        # Get events and rebuild aggregate state
         events = await self.event_store.get_stream(command.user_id)
-
-        # Create aggregate and replay events
         user = UserAggregate(command.user_id)
         for event in events:
             user.apply(event)
 
-        # Call domain method and get new events
-        new_events = user.change_password(command.password_data.current_password, command.password_data.new_password)
+        # Execute business logic and persist
+        new_events = user.change_password(
+            command.password_data.current_password,
+            command.password_data.new_password
+        )
 
         # Persist and dispatch events using unit of work
         async with self.uow:
@@ -885,6 +886,8 @@ PUT /users/123/ {"first_name": "Sara"}
 ### 1. Optimistic Updates (Naive)
 ### 2. Outbox Pattern (Advanced)
 
+**Most teams start with optimistic updates - it's simpler and works for 80% of use cases.**
+
 ## **Eventual consistency requires thoughtful UI design**
 
 <!--
@@ -911,7 +914,7 @@ The key insight is that eventual consistency isn't just a technical challenge - 
         events = await self.event_store.get_stream(command.user_id)  # 10,000 events!
         user = UserAggregate(command.user_id)
         for event in events:
-            user.apply(event)  # Takes 5 seconds 😱
+            user.apply(event)  # Takes 5 seconds for 10,000 events 😱
 ```
 
 ## The solution: "Time travel with snapshots"
@@ -959,9 +962,10 @@ class TestUserAggregate(AsyncIOIsolatedTestCase):
         # Act - Test the problematic suspension event
         result = user.apply(UserSuspendedEvent("user_123", reason="fraud_detected"))
 
-        # Assert
+        # Assert - Verify business logic behavior
         self.assertTrue(result.is_success)
         self.assertEqual(user.status, "suspended")
+        # Now we know exactly why the user was suspended!
 ```
 
 ## **Test business logic with real production data**
@@ -985,8 +989,9 @@ But here's the real magic: we can transform these debugging scenarios into simpl
 - Familiar tools, powerful results
 
 ## ⚠️ When NOT to use Event Sourcing
-- **Simple CRUD** or **high-frequency systems** (immediate consistency needed)
-- **Teams without distributed systems experience**
+- **Simple CRUD** with basic audit needs
+- **High-frequency systems** requiring immediate consistency
+- **Teams without distributed systems experience** (start with simpler patterns first)
 
 ## 🎯 What you gain
 - **Complete audit trail** & time travel
