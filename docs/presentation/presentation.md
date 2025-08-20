@@ -704,16 +704,17 @@ The beauty is in the simplicity: commands and queries are just Pydantic models, 
 ```python
 class ChangePasswordCommandHandler(CommandHandler[ChangePasswordCommand]):
     async def handle(self, command: ChangePasswordCommand) -> None:
-        # Retrieve all events for this aggregate
+        # Get events and rebuild aggregate state
         events = await self.event_store.get_stream(command.user_id)
-
-        # Create aggregate and replay events
         user = UserAggregate(command.user_id)
         for event in events:
             user.apply(event)
 
-        # Call domain method and get new events
-        new_events = user.change_password(command.password_data.current_password, command.password_data.new_password)
+        # Execute business logic and persist
+        new_events = user.change_password(
+            command.password_data.current_password,
+            command.password_data.new_password
+        )
 
         # Persist and dispatch events using unit of work
         async with self.uow:
@@ -739,13 +740,20 @@ The Unit of Work pattern (`async with self.uow:`) is crucial here - it ensures t
 class UserAggregate(Aggregate):
     """User domain aggregate - encapsulates user business logic"""
 
-    def change_password(self, new_password_hash: str) -> List[EventDTO]:
-        """Change user's password"""
-        # Business rules and event creation logic here
-        pass
+    def change_password(self, current_password: str, new_password: str) -> List[EventDTO]:
+        if not self._verify_password(current_password):
+            raise InvalidPasswordError("Current password is incorrect")
+
+        if len(new_password) < 8:
+            raise ValidationError("Password must be at least 8 characters")
+
+        return [PasswordChangedEvent(
+            aggregate_id=self.id,
+            changed_at=datetime.utcnow(),
+            password_hash=hash_password(new_password)
+        )]
 
     def apply(self, event: EventDTO) -> None:
-        """Apply a domain event to the user aggregate state"""
         if event.event_type == EventType.PASSWORD_CHANGED:
             self._apply_password_changed_event(event)
         # ... other event types
@@ -878,6 +886,8 @@ PUT /users/123/ {"first_name": "Sara"}
 ### 1. Optimistic Updates (Naive)
 ### 2. Outbox Pattern (Advanced)
 
+**Most teams start with optimistic updates - it's simpler and works for 80% of use cases.**
+
 ## **Eventual consistency requires thoughtful UI design**
 
 <!--
@@ -904,7 +914,7 @@ The key insight is that eventual consistency isn't just a technical challenge - 
         events = await self.event_store.get_stream(command.user_id)  # 10,000 events!
         user = UserAggregate(command.user_id)
         for event in events:
-            user.apply(event)  # Takes 5 seconds 😱
+            user.apply(event)  # Takes 5 seconds for 10,000 events 😱
 ```
 
 ## The solution: "Time travel with snapshots"
@@ -952,9 +962,10 @@ class TestUserAggregate(AsyncIOIsolatedTestCase):
         # Act - Test the problematic suspension event
         result = user.apply(UserSuspendedEvent("user_123", reason="fraud_detected"))
 
-        # Assert
+        # Assert - Verify business logic behavior
         self.assertTrue(result.is_success)
         self.assertEqual(user.status, "suspended")
+        # Now we know exactly why the user was suspended!
 ```
 
 ## **Test business logic with real production data**
@@ -978,8 +989,9 @@ But here's the real magic: we can transform these debugging scenarios into simpl
 - Familiar tools, powerful results
 
 ## ⚠️ When NOT to use Event Sourcing
-- **Simple CRUD** or **high-frequency systems** (immediate consistency needed)
-- **Teams without distributed systems experience**
+- **Simple CRUD** with basic audit needs
+- **High-frequency systems** requiring immediate consistency
+- **Teams without distributed systems experience** (start with simpler patterns first)
 
 ## 🎯 What you gain
 - **Complete audit trail** & time travel
