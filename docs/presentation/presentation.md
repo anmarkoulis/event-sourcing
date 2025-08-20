@@ -302,6 +302,13 @@ style: |
     box-shadow: none !important;
   }
 
+  /* SVG-specific styling for crisp rendering */
+  img[src*=".svg"] {
+    image-rendering: optimizeQuality;
+    shape-rendering: geometricPrecision;
+    text-rendering: optimizeLegibility;
+  }
+
   /* Subtle hover effects for diagrams - no shadows */
   img[src*="event-sourcing-flow"]:hover,
   img[src*="event-stream-sequence"]:hover,
@@ -526,7 +533,7 @@ This is what gives us the audit trail we need for debugging - we can see exactly
 **Event Store** is append-only storage where events are organized in **streams per aggregate**.
 
 ## Example:
-![Event Stream Sequence](diagrams/generated/event-stream-sequence.png)
+![Event Stream Sequence](diagrams/generated/event-stream-sequence.svg)
 
 ## Key characteristics:
 - **Append-only**: Events are never modified or deleted
@@ -657,7 +664,7 @@ A key benefit is that one event can trigger multiple projections - the same User
 
 ## The complete flow:
 
-![Event Sourcing Flow](diagrams/generated/event-sourcing-flow.png)
+![Event Sourcing Flow](diagrams/generated/event-sourcing-flow.svg)
 
 ## **Two paths: Commands (Write) and Queries (Read)**
 
@@ -959,7 +966,7 @@ The key insight is that snapshots require proper error handling in the command h
 
 ## The story: "What was the user's state at 3:47 PM?"
 
-![Debugging Superpowers](diagrams/generated/debugging-superpowers.png)
+![Debugging Superpowers](diagrams/generated/debugging-superpowers.svg)
 
 ```python
 class TestUserAggregate(AsyncIOIsolatedTestCase):
