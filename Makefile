@@ -126,8 +126,8 @@ ifeq ($(DEV_CONTAINER),true)
 			for file in docs/presentation/diagrams/source/*.mmd; do \
 				if [ -f "$$file" ]; then \
 					filename=$$(basename $$file .mmd); \
-					echo "Generating $$filename.png from $$file"; \
-					PUPPETEER_EXECUTABLE_PATH=/tmp/chromium-wrapper.sh mmdc -i $$file -o docs/presentation/diagrams/generated/$$filename.png; \
+					echo "Generating $$filename.svg from $$file"; \
+					PUPPETEER_EXECUTABLE_PATH=/tmp/chromium-wrapper.sh mmdc -i $$file -o docs/presentation/diagrams/generated/$$filename.svg --outputFormat svg; \
 				fi; \
 			done; \
 			echo "Diagrams generated successfully!"; \
@@ -159,8 +159,8 @@ else
 				for file in docs/presentation/diagrams/source/*.mmd; do \
 					if [ -f \"\$$file\" ]; then \
 						filename=\$$(basename \$$file .mmd); \
-						echo \"Generating \$$filename.png from \$$file\"; \
-						PUPPETEER_EXECUTABLE_PATH=/tmp/chromium-wrapper.sh mmdc -i \"\$$file\" -o docs/presentation/diagrams/generated/\$$filename.png; \
+						echo \"Generating \$$filename.svg from \$$file\"; \
+						PUPPETEER_EXECUTABLE_PATH=/tmp/chromium-wrapper.sh mmdc -i \"\$$file\" -o docs/presentation/diagrams/generated/\$$filename.svg --outputFormat svg; \
 					fi; \
 				done; \
 				echo 'Diagrams generated successfully!'; \
