@@ -451,9 +451,9 @@ def delete_user(user_id: int):
 **Tuesday 9:15 AM**: "When was it deleted? Who did it? Why?"
 
 ## What we can't answer:
-- ❌ **When** was the user deleted?
-- ❌ **Who** deleted the user?
-- ❌ **Why** was it deleted?
+- **When** was the user deleted?
+- **Who** deleted the user?
+- **Why** was it deleted?
 
 ## **The system has no memory of what happened**
 
