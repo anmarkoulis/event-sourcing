@@ -1,26 +1,26 @@
 graph LR
-    A[Entry Point<br/>FastAPI] --> B[Command]
+    A(Entry Point<br/>FastAPI) --> B[Command]
     A --> J[Query]
 
-    B --> C[Command Handler]
+    B --> C(Command Handler)
     C --> D[Aggregate]
-    D --> E[Event]
-    E --> F[Event Store]
+    D --> E((Event))
+    E --> F[(Event Store)]
     E --> G[Event Bus]
-    G --> I[Projections]
-    I --> K[Read Models]
+    G --> I(Projections)
+    I --> K[(Read Models)]
 
-    J --> L[Query Handler]
+    J --> L(Query Handler)
     L --> K
 
-    style A fill:#306998,stroke:#1e3a8a,stroke-width:2px,color:#ffffff
-    style B fill:#FF6B35,stroke:#ea580c,stroke-width:2px,color:#ffffff
-    style C fill:#FFD43B,stroke:#eab308,stroke-width:2px,color:#1f2937
-    style D fill:#FF6B35,stroke:#ea580c,stroke-width:2px,color:#ffffff
-    style E fill:#28A745,stroke:#16a34a,stroke-width:2px,color:#ffffff
-    style F fill:#306998,stroke:#1e3a8a,stroke-width:2px,color:#ffffff
-    style G fill:#FF6B35,stroke:#ea580c,stroke-width:2px,color:#ffffff
-    style I fill:#FFD43B,stroke:#eab308,stroke-width:2px,color:#1f2937
-    style J fill:#FF6B35,stroke:#ea580c,stroke-width:2px,color:#ffffff
-    style K fill:#28A745,stroke:#16a34a,stroke-width:2px,color:#ffffff
-    style L fill:#FFD43B,stroke:#eab308,stroke-width:2px,color:#1f2937
+    style A fill:#E3F2FD,stroke:#306998,stroke-width:4px,color:#1565C0,font-weight:bold,font-size:16px,font-family:sans-serif
+    style B fill:#FFF3E0,stroke:#FF6B35,stroke-width:3px,color:#E65100,font-weight:bold,font-size:14px,font-family:sans-serif
+    style C fill:#FFFDE7,stroke:#FFD43B,stroke-width:3px,color:#F57F17,font-weight:bold,font-size:14px,font-family:sans-serif
+    style D fill:#FFF3E0,stroke:#FF6B35,stroke-width:3px,color:#E65100,font-weight:bold,font-size:14px,font-family:sans-serif
+    style E fill:#E8F5E8,stroke:#28A745,stroke-width:3px,color:#2E7D32,font-weight:bold,font-size:14px,font-family:sans-serif
+    style F fill:#E3F2FD,stroke:#306998,stroke-width:3px,color:#1565C0,font-weight:bold,font-size:14px,font-family:sans-serif
+    style G fill:#FFF3E0,stroke:#FF6B35,stroke-width:3px,color:#E65100,font-weight:bold,font-size:14px,font-family:sans-serif
+    style I fill:#FFFDE7,stroke:#FFD43B,stroke-width:3px,color:#F57F17,font-weight:bold,font-size:14px,font-family:sans-serif
+    style J fill:#FFF3E0,stroke:#FF6B35,stroke-width:3px,color:#E65100,font-weight:bold,font-size:14px,font-family:sans-serif
+    style K fill:#E8F5E8,stroke:#28A745,stroke-width:3px,color:#2E7D32,font-weight:bold,font-size:14px,font-family:sans-serif
+    style L fill:#FFFDE7,stroke:#FFD43B,stroke-width:3px,color:#F57F17,font-weight:bold,font-size:14px,font-family:sans-serif
