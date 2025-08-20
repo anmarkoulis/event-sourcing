@@ -95,8 +95,8 @@ style: |
   }
 
   .contact-item .icon {
-    width: 24px;
-    height: 24px;
+    width: 14px;
+    height: 14px;
     margin-right: 1em;
     flex-shrink: 0;
   }
@@ -121,7 +121,7 @@ style: |
     font-family: 'Google Sans', sans-serif;
     font-size: 1.6em;
     font-weight: 500;
-    color: #306998;
+    color: #FF6B35;
     margin-top: 0.8em;
     margin-bottom: 0.4em;
   }
@@ -220,6 +220,21 @@ style: |
   /* Fallback - force all code to be visible */
   pre code { color: #1E1E1E !important; }
 
+  /* YAML-specific highlighting - clean and simple */
+  pre code .hljs-attr { color: #306998 !important; font-weight: 600; }  /* YAML keys */
+  pre code .hljs-variable { color: #000000 !important; }
+  pre code .hljs-params { color: #000000 !important; }
+  pre code .hljs-property { color: #000000 !important; }
+  pre code .hljs-name { color: #000000 !important; }
+
+  /* Force consistent UUID coloring - override any split highlighting */
+  pre code .hljs-string { color: #28A745 !important; }
+  pre code .hljs-literal { color: #28A745 !important; }
+  pre code .hljs-number { color: #28A745 !important; }
+
+  /* Aggressive override for any other classes that might affect UUIDs */
+  pre code * { color: inherit !important; }
+
   /* Emphasis and highlights */
   strong {
     color: #306998;
@@ -308,6 +323,168 @@ style: |
     shape-rendering: geometricPrecision;
     text-rendering: optimizeLegibility;
   }
+
+  /* Big question mark to connect question and connections */
+  .question-mark {
+    font-size: 6.8em;
+    text-align: center;
+    margin: 0.3em 0;
+    color: #FF8C00;
+    font-weight: 900;
+    line-height: 1;
+  }
+
+  /* Push everything to bottom and make containers compact */
+  .questions {
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    min-height: 100vh;
+  }
+
+  .questions .contact-links {
+    margin-top: auto;
+    margin-bottom: 1em;
+  }
+
+  .question-mark + p {
+    margin-top: auto;
+    margin-bottom: 0.5em;
+  }
+
+  /* Contact links styling for questions slide */
+  .questions .contact-links {
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+    margin: 0;
+    width: 100%;
+    max-width: none;
+    margin-left: 0;
+  }
+
+  .questions .contact-item {
+    display: flex;
+    align-items: center;
+    gap: 0.7em;
+    padding: 0.3em 0.1em;
+    border-radius: 8px;
+    transition: all 0.3s ease-in-out;
+    font-size: 0.95em;
+    min-height: 8px;
+    background: transparent;
+    border: none;
+    width: 100%;
+  }
+
+  .questions .contact-item .icon {
+    width: 12px;
+    height: 12px;
+    border-radius: 3px;
+    flex-shrink: 0;
+  }
+
+  .questions .contact-item a {
+    color: #306998;
+    text-decoration: none;
+    font-weight: 500;
+  }
+
+  .questions .contact-item a:hover {
+    color: #1e3a8a;
+    text-decoration: underline;
+  }
+
+  /* Minimize the "Thank You!" container */
+  h1:contains("Thank You!") {
+    font-size: 2em;
+    text-align: center;
+    margin: 0.5em 0;
+    color: #666;
+    font-weight: 400;
+    opacity: 0.7;
+  }
+
+  /* Style "Let's Connect!" text before contacts */
+  .question-mark + p {
+    font-size: 1.3em;
+    color: #306998;
+    font-weight: 600;
+    margin: 0.5em 0 1em 0;
+    text-align: left;
+    font-style: italic;
+  }
+
+
+
+
+  /* Big question mark to connect question and connections */
+  .question-mark {
+    font-size: 6.8em;
+    text-align: center;
+    margin: 0.3em 0;
+    color: #FF8C00;
+    font-weight: 900;
+    line-height: 1;
+  }
+
+
+
+  /* Make connection containers much more compact */
+  .contact-item {
+    display: flex;
+    align-items: center;
+    gap: 0.5em;
+    padding: 0.2em 0.5em;
+    border-radius: 6px;
+    transition: all 0.3s ease-in-out;
+    font-size: 0.85em;
+    min-height: 20px;
+    background: transparent;
+    border: none;
+    width: 100%;
+  }
+
+  /* Minimize the "Thank You!" container */
+  h1:contains("Thank You!") {
+    font-size: 2em;
+    text-align: center;
+    margin: 0.5em 0;
+    color: #666;
+    font-weight: 400;
+    opacity: 0.7;
+  }
+
+  /* Style "Let's Connect!" text before contacts */
+  .question-mark + p {
+    font-size: 1.3em;
+    color: #306998;
+    font-weight: 600;
+    margin: 0.5em 0 1em 0;
+    text-align: left;
+    font-style: italic;
+  }
+
+  /* Push everything to bottom of slide */
+  .questions {
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    min-height: 100vh;
+  }
+
+  .questions .contact-links {
+    margin-top: auto;
+    margin-bottom: 1em;
+  }
+
+  /* Push "Let's Connect!" even lower */
+  .question-mark + p {
+    margin-top: auto;
+    margin-bottom: 0.5em;
+  }
+
+
 
   /* Subtle hover effects for diagrams - no shadows */
   img[src*="event-sourcing-flow"]:hover,
@@ -494,7 +671,7 @@ This is exactly the problem that event sourcing solves.
 **Events are immutable facts** that represent state changes in the system.
 
 ## Event Structure:
-```
+```yaml
 id: 550e8400-e29b-41d4-a716-446655440000
 aggregate_id: 123e4567-e89b-12d3-a456-426614174000
 event_type: USER_DELETED
@@ -641,7 +818,7 @@ So now we have events being created by aggregates. But these events are just sto
 **Projections build optimized read models** from events for fast querying.
 
 ## Example:
-- Event: User Created → Actions:
+Event: User Created → Actions:
   - Create user record (read model)
   - Send welcome email (side effect)
 
@@ -761,10 +938,8 @@ class UserAggregate(Aggregate):
     def change_password(self, current_password: str, new_password: str) -> List[EventDTO]:
         if not self._verify_password(current_password):
             raise InvalidPasswordError("Current password is incorrect")
-
         if len(new_password) < 8:
             raise ValidationError("Password must be at least 8 characters")
-
         return [PasswordChangedEvent(
             aggregate_id=self.id,
             changed_at=datetime.utcnow(),
@@ -983,7 +1158,6 @@ class TestUserAggregate(AsyncIOIsolatedTestCase):
         # Assert - Verify business logic behavior
         self.assertTrue(result.is_success)
         self.assertEqual(user.status, "suspended")
-        # Now we know exactly why the user was suspended!
 ```
 
 ## **Test business logic with real production data**
@@ -1032,9 +1206,14 @@ The Python ecosystem is incredibly powerful for distributed systems. FastAPI, Ce
 
 ---
 
+
+<!-- _class: questions -->
+
 # Thank You!
 
-## Q & A
+## Do you have any questions?
+
+<div class="question-mark">?</div>
 
 **Let's Connect!**
 
