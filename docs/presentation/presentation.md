@@ -681,7 +681,6 @@ revision: 5
 data:
   deleted_by: admin@company.com
   reason: User requested account deletion
-  deleted_at: 2024-03-15T16:47:23Z
 ```
 
 ## Key principle: **Events are immutable facts** - they never change
