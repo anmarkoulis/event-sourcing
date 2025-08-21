@@ -7,6 +7,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from event_sourcing.dto.user import UserDTO, UserReadModelData
 from event_sourcing.enums import Role
+from event_sourcing.exceptions import MissingRequiredFieldError
 from event_sourcing.infrastructure.database.models.read.user import User
 from event_sourcing.infrastructure.read_model.base import ReadModel
 
@@ -24,7 +25,7 @@ class PostgreSQLReadModel(ReadModel):
         logger.debug(f"Saving user {user_data.aggregate_id} to read model")
 
         if not user_data.aggregate_id:
-            raise ValueError("aggregate_id is required")
+            raise MissingRequiredFieldError("aggregate_id", "user data")
 
         await self._save_user_with_session(user_data)
 

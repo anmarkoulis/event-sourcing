@@ -9,11 +9,14 @@ from starlette.exceptions import HTTPException as StarletteHTTPException
 from starlette.responses import Response
 
 from event_sourcing.exceptions import (
+    AuthenticationError,
     BusinessRuleViolationError,
     EmailAlreadyExistsError,
     EventSourcingError,
+    InfrastructureError,
     InvalidEmailFormatError,
     PasswordRequiredError,
+    ProjectionError,
     ResourceConflictError,
     ResourceNotFoundError,
     UserBusinessRuleViolationError,
@@ -39,6 +42,11 @@ def configure_exception_handlers(app: FastAPI) -> None:
     )
     app.add_exception_handler(ResourceNotFoundError, handle_resource_not_found)
     app.add_exception_handler(ResourceConflictError, handle_resource_conflict)
+
+    # New exception category handlers
+    app.add_exception_handler(InfrastructureError, handle_infrastructure_error)
+    app.add_exception_handler(AuthenticationError, handle_authentication_error)
+    app.add_exception_handler(ProjectionError, handle_projection_error)
 
     # User-specific exception handlers
     app.add_exception_handler(
@@ -179,6 +187,63 @@ async def handle_resource_conflict(
             "error": "Resource Conflict",
             "message": exc.message,
             "conflict_type": exc.conflict_type,
+            "details": exc.details,
+            "type": exc.__class__.__name__,
+        },
+    )
+
+
+async def handle_infrastructure_error(
+    request: Request, exc: InfrastructureError
+) -> JSONResponse:
+    """Handle infrastructure errors."""
+    logger.error(
+        f"Infrastructure error: {exc.message}", extra={"details": exc.details}
+    )
+
+    return JSONResponse(
+        status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+        content={
+            "error": "Infrastructure Error",
+            "message": exc.message,
+            "details": exc.details,
+            "type": exc.__class__.__name__,
+        },
+    )
+
+
+async def handle_authentication_error(
+    request: Request, exc: AuthenticationError
+) -> JSONResponse:
+    """Handle authentication errors."""
+    logger.warning(
+        f"Authentication error: {exc.message}", extra={"details": exc.details}
+    )
+
+    return JSONResponse(
+        status_code=status.HTTP_401_UNAUTHORIZED,
+        content={
+            "error": "Authentication Error",
+            "message": exc.message,
+            "details": exc.details,
+            "type": exc.__class__.__name__,
+        },
+    )
+
+
+async def handle_projection_error(
+    request: Request, exc: ProjectionError
+) -> JSONResponse:
+    """Handle projection errors."""
+    logger.error(
+        f"Projection error: {exc.message}", extra={"details": exc.details}
+    )
+
+    return JSONResponse(
+        status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+        content={
+            "error": "Projection Error",
+            "message": exc.message,
             "details": exc.details,
             "type": exc.__class__.__name__,
         },

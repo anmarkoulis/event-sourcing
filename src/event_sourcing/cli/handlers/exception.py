@@ -13,8 +13,11 @@ from typing import Any, Callable, TypeVar
 import typer
 
 from event_sourcing.exceptions import (
+    AuthenticationError,
     BusinessRuleViolationError,
     EventSourcingError,
+    InfrastructureError,
+    ProjectionError,
     ResourceConflictError,
     ResourceNotFoundError,
     ValidationError,
@@ -35,6 +38,12 @@ EXIT_CODES = {
     ResourceNotFoundError: 2,
     # Resource conflicts - 3 (conflict)
     ResourceConflictError: 3,
+    # Infrastructure errors - 4 (infrastructure error)
+    InfrastructureError: 4,
+    # Authentication errors - 5 (authentication error)
+    AuthenticationError: 5,
+    # Projection errors - 6 (projection error)
+    ProjectionError: 6,
     # Event sourcing errors - 1 (general event sourcing error)
     EventSourcingError: 1,
     # Generic exceptions - 1 (unexpected error)
@@ -47,6 +56,9 @@ ERROR_MESSAGES = {
     BusinessRuleViolationError: "Business rule violation occurred",
     ResourceNotFoundError: "Resource not found",
     ResourceConflictError: "Resource conflict occurred",
+    InfrastructureError: "Infrastructure error occurred",
+    AuthenticationError: "Authentication error occurred",
+    ProjectionError: "Projection error occurred",
     EventSourcingError: "Event sourcing error occurred",
     Exception: "An unexpected error occurred",
 }

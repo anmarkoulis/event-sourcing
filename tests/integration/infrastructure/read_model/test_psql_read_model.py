@@ -487,7 +487,11 @@ class TestPostgreSQLReadModel:
             email="test@example.com",
         )
 
-        with pytest.raises(ValueError, match="aggregate_id is required"):
+        from event_sourcing.exceptions import MissingRequiredFieldError
+
+        with pytest.raises(
+            MissingRequiredFieldError, match="aggregate_id is required"
+        ):
             await read_model.save_user(invalid_user_data)
 
     async def test_user_aggregate_id_none_raises_error(

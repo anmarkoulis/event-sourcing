@@ -81,7 +81,9 @@ class ChangePasswordCommandHandler(CommandHandler[ChangePasswordCommand]):
         if not self.hashing_service.verify_password(
             command.old_password, user.password_hash
         ):
-            raise ValueError("Old password is incorrect")
+            from event_sourcing.exceptions import IncorrectPasswordError
+
+            raise IncorrectPasswordError("password change")
 
         new_password_hash = self.hashing_service.hash_password(
             command.new_password

@@ -2,6 +2,7 @@ import logging
 
 from event_sourcing.application.projections.base import Projection
 from event_sourcing.dto import EventDTO
+from event_sourcing.exceptions import EmailProjectionError
 from event_sourcing.infrastructure.providers.email import (
     EmailProviderInterface,
 )
@@ -57,8 +58,11 @@ class UserCreatedEmailProjection(Projection):
                     "Failed to send welcome email to user: %s",
                     event.aggregate_id,
                 )
-                raise Exception(
-                    "Welcome email sending failed for USER_CREATED event"
+                raise EmailProjectionError(
+                    "Welcome email sending failed for USER_CREATED event",
+                    details={"email_type": "welcome", "recipient": user_email},
+                    email_type="welcome",
+                    recipient=user_email,
                 )
 
         except Exception as e:
