@@ -146,6 +146,7 @@ FROM production-no-files AS local
 # hadolint ignore=DL3002
 USER root
 
+# hadolint ignore=DL3008
 RUN  apt-get update \
 # Install git in order to be able to run pre-commit inside the container
 && apt-get install -y git=1:2.39.5-0+deb12u2 --no-install-recommends \
@@ -157,7 +158,7 @@ RUN  apt-get update \
 && bash /tmp/nodesource_setup.sh \
 && apt-get install -y nodejs=20.19.4-1nodesource1 --no-install-recommends \
 # Install Chromium for mermaid-cli diagram generation
-&& apt-get install -y chromium=139.0.7258.127-1~deb12u1 --no-install-recommends \
+&& apt-get install -y chromium --no-install-recommends \
 # Install presentation tools globally
 && npm install -g @marp-team/marp-cli@4.2.3 @mermaid-js/mermaid-cli@11.9.0 \
 # Set Puppeteer to use system Chromium
