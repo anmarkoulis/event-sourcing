@@ -2,10 +2,10 @@
 
 from typing import Optional
 
-from .domain import DomainError
+from .base import EventSourcingError
 
 
-class ValidationError(DomainError):
+class ValidationError(EventSourcingError):
     """Exception raised when validation fails."""
 
     def __init__(

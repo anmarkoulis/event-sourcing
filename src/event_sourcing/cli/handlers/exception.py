@@ -12,9 +12,9 @@ from typing import Any, Callable, TypeVar
 
 import typer
 
-from event_sourcing.domain.exceptions import (
+from event_sourcing.exceptions import (
     BusinessRuleViolationError,
-    DomainError,
+    EventSourcingError,
     ResourceConflictError,
     ResourceNotFoundError,
     ValidationError,
@@ -35,8 +35,8 @@ EXIT_CODES = {
     ResourceNotFoundError: 2,
     # Resource conflicts - 3 (conflict)
     ResourceConflictError: 3,
-    # Domain errors - 1 (general domain error)
-    DomainError: 1,
+    # Event sourcing errors - 1 (general event sourcing error)
+    EventSourcingError: 1,
     # Generic exceptions - 1 (unexpected error)
     Exception: 1,
 }
@@ -47,7 +47,7 @@ ERROR_MESSAGES = {
     BusinessRuleViolationError: "Business rule violation occurred",
     ResourceNotFoundError: "Resource not found",
     ResourceConflictError: "Resource conflict occurred",
-    DomainError: "Domain error occurred",
+    EventSourcingError: "Event sourcing error occurred",
     Exception: "An unexpected error occurred",
 }
 
@@ -214,7 +214,7 @@ def _is_expected_exception(exc: Exception) -> bool:
         BusinessRuleViolationError,
         ResourceNotFoundError,
         ResourceConflictError,
-        DomainError,
+        EventSourcingError,
     }
 
     return any(

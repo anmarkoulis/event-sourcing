@@ -1,7 +1,7 @@
-"""Domain exceptions package for business logic errors.
+"""Event sourcing exceptions package for business logic errors.
 
-This package contains all domain-specific exceptions organized by type:
-- domain: Base DomainError
+This package contains all event sourcing specific exceptions organized by type:
+- base: Base EventSourcingError
 - validation: ValidationError and its children
 - business: BusinessRuleViolationError and its children
 - resource: ResourceNotFoundError, ResourceConflictError and their children
@@ -9,8 +9,9 @@ This package contains all domain-specific exceptions organized by type:
 All exceptions are imported here to maintain backward compatibility.
 """
 
-# Base domain exception
+# Base event sourcing exception
 # Business rule violation exceptions
+from .base import EventSourcingError
 from .business import (
     BusinessRuleViolationError,
     CannotChangePasswordForDeletedUserError,
@@ -18,7 +19,6 @@ from .business import (
     UserAlreadyDeletedError,
     UserBusinessRuleViolationError,
 )
-from .domain import DomainError
 
 # Resource exceptions
 from .resource import (
@@ -45,7 +45,7 @@ from .validation import (
 
 __all__ = [
     # Base
-    "DomainError",
+    "EventSourcingError",
     # Validation
     "ValidationError",
     "UserValidationError",

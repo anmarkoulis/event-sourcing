@@ -13,12 +13,12 @@ from event_sourcing.application.commands.user.create_user import (
 )
 from event_sourcing.cli.handlers.exception import cli_error_handler
 from event_sourcing.config.settings import settings
-from event_sourcing.domain.exceptions import (
+from event_sourcing.enums import AggregateTypeEnum, Role
+from event_sourcing.exceptions import (
     EmailAlreadyExistsError,
     UserAlreadyExistsError,
     UsernameAlreadyExistsError,
 )
-from event_sourcing.enums import AggregateTypeEnum, Role
 from event_sourcing.infrastructure.provider import get_infrastructure_factory
 from event_sourcing.utils import log_typer_command
 

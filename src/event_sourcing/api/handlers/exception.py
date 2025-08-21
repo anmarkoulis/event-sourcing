@@ -8,10 +8,10 @@ from fastapi.responses import JSONResponse
 from starlette.exceptions import HTTPException as StarletteHTTPException
 from starlette.responses import Response
 
-from event_sourcing.domain.exceptions import (
+from event_sourcing.exceptions import (
     BusinessRuleViolationError,
-    DomainError,
     EmailAlreadyExistsError,
+    EventSourcingError,
     InvalidEmailFormatError,
     PasswordRequiredError,
     ResourceConflictError,
@@ -32,7 +32,7 @@ def configure_exception_handlers(app: FastAPI) -> None:
     """Configure exception handlers for the FastAPI application."""
 
     # Domain exception handlers
-    app.add_exception_handler(DomainError, handle_domain_exception)
+    app.add_exception_handler(EventSourcingError, handle_domain_exception)
     app.add_exception_handler(ValidationError, handle_validation_error)
     app.add_exception_handler(
         BusinessRuleViolationError, handle_business_rule_violation
@@ -80,7 +80,7 @@ def configure_exception_handlers(app: FastAPI) -> None:
 
 
 async def handle_domain_exception(
-    request: Request, exc: DomainError
+    request: Request, exc: EventSourcingError
 ) -> JSONResponse:
     """Handle generic domain exceptions."""
     logger.warning(

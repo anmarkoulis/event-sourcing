@@ -2,10 +2,10 @@
 
 from typing import Optional
 
-from .domain import DomainError
+from .base import EventSourcingError
 
 
-class BusinessRuleViolationError(DomainError):
+class BusinessRuleViolationError(EventSourcingError):
     """Exception raised when business rules are violated."""
 
     def __init__(

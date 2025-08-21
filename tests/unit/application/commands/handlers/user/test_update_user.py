@@ -296,7 +296,7 @@ class TestUpdateUserCommandHandler:
         snapshot_store_mock.get.return_value = None
 
         # Now the aggregate will raise UserNotFoundError when no events exist
-        from event_sourcing.domain.exceptions import UserNotFoundError
+        from event_sourcing.exceptions import UserNotFoundError
 
         with pytest.raises(
             UserNotFoundError,

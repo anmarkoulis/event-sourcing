@@ -14,9 +14,9 @@ from event_sourcing.cli.handlers.exception import (
     _is_expected_exception,
     cli_error_handler,
 )
-from event_sourcing.domain.exceptions import (
+from event_sourcing.exceptions import (
     BusinessRuleViolationError,
-    DomainError,
+    EventSourcingError,
     ResourceConflictError,
     ResourceNotFoundError,
     UserBusinessRuleViolationError,
@@ -36,7 +36,7 @@ class TestCliExceptionHandler:
         assert EXIT_CODES[BusinessRuleViolationError] == 1
         assert EXIT_CODES[ResourceNotFoundError] == 2
         assert EXIT_CODES[ResourceConflictError] == 3
-        assert EXIT_CODES[DomainError] == 1
+        assert EXIT_CODES[EventSourcingError] == 1
         assert EXIT_CODES[Exception] == 1
 
     def test_error_messages_mapping(self) -> None:
@@ -51,7 +51,10 @@ class TestCliExceptionHandler:
             ERROR_MESSAGES[ResourceConflictError]
             == "Resource conflict occurred"
         )
-        assert ERROR_MESSAGES[DomainError] == "Domain error occurred"
+        assert (
+            ERROR_MESSAGES[EventSourcingError]
+            == "Event sourcing error occurred"
+        )
         assert ERROR_MESSAGES[Exception] == "An unexpected error occurred"
 
     def test_get_exit_code_exact_type_match(self) -> None:
@@ -159,7 +162,7 @@ class TestCliExceptionHandler:
         )
         assert _is_expected_exception(ResourceNotFoundError("test")) is True
         assert _is_expected_exception(ResourceConflictError("test")) is True
-        assert _is_expected_exception(DomainError("test")) is True
+        assert _is_expected_exception(EventSourcingError("test")) is True
 
     def test_is_expected_exception_child_exceptions(self) -> None:
         """Test that child exceptions are considered expected."""
