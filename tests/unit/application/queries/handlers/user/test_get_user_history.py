@@ -72,3 +72,48 @@ class TestGetUserHistoryQueryHandler:
         result = await handler.handle(query)
 
         assert result is None
+
+    @pytest.mark.asyncio
+    async def test_handle_exception_returns_none(
+        self,
+        handler: GetUserHistoryQueryHandler,
+        event_store_mock: MagicMock,
+        query: GetUserHistoryQuery,
+    ) -> None:
+        """Test that exceptions are caught and None is returned."""
+        # Make the event store raise an exception
+        event_store_mock.get_stream.side_effect = Exception("Database error")
+
+        result = await handler.handle(query)
+
+        # Should return None when exception occurs
+        assert result is None
+
+    @pytest.mark.asyncio
+    async def test_handle_with_user_aggregate_edge_cases(
+        self,
+        handler: GetUserHistoryQueryHandler,
+        event_store_mock: MagicMock,
+        query: GetUserHistoryQuery,
+    ) -> None:
+        """Test handling when user aggregate has None values."""
+        # Create an event that might result in None values
+        created_event = EventFactory.create_user_created(
+            aggregate_id=query.user_id,
+            username="alice",
+            email="a@example.com",
+            first_name="",  # Test empty string first_name
+            last_name="",  # Test empty string last_name
+            password_hash="p",  # noqa: S106
+            hashing_method=HashingMethod.BCRYPT,
+            revision=1,
+        )
+        event_store_mock.get_stream.return_value = [created_event]
+
+        result = await handler.handle(query)
+
+        assert isinstance(result, UserDTO)
+        assert result.username == "alice"
+        assert result.email == "a@example.com"
+        assert result.first_name == ""  # Should default to empty string
+        assert result.last_name == ""  # Should default to empty string
