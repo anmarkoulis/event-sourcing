@@ -77,7 +77,10 @@ class InfrastructureFactory:
             if settings.SYNC_EVENT_HANDLER:
                 self._event_handler = SyncEventHandler(self)
             else:
-                self._event_handler = CeleryEventHandler()
+                # Import the Celery app and inject it into the handler
+                from event_sourcing.config.celery_app import app
+
+                self._event_handler = CeleryEventHandler(app)
         return self._event_handler
 
     def _initialize_email_providers(self) -> None:

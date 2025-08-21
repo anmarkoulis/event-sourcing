@@ -62,48 +62,49 @@ class SyncEventHandler(EventHandler):
         """Import and call the projection handlers directly"""
         try:
             # Import and call projection handlers directly
-            if handler_name == "process_user_created_task":
-                if self.infrastructure_factory:
-                    # Use the infrastructure factory to create the projection
-                    projection = self.infrastructure_factory.create_user_created_projection()
-                    await projection.handle(event)
-                else:
-                    logger.warning(
-                        "No infrastructure factory available for user created projection"
-                    )
+            match handler_name:
+                case "process_user_created_task":
+                    if self.infrastructure_factory:
+                        # Use the infrastructure factory to create the projection
+                        projection = self.infrastructure_factory.create_user_created_projection()
+                        await projection.handle(event)
+                    else:
+                        logger.warning(
+                            "No infrastructure factory available for user created projection"
+                        )
 
-            elif handler_name == "process_user_created_email_task":
-                if self.infrastructure_factory:
-                    # Use the infrastructure factory to create the projection
-                    projection = self.infrastructure_factory.create_user_created_email_projection()
-                    await projection.handle(event)
-                else:
-                    logger.warning(
-                        "No infrastructure factory available for email projection"
-                    )
+                case "process_user_created_email_task":
+                    if self.infrastructure_factory:
+                        # Use the infrastructure factory to create the projection
+                        projection = self.infrastructure_factory.create_user_created_email_projection()
+                        await projection.handle(event)
+                    else:
+                        logger.warning(
+                            "No infrastructure factory available for email projection"
+                        )
 
-            elif handler_name == "process_user_updated_task":
-                if self.infrastructure_factory:
-                    # Use the infrastructure factory to create the projection
-                    projection = self.infrastructure_factory.create_user_updated_projection()
-                    await projection.handle(event)
-                else:
-                    logger.warning(
-                        "No infrastructure factory available for user updated projection"
-                    )
+                case "process_user_updated_task":
+                    if self.infrastructure_factory:
+                        # Use the infrastructure factory to create the projection
+                        projection = self.infrastructure_factory.create_user_updated_projection()
+                        await projection.handle(event)
+                    else:
+                        logger.warning(
+                            "No infrastructure factory available for user updated projection"
+                        )
 
-            elif handler_name == "process_user_deleted_task":
-                if self.infrastructure_factory:
-                    # Use the infrastructure factory to create the projection
-                    projection = self.infrastructure_factory.create_user_deleted_projection()
-                    await projection.handle(event)
-                else:
-                    logger.warning(
-                        "No infrastructure factory available for user deleted projection"
-                    )
+                case "process_user_deleted_task":
+                    if self.infrastructure_factory:
+                        # Use the infrastructure factory to create the projection
+                        projection = self.infrastructure_factory.create_user_deleted_projection()
+                        await projection.handle(event)
+                    else:
+                        logger.warning(
+                            "No infrastructure factory available for user deleted projection"
+                        )
 
-            else:
-                logger.warning(f"Unknown handler: {handler_name}")
+                case _:
+                    logger.warning(f"Unknown handler: {handler_name}")
 
         except ImportError as e:
             logger.error(f"Could not import handler {handler_name}: {e}")
@@ -114,13 +115,15 @@ class SyncEventHandler(EventHandler):
 
     def _get_handler_functions(self, event_type: EventType) -> List[str]:
         """Map event type to list of handler function names"""
-        handler_mappings = {
-            EventType.USER_CREATED: [
-                "process_user_created_task",
-                "process_user_created_email_task",
-            ],
-            EventType.USER_UPDATED: ["process_user_updated_task"],
-            EventType.USER_DELETED: ["process_user_deleted_task"],
-        }
-
-        return handler_mappings.get(event_type, ["default_event_handler"])
+        match event_type:
+            case EventType.USER_CREATED:
+                return [
+                    "process_user_created_task",
+                    "process_user_created_email_task",
+                ]
+            case EventType.USER_UPDATED:
+                return ["process_user_updated_task"]
+            case EventType.USER_DELETED:
+                return ["process_user_deleted_task"]
+            case _:
+                return ["default_event_handler"]
