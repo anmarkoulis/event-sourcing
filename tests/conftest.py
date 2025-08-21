@@ -112,21 +112,27 @@ async def async_client_with_test_db(
     app_with_test_infrastructure: Any,
 ) -> AsyncGenerator[httpx.AsyncClient, None]:
     """Async HTTP client configured with test database."""
-    async with httpx.AsyncClient(
-        transport=httpx.ASGITransport(app=app_with_test_infrastructure),
-        base_url="http://test",
-    ) as client:
-        yield client
+    # Manually trigger lifespan events
+    async with app_with_test_infrastructure.router.lifespan_context(
+        app_with_test_infrastructure
+    ):
+        async with httpx.AsyncClient(
+            transport=httpx.ASGITransport(app=app_with_test_infrastructure),
+            base_url="http://test",
+        ) as client:
+            yield client
 
 
 @pytest.fixture
 async def async_client() -> AsyncGenerator[httpx.AsyncClient, None]:
     from event_sourcing.main import app
 
-    async with httpx.AsyncClient(
-        transport=httpx.ASGITransport(app=app), base_url="http://test"
-    ) as client:
-        yield client
+    # Manually trigger lifespan events
+    async with app.router.lifespan_context(app):
+        async with httpx.AsyncClient(
+            transport=httpx.ASGITransport(app=app), base_url="http://test"
+        ) as client:
+            yield client
 
 
 # Common unit-test fixtures for command handlers
