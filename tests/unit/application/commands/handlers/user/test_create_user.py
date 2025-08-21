@@ -11,11 +11,11 @@ from event_sourcing.application.commands.user.create_user import (
     CreateUserCommand,
 )
 from event_sourcing.application.events.handlers.base import EventHandler
-from event_sourcing.domain.exceptions import (
+from event_sourcing.enums import AggregateTypeEnum, EventType
+from event_sourcing.exceptions import (
     EmailAlreadyExistsError,
     UsernameAlreadyExistsError,
 )
-from event_sourcing.enums import AggregateTypeEnum, EventType
 from event_sourcing.infrastructure.event_store import EventStore
 from event_sourcing.infrastructure.unit_of_work.base import BaseUnitOfWork
 

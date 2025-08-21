@@ -53,8 +53,10 @@ class TestEmailProviderFactory:
     def test_create_provider_unknown_provider(self) -> None:
         """Test that create_provider raises error for unknown provider"""
         # Act & Assert
+        from event_sourcing.exceptions import UnknownProviderError
+
         with pytest.raises(
-            ValueError, match="Unknown email provider: unknown"
+            UnknownProviderError, match="Unknown email: unknown"
         ):
             EmailProviderFactory.create_provider("unknown")
 

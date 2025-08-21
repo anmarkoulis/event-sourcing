@@ -1,6 +1,8 @@
 import logging
 from typing import Any, Dict, Type
 
+from event_sourcing.exceptions import UnknownProviderError
+
 from .provider_interface import CRMProviderInterface
 
 logger = logging.getLogger(__name__)
@@ -26,7 +28,7 @@ class CRMProviderFactory:
         """Create a provider instance based on provider name"""
         provider_class = cls._providers.get(provider_name.lower())
         if not provider_class:
-            raise ValueError(f"Unknown CRM provider: {provider_name}")
+            raise UnknownProviderError(provider_name, "CRM")
 
         logger.debug(f"Creating CRM provider: {provider_name}")
         # All registered providers take config as constructor parameter

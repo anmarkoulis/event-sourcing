@@ -8,6 +8,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from event_sourcing.dto import EventDTO
 from event_sourcing.enums import AggregateTypeEnum
+from event_sourcing.exceptions import UnsupportedAggregateTypeError
 from event_sourcing.infrastructure.database.models.write.user_event_stream import (
     UserEventStream,
 )
@@ -41,7 +42,7 @@ class PostgreSQLEventStore(EventStore):
 
         # For now, we only support User aggregate type
         if aggregate_type != AggregateTypeEnum.USER:
-            raise ValueError(f"Unsupported aggregate type: {aggregate_type}")
+            raise UnsupportedAggregateTypeError(str(aggregate_type))
 
         query = select(UserEventStream).where(
             UserEventStream.aggregate_id == aggregate_id
@@ -103,7 +104,7 @@ class PostgreSQLEventStore(EventStore):
 
         # For now, we only support User aggregate type
         if aggregate_type != AggregateTypeEnum.USER:
-            raise ValueError(f"Unsupported aggregate type: {aggregate_type}")
+            raise UnsupportedAggregateTypeError(str(aggregate_type))
 
         # Track event IDs to prevent duplicates within this call
         event_ids_in_this_call = set()
@@ -147,7 +148,7 @@ class PostgreSQLEventStore(EventStore):
 
         # For now, we only support User aggregate type
         if aggregate_type != AggregateTypeEnum.USER:
-            raise ValueError(f"Unsupported aggregate type: {aggregate_type}")
+            raise UnsupportedAggregateTypeError(str(aggregate_type))
 
         # Build query based on parameters
         query = select(UserEventStream)

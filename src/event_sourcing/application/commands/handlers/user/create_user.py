@@ -74,14 +74,14 @@ class CreateUserCommandHandler(CommandHandler[CreateUserCommand]):
 
         # Validate uniqueness before creating the user
         if not await self._validate_username_uniqueness(command.username):
-            from event_sourcing.domain.exceptions import (
+            from event_sourcing.exceptions import (
                 UsernameAlreadyExistsError,
             )
 
             raise UsernameAlreadyExistsError(command.username)
 
         if not await self._validate_email_uniqueness(command.email):
-            from event_sourcing.domain.exceptions import (
+            from event_sourcing.exceptions import (
                 EmailAlreadyExistsError,
             )
 

@@ -1,15 +1,28 @@
-"""Domain exceptions package for business logic errors.
+"""Event sourcing exceptions package for business logic errors.
 
-This package contains all domain-specific exceptions organized by type:
-- domain: Base DomainError
+This package contains all event sourcing specific exceptions organized by type:
+- base: Base EventSourcingError
 - validation: ValidationError and its children
 - business: BusinessRuleViolationError and its children
 - resource: ResourceNotFoundError, ResourceConflictError and their children
+- infrastructure: InfrastructureError and its children
+- authentication: AuthenticationError and its children
 
 All exceptions are imported here to maintain backward compatibility.
 """
 
-# Base domain exception
+# Base event sourcing exception
+# Authentication exceptions
+from .authentication import (
+    AuthenticationError,
+    AuthenticationFailedError,
+    IncorrectPasswordError,
+    InsufficientPermissionsError,
+    InvalidPasswordError,
+    PasswordMismatchError,
+)
+from .base import EventSourcingError
+
 # Business rule violation exceptions
 from .business import (
     BusinessRuleViolationError,
@@ -18,7 +31,26 @@ from .business import (
     UserAlreadyDeletedError,
     UserBusinessRuleViolationError,
 )
-from .domain import DomainError
+
+# Infrastructure exceptions
+from .infrastructure import (
+    ConfigurationError,
+    DatabaseError,
+    InfrastructureError,
+    MissingRequiredFieldError,
+    SerializationError,
+    UnknownProviderError,
+    UnsupportedAggregateTypeError,
+)
+
+# Projection exceptions
+from .projection import (
+    EmailProjectionError,
+    ProjectionConfigurationError,
+    ProjectionDependencyError,
+    ProjectionError,
+    ProjectionProcessingError,
+)
 
 # Resource exceptions
 from .resource import (
@@ -45,7 +77,7 @@ from .validation import (
 
 __all__ = [
     # Base
-    "DomainError",
+    "EventSourcingError",
     # Validation
     "ValidationError",
     "UserValidationError",
@@ -69,4 +101,25 @@ __all__ = [
     "UsernameAlreadyExistsError",
     "EmailAlreadyExistsError",
     "UserAlreadyExistsError",
+    # Infrastructure
+    "InfrastructureError",
+    "UnsupportedAggregateTypeError",
+    "UnknownProviderError",
+    "MissingRequiredFieldError",
+    "ConfigurationError",
+    "SerializationError",
+    "DatabaseError",
+    # Authentication
+    "AuthenticationError",
+    "InvalidPasswordError",
+    "IncorrectPasswordError",
+    "PasswordMismatchError",
+    "AuthenticationFailedError",
+    "InsufficientPermissionsError",
+    # Projection
+    "ProjectionError",
+    "ProjectionProcessingError",
+    "EmailProjectionError",
+    "ProjectionConfigurationError",
+    "ProjectionDependencyError",
 ]

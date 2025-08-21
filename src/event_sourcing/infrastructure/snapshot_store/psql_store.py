@@ -6,6 +6,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from event_sourcing.dto.snapshot import SnapshotDTO
 from event_sourcing.enums import AggregateTypeEnum
+from event_sourcing.exceptions import UnsupportedAggregateTypeError
 from event_sourcing.infrastructure.database.models.snapshot import (
     Snapshot,
     UserSnapshot,
@@ -29,10 +30,8 @@ class PsqlSnapshotStore(SnapshotStore[T_Agg]):
     def _table_for(self, aggregate_type: AggregateTypeEnum) -> Type[Snapshot]:
         try:
             return self._TABLES[aggregate_type]
-        except KeyError as exc:
-            raise ValueError(
-                f"Unsupported aggregate type for snapshots: {aggregate_type}"
-            ) from exc
+        except KeyError:
+            raise UnsupportedAggregateTypeError(str(aggregate_type))
 
     async def get(
         self, aggregate_id: uuid.UUID, aggregate_type: AggregateTypeEnum

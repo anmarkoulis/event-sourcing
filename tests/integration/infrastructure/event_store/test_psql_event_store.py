@@ -324,7 +324,11 @@ class TestPostgreSQLEventStore:
         self, event_store: "PostgreSQLEventStore"
     ) -> None:
         """Test that unsupported aggregate types raise appropriate errors."""
-        with pytest.raises(ValueError, match="Unsupported aggregate type"):
+        from event_sourcing.exceptions import UnsupportedAggregateTypeError
+
+        with pytest.raises(
+            UnsupportedAggregateTypeError, match="Unsupported aggregate type"
+        ):
             # Test with an invalid aggregate type to ensure proper error handling
             from typing import cast
 

@@ -1,6 +1,8 @@
 import logging
 from typing import Any, Dict, Optional, Type
 
+from event_sourcing.exceptions import UnknownProviderError
+
 from .email_provider_interface import EmailProviderInterface
 
 logger = logging.getLogger(__name__)
@@ -36,7 +38,7 @@ class EmailProviderFactory:
         """
         provider_class = cls._providers.get(provider_name.lower())
         if not provider_class:
-            raise ValueError(f"Unknown email provider: {provider_name}")
+            raise UnknownProviderError(provider_name, "email")
 
         logger.debug(f"Creating email provider: {provider_name}")
         # All registered providers take config as constructor parameter

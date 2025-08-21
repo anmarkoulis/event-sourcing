@@ -2,10 +2,10 @@
 
 from typing import Optional
 
-from .domain import DomainError
+from .base import EventSourcingError
 
 
-class ResourceNotFoundError(DomainError):
+class ResourceNotFoundError(EventSourcingError):
     """Exception raised when a requested resource is not found."""
 
     def __init__(
@@ -20,7 +20,7 @@ class ResourceNotFoundError(DomainError):
         self.resource_id = resource_id
 
 
-class ResourceConflictError(DomainError):
+class ResourceConflictError(EventSourcingError):
     """Exception raised when there's a conflict with an existing resource."""
 
     def __init__(
