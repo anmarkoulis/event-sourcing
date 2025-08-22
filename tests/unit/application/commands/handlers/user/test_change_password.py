@@ -275,35 +275,8 @@ class TestChangePasswordCommandHandler:
         event_handler_mock.dispatch.assert_awaited_once()
         unit_of_work.commit.assert_awaited_once()
 
-        # Verify no snapshot operations
-        # (This would be handled by the handler logic)
-
-    @pytest.mark.asyncio
-    async def test_handle_propagates_domain_error(
-        self,
-        handler: ChangePasswordCommandHandler,
-        event_store_mock: MagicMock,
-        event_handler_mock: MagicMock,
-        change_password_command: ChangePasswordCommand,
-    ) -> None:
-        """Test that domain errors are propagated."""
-        # Configure mocks - no events means user doesn't exist
-        event_store_mock.get_stream.return_value = []
-        snapshot_store_mock = handler.snapshot_store
-        snapshot_store_mock.get.return_value = None
-
-        # Now the aggregate will raise UserNotFoundError when no events exist
-        from event_sourcing.exceptions import UserNotFoundError
-
-        with pytest.raises(
-            UserNotFoundError,
-            match="User 11111111-1111-1111-1111-111111111111 not found",
-        ):
-            await handler.handle(change_password_command)
-
-        # Verify no events were persisted
-        event_store_mock.append_to_stream.assert_not_awaited()
-        event_handler_mock.dispatch.assert_not_awaited()
+        # Verify no snapshot operations since snapshot_store is None
+        # The handler should not try to access snapshot_store.set when it's None
 
     @pytest.mark.asyncio
     async def test_handle_with_snapshot_store_error(
@@ -333,3 +306,69 @@ class TestChangePasswordCommandHandler:
         # Verify unit of work was rolled back due to snapshot error
         unit_of_work.rollback.assert_awaited_once()
         unit_of_work.commit.assert_not_awaited()
+
+    @pytest.mark.asyncio
+    async def test_handle_with_incorrect_password(
+        self,
+        handler: ChangePasswordCommandHandler,
+        event_store_mock: MagicMock,
+        event_handler_mock: MagicMock,
+        unit_of_work: MagicMock,
+        change_password_command: ChangePasswordCommand,
+        user_created_event: EventDTO,
+    ) -> None:
+        """Test handling when old password is incorrect."""
+        # Configure mocks
+        event_store_mock.get_stream.return_value = [user_created_event]
+        snapshot_store_mock = handler.snapshot_store
+        snapshot_store_mock.get.return_value = None
+
+        # Make the hashing service return False for password verification
+        handler.hashing_service.verify_password.return_value = False
+
+        from event_sourcing.exceptions import IncorrectPasswordError
+
+        with pytest.raises(
+            IncorrectPasswordError,
+            match="password change",
+        ):
+            await handler.handle(change_password_command)
+
+        # Verify no events were persisted
+        event_store_mock.append_to_stream.assert_not_awaited()
+        event_handler_mock.dispatch.assert_not_awaited()
+        unit_of_work.commit.assert_not_awaited()
+
+    @pytest.mark.asyncio
+    async def test_handle_with_snapshot_store_none_and_no_events(
+        self,
+        event_store_mock: MagicMock,
+        event_handler_mock: MagicMock,
+        unit_of_work: MagicMock,
+        hashing_service_mock: MagicMock,
+        change_password_command: ChangePasswordCommand,
+    ) -> None:
+        """Test handling when snapshot store is None and no events exist."""
+        # Create handler without snapshot store
+        handler = ChangePasswordCommandHandler(
+            event_store=event_store_mock,
+            event_handler=event_handler_mock,
+            unit_of_work=unit_of_work,
+            snapshot_store=None,
+            hashing_service=hashing_service_mock,
+        )
+
+        # Configure mocks - no events means user doesn't exist
+        event_store_mock.get_stream.return_value = []
+
+        from event_sourcing.exceptions import UserNotFoundError
+
+        with pytest.raises(
+            UserNotFoundError,
+            match="User 11111111-1111-1111-1111-111111111111 not found",
+        ):
+            await handler.handle(change_password_command)
+
+        # Verify no events were persisted
+        event_store_mock.append_to_stream.assert_not_awaited()
+        event_handler_mock.dispatch.assert_not_awaited()

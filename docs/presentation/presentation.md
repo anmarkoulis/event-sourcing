@@ -657,7 +657,7 @@ This is a story that probably sounds familiar to many of you. Monday afternoon -
 
 Why is that? Usually we have one row per entity in our relational database and we update on top of it. In the case of hard delete, we lose the entry completely. If we have soft delete, we know when it was deleted using deleted_at, maybe who using updated_by, but in most cases we miss the reason or the different states the user was in. The system has no memory of what happened. This is the nightmare we all face when debugging production issues with classic architectures.
 
-This is exactly the problem that event sourcing solves.
+This is exactly the problem that event sourcing solves. And later in this presentation, we'll see exactly how we can debug Sarah's missing account issue using the debugging superpowers that event sourcing gives us.
 -->
 
 
@@ -1075,8 +1075,8 @@ PUT /users/123/ {"first_name": "Sara"}
 
 ## Two approaches to handle this:
 
-### 1. Optimistic Updates (Naive)
-### 2. Outbox Pattern (Advanced)
+1. Optimistic Updates (Naive)
+2. Outbox Pattern (Advanced)
 
 **Most teams start with optimistic updates - it's simpler and works for 80% of use cases.**
 
@@ -1138,37 +1138,44 @@ The key insight is that snapshots require proper error handling in the command h
 
 # Debugging Superpowers: Testing Business Logic
 
-## The story: "What was the user's state at 3:47 PM?"
+## The story: "Where is Sarah's account?"
 
 ![Debugging Superpowers](diagrams/generated/debugging-superpowers.svg)
 
 ```python
-class TestUserAggregate(AsyncIOIsolatedTestCase):
-    async def test_user_suspended(self):
-        # Arrange - Apply real production events
-        user = UserAggregate()
-        user.apply(UserCreatedEvent("user_123", name="John", email="john@example.com"))
-        user.apply(UserLoginEvent("user_123", ip="192.168.1.1"))
-        user.apply(UserProfileUpdatedEvent("user_123", field="email", value="john.doe@example.com"))
+class TestSarahAccountDeletion(AsyncIOIsolatedTestCase):
+    async def test_sarah_account_deletion_scenario(self):
+        # Arrange - Replay Sarah's exact production events
+        sarah = UserAggregate()
+        sarah.apply(UserCreatedEvent("sarah_456", name="Sarah", email="sarah@company.com"))
+        sarah.apply(UserLoginEvent("sarah_456", ip="192.168.1.100"))
+        sarah.apply(UserProfileUpdatedEvent("sarah_456", field="role", value="admin"))
 
-        # Act - Test the problematic suspension event
-        result = user.apply(UserSuspendedEvent("user_123", reason="fraud_detected"))
+        # Act - Test the deletion event that caused the issue
+        result = sarah.apply(UserDeletedEvent("sarah_456", deleted_by="admin@company.com", reason="User requested account deletion"))
 
         # Assert - Verify business logic behavior
         self.assertTrue(result.is_success)
-        self.assertEqual(user.status, "suspended")
+        self.assertEqual(sarah.status, "deleted")
+        self.assertEqual(sarah.deleted_by, "admin@company.com")
+        self.assertEqual(sarah.deletion_reason, "User requested account deletion")
 ```
 
-## **Test business logic with real production data**
+## **Debug the actual issue with real production data & time travel capabilities**
+
 
 <!--
-Another powerful benefit of event sourcing is the ability to debug issues that happened in the past. Consider a support ticket: "Why was my account suspended yesterday at 3:47 PM? I was just logging in normally! This is affecting my work!" With traditional systems, we would have said "Sorry, we can't see what happened." But with event sourcing, we can replay exactly what happened.
+This is where the magic happens - we can now debug the exact issue that Sarah reported! Remember from the first slide: "Sarah's account is missing!" With traditional systems, we would have said "Sorry, we can't see what happened." But with event sourcing, we can replay exactly what happened.
 
-Instead of trying to recreate scenarios in test environments, we can rebuild the exact state at any moment in history. Here's how it works: we get all events before a specific incident time, rebuild the aggregate state at that exact moment, and then apply the problematic event that caused the issue - like a UserSuspendedEvent. This lets us see exactly what the business rules would do when that event is applied, and understand why certain actions were allowed or blocked.
+Instead of trying to recreate scenarios in test environments, we can rebuild the exact state at any moment in history. Here's how it works: we get all events before a specific incident time, rebuild the aggregate state at that exact moment, and then apply the problematic event that caused the issue - like the UserDeletedEvent. This lets us see exactly what the business rules would do when that event is applied, and understand why certain actions were allowed or blocked.
 
-This gives us the ability to debug issues that happened hours or days ago, and test business logic against real production data at any point in time. This is debugging and testing superpowers combined - we can answer "What was the user's state at 3:47 PM?" with complete certainty.
+This gives us the ability to debug issues that happened hours or days ago, and test business logic against real production data at any point in time. This is debugging and testing superpowers combined - we can answer "What was Sarah's state when her account was deleted?" with complete certainty.
 
 But here's the real magic: we can transform these debugging scenarios into simple unit tests without dealing with infrastructure. Since aggregates are pure Python classes, we can test business logic in complete isolation. The business rules can be tested as standalone units, replaying the exact sequence of events that caused issues in production. This means we can catch bugs before they happen and ensure our business logic behaves correctly under any scenario.
+
+The beauty is that this test now serves as both a debugging tool for the current issue AND a regression test to prevent similar issues in the future. We've turned a production problem into a learning opportunity and a safety net.
+
+And most importantly, we've solved the exact problem we started with - we can now tell Sarah exactly when, why, and by whom her account was deleted. The nightmare becomes a solvable mystery with a complete audit trail.
 -->
 
 ---
