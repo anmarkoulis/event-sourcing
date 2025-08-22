@@ -720,6 +720,8 @@ This is what gives us the audit trail we need for debugging - we can see exactly
 ## **The stream is the source of truth** - rebuild any point in time
 
 <!--
+~5min
+
 Where do we store all these events? The Event Store is the append-only storage for all events in the system, organized in streams per aggregate. Here's a user's complete story: UserCreated, UserNameChanged, UserEmailChanged, UserStatusChanged, and finally UserDeleted.
 
 The stream is the source of truth - we can rebuild any point in time by replaying these events in order. This is how we get time travel capabilities. Operations are simple: store new events, read in order, never modify. Events are immutable - once written, they're permanent.
@@ -802,6 +804,8 @@ So we have commands that create events, and queries that read data. But where do
 ## **Aggregates apply business logic** and create events
 
 <!--
+11min
+
 Now, where does the business logic live? Aggregates contain domain logic and apply business rules to create events. First, we rebuild the aggregate's current state by applying all previous events from the event store. Once the aggregate is up-to-date, we call a business logic method that validates the command against business rules like 'User email must be unique' and 'Cannot delete already deleted user'. When rules pass, the method creates new events. When rules fail, it returns errors. This ensures business invariants are maintained while keeping the aggregate state current.
 
 So now we have events being created by aggregates. But these events are just stored in the event store - they don't automatically update our read models. That's where projections come in - they listen to these events and build the optimized read models that our queries will use.
