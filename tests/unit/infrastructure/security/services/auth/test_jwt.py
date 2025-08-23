@@ -86,47 +86,6 @@ class TestJWTAuthService:
         assert hashed != password
         assert hashing_service.verify_password(password, hashed) is True
 
-    def test_get_scopes_for_role_admin(
-        self, auth_service: JWTAuthService
-    ) -> None:
-        """Test getting scopes for admin role."""
-        scopes = auth_service._get_scopes_for_role("admin")
-        assert scopes == [
-            "user:create",
-            "user:read",
-            "user:update",
-            "user:delete",
-        ]
-
-    def test_get_scopes_for_role_user(
-        self, auth_service: JWTAuthService
-    ) -> None:
-        """Test getting scopes for user role."""
-        scopes = auth_service._get_scopes_for_role("user")
-        assert scopes == ["user:read", "user:update"]
-
-    def test_get_scopes_for_role_unknown(
-        self, auth_service: JWTAuthService
-    ) -> None:
-        """Test getting scopes for unknown role."""
-        scopes = auth_service._get_scopes_for_role("unknown")
-        assert scopes == []
-
-    def test_get_scopes_for_role_case_insensitive(
-        self, auth_service: JWTAuthService
-    ) -> None:
-        """Test getting scopes for role with different case."""
-        # The enum system is case-sensitive, so "ADMIN" should return empty scopes
-        scopes = auth_service._get_scopes_for_role("ADMIN")
-        assert scopes == []
-
-    def test_get_scopes_for_role_none(
-        self, auth_service: JWTAuthService
-    ) -> None:
-        """Test getting scopes for None role."""
-        scopes = auth_service._get_scopes_for_role(None)
-        assert scopes == []
-
     def test_create_access_token(self, auth_service: JWTAuthService) -> None:
         """Test access token creation."""
         data = {"sub": "testuser", "user_id": str(uuid4())}
@@ -171,6 +130,31 @@ class TestJWTAuthService:
     ) -> None:
         """Test access token creation with unknown role."""
         data = {"sub": "unknown", "user_id": str(uuid4()), "role": "unknown"}
+        token = auth_service.create_access_token(data)
+
+        # Decode token to check scopes
+        payload = auth_service.verify_token(token)
+        assert "scopes" in payload
+        assert payload["scopes"] == []
+
+    def test_create_access_token_with_case_sensitive_role(
+        self, auth_service: JWTAuthService
+    ) -> None:
+        """Test access token creation with case-sensitive role handling."""
+        # Test with uppercase role that should return empty scopes
+        data = {"sub": "ADMIN", "user_id": str(uuid4()), "role": "ADMIN"}
+        token = auth_service.create_access_token(data)
+
+        # Decode token to check scopes
+        payload = auth_service.verify_token(token)
+        assert "scopes" in payload
+        assert payload["scopes"] == []
+
+    def test_create_access_token_with_none_role(
+        self, auth_service: JWTAuthService
+    ) -> None:
+        """Test access token creation with None role."""
+        data = {"sub": "testuser", "user_id": str(uuid4()), "role": None}
         token = auth_service.create_access_token(data)
 
         # Decode token to check scopes

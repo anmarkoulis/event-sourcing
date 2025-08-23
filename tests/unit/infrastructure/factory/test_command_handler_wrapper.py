@@ -56,38 +56,84 @@ class TestCommandHandlerWrapper:
     @patch(
         "event_sourcing.infrastructure.factory.command_handler_wrapper.PostgreSQLEventStore"
     )
-    async def test_create_handler_with_session(
+    @patch(
+        "event_sourcing.infrastructure.snapshot_store.psql_store.PsqlSnapshotStore"
+    )
+    async def test_handle_integration(
         self,
+        psql_snapshot_store_mock: MagicMock,
         postgresql_event_store_mock: MagicMock,
         sqla_uow_mock: MagicMock,
         wrapper: CommandHandlerWrapper,
         session_mock: MagicMock,
+        command_mock: MagicMock,
     ) -> None:
-        """Test creating handler with session."""
+        """Test command handling integration through public handle method."""
+        # Setup mocks
         wrapper.factory.session_manager.get_session.return_value = session_mock
-        sqla_uow_mock.return_value = MagicMock()
-        postgresql_event_store_mock.return_value = MagicMock()
+        wrapper.factory.event_handler = MagicMock()
 
-        handler, session = await wrapper._create_handler_with_session()
-
-        assert session == session_mock
-        wrapper.factory.session_manager.get_session.assert_awaited_once()
-        sqla_uow_mock.assert_called_once_with(session_mock)
-        postgresql_event_store_mock.assert_called_once_with(session_mock)
-
-    @pytest.mark.asyncio
-    async def test_handle_success(
-        self, wrapper: CommandHandlerWrapper, command_mock: MagicMock
-    ) -> None:
-        """Test successful command handling."""
+        # Mock the handler class constructor and handle method
         handler_mock = MagicMock()
         handler_mock.handle = AsyncMock(return_value="success")
-        session_mock = MagicMock()
+        wrapper.handler_class.return_value = handler_mock
+
+        # Mock the dependencies
+        sqla_uow_mock.return_value = MagicMock()
+        postgresql_event_store_mock.return_value = MagicMock()
+        psql_snapshot_store_mock.return_value = MagicMock()
+
+        # Mock session close
         session_mock.close = AsyncMock()
 
-        wrapper._create_handler_with_session = AsyncMock(
-            return_value=(handler_mock, session_mock)
-        )
+        # Test through public interface
+        result = await wrapper.handle(command_mock)
+
+        # Verify the result
+        assert result == "success"
+
+        # Verify session management
+        wrapper.factory.session_manager.get_session.assert_awaited_once()
+        session_mock.close.assert_awaited_once()
+
+        # Verify handler creation and execution
+        wrapper.handler_class.assert_called_once()
+        handler_mock.handle.assert_awaited_once_with(command_mock)
+
+    @pytest.mark.asyncio
+    @patch(
+        "event_sourcing.infrastructure.factory.command_handler_wrapper.SQLAUnitOfWork"
+    )
+    @patch(
+        "event_sourcing.infrastructure.factory.command_handler_wrapper.PostgreSQLEventStore"
+    )
+    @patch(
+        "event_sourcing.infrastructure.snapshot_store.psql_store.PsqlSnapshotStore"
+    )
+    async def test_handle_success(
+        self,
+        psql_snapshot_store_mock: MagicMock,
+        postgresql_event_store_mock: MagicMock,
+        sqla_uow_mock: MagicMock,
+        wrapper: CommandHandlerWrapper,
+        command_mock: MagicMock,
+    ) -> None:
+        """Test successful command handling through public interface."""
+        # Setup mocks
+        session_mock = MagicMock()
+        session_mock.close = AsyncMock()
+        wrapper.factory.session_manager.get_session.return_value = session_mock
+        wrapper.factory.event_handler = MagicMock()
+
+        # Mock the handler class constructor and handle method
+        handler_mock = MagicMock()
+        handler_mock.handle = AsyncMock(return_value="success")
+        wrapper.handler_class.return_value = handler_mock
+
+        # Mock the dependencies
+        sqla_uow_mock.return_value = MagicMock()
+        postgresql_event_store_mock.return_value = MagicMock()
+        psql_snapshot_store_mock.return_value = MagicMock()
 
         result = await wrapper.handle(command_mock)
 
@@ -96,19 +142,40 @@ class TestCommandHandlerWrapper:
         session_mock.close.assert_awaited_once()
 
     @pytest.mark.asyncio
+    @patch(
+        "event_sourcing.infrastructure.factory.command_handler_wrapper.SQLAUnitOfWork"
+    )
+    @patch(
+        "event_sourcing.infrastructure.factory.command_handler_wrapper.PostgreSQLEventStore"
+    )
+    @patch(
+        "event_sourcing.infrastructure.snapshot_store.psql_store.PsqlSnapshotStore"
+    )
     async def test_handle_error(
-        self, wrapper: CommandHandlerWrapper, command_mock: MagicMock
+        self,
+        psql_snapshot_store_mock: MagicMock,
+        postgresql_event_store_mock: MagicMock,
+        sqla_uow_mock: MagicMock,
+        wrapper: CommandHandlerWrapper,
+        command_mock: MagicMock,
     ) -> None:
-        """Test command handling with error."""
+        """Test command handling with error through public interface."""
+        # Setup mocks
+        session_mock = MagicMock()
+        session_mock.close = AsyncMock()
+        wrapper.factory.session_manager.get_session.return_value = session_mock
+        wrapper.factory.event_handler = MagicMock()
+
+        # Mock the handler class constructor and handle method
         handler_mock = MagicMock()
         error = ValueError("Test error")
         handler_mock.handle = AsyncMock(side_effect=error)
-        session_mock = MagicMock()
-        session_mock.close = AsyncMock()
+        wrapper.handler_class.return_value = handler_mock
 
-        wrapper._create_handler_with_session = AsyncMock(
-            return_value=(handler_mock, session_mock)
-        )
+        # Mock the dependencies
+        sqla_uow_mock.return_value = MagicMock()
+        postgresql_event_store_mock.return_value = MagicMock()
+        psql_snapshot_store_mock.return_value = MagicMock()
 
         with pytest.raises(ValueError, match="Test error"):
             await wrapper.handle(command_mock)

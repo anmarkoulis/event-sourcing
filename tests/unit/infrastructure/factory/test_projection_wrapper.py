@@ -55,17 +55,27 @@ class TestProjectionWrapper:
     @patch(
         "event_sourcing.infrastructure.factory.projection_wrapper.SQLAUnitOfWork"
     )
-    async def test_create_projection_with_session_with_uow(
+    async def test_handle_integration_with_uow(
         self,
         sqla_uow_mock: MagicMock,
         postgresql_read_model_mock: MagicMock,
         wrapper: ProjectionWrapper,
         session_mock: MagicMock,
+        event_mock: MagicMock,
     ) -> None:
-        """Test creating projection with session when UoW is expected."""
+        """Test projection handling integration through public handle method when UoW is expected."""
+        # Setup mocks
         wrapper.factory.session_manager.get_session.return_value = session_mock
         postgresql_read_model_mock.return_value = MagicMock()
         sqla_uow_mock.return_value = MagicMock()
+
+        # Mock the projection class constructor and handle method
+        projection_mock = MagicMock()
+        projection_mock.handle = AsyncMock(return_value="success")
+        wrapper.projection_class.return_value = projection_mock
+
+        # Mock session close
+        session_mock.close = AsyncMock()
 
         # Mock inspect.signature to return parameters including unit_of_work
         with patch(
@@ -78,29 +88,43 @@ class TestProjectionWrapper:
             }
             inspect_mock.signature.return_value = sig_mock
 
-            (
-                projection,
-                session,
-            ) = await wrapper._create_projection_with_session()
+            # Test through public interface
+            result = await wrapper.handle(event_mock)
 
-        assert session == session_mock
+        # Verify the result
+        assert result == "success"
+
+        # Verify session management
         wrapper.factory.session_manager.get_session.assert_awaited_once()
-        postgresql_read_model_mock.assert_called_once_with(session_mock)
-        sqla_uow_mock.assert_called_once_with(session_mock)
+        session_mock.close.assert_awaited_once()
+
+        # Verify projection creation and execution
+        wrapper.projection_class.assert_called_once()
+        projection_mock.handle.assert_awaited_once_with(event_mock)
 
     @pytest.mark.asyncio
     @patch(
         "event_sourcing.infrastructure.factory.projection_wrapper.PostgreSQLReadModel"
     )
-    async def test_create_projection_with_session_without_uow(
+    async def test_handle_integration_without_uow(
         self,
         postgresql_read_model_mock: MagicMock,
         wrapper: ProjectionWrapper,
         session_mock: MagicMock,
+        event_mock: MagicMock,
     ) -> None:
-        """Test creating projection with session when UoW is not expected."""
+        """Test projection handling integration through public handle method when UoW is not expected."""
+        # Setup mocks
         wrapper.factory.session_manager.get_session.return_value = session_mock
         postgresql_read_model_mock.return_value = MagicMock()
+
+        # Mock the projection class constructor and handle method
+        projection_mock = MagicMock()
+        projection_mock.handle = AsyncMock(return_value="success")
+        wrapper.projection_class.return_value = projection_mock
+
+        # Mock session close
+        session_mock.close = AsyncMock()
 
         # Mock inspect.signature to return parameters excluding unit_of_work
         with patch(
@@ -110,31 +134,100 @@ class TestProjectionWrapper:
             sig_mock.parameters = {"read_model": MagicMock()}
             inspect_mock.signature.return_value = sig_mock
 
-            (
-                projection,
-                session,
-            ) = await wrapper._create_projection_with_session()
+            # Test through public interface
+            result = await wrapper.handle(event_mock)
 
-        assert session == session_mock
+        # Verify the result
+        assert result == "success"
+
+        # Verify session management
         wrapper.factory.session_manager.get_session.assert_awaited_once()
-        postgresql_read_model_mock.assert_called_once_with(session_mock)
+        session_mock.close.assert_awaited_once()
+
+        # Verify projection creation and execution
+        wrapper.projection_class.assert_called_once()
+        projection_mock.handle.assert_awaited_once_with(event_mock)
 
     @pytest.mark.asyncio
+    @patch(
+        "event_sourcing.infrastructure.factory.projection_wrapper.PostgreSQLReadModel"
+    )
     async def test_handle_success(
-        self, wrapper: ProjectionWrapper, event_mock: MagicMock
+        self,
+        postgresql_read_model_mock: MagicMock,
+        wrapper: ProjectionWrapper,
+        event_mock: MagicMock,
     ) -> None:
-        """Test successful event handling."""
-        projection_mock = MagicMock()
-        projection_mock.handle = AsyncMock(return_value="success")
+        """Test successful event handling through public interface."""
+        # Setup mocks
         session_mock = MagicMock()
         session_mock.close = AsyncMock()
+        wrapper.factory.session_manager.get_session.return_value = session_mock
+        postgresql_read_model_mock.return_value = MagicMock()
 
-        wrapper._create_projection_with_session = AsyncMock(
-            return_value=(projection_mock, session_mock)
-        )
+        # Mock the projection class constructor and handle method
+        projection_mock = MagicMock()
+        projection_mock.handle = AsyncMock(return_value="success")
+        wrapper.projection_class.return_value = projection_mock
 
-        result = await wrapper.handle(event_mock)
+        # Mock session close
+        session_mock.close = AsyncMock()
+
+        # Mock inspect.signature to return parameters including unit_of_work
+        with patch(
+            "event_sourcing.infrastructure.factory.projection_wrapper.inspect"
+        ) as inspect_mock:
+            sig_mock = MagicMock()
+            sig_mock.parameters = {
+                "read_model": MagicMock(),
+                "unit_of_work": MagicMock(),
+            }
+            inspect_mock.signature.return_value = sig_mock
+
+            result = await wrapper.handle(event_mock)
 
         assert result == "success"
         projection_mock.handle.assert_awaited_once_with(event_mock)
+        session_mock.close.assert_awaited_once()
+
+    @pytest.mark.asyncio
+    @patch(
+        "event_sourcing.infrastructure.factory.projection_wrapper.PostgreSQLReadModel"
+    )
+    async def test_handle_error(
+        self,
+        postgresql_read_model_mock: MagicMock,
+        wrapper: ProjectionWrapper,
+        event_mock: MagicMock,
+    ) -> None:
+        """Test event handling with error through public interface."""
+        # Setup mocks
+        session_mock = MagicMock()
+        session_mock.close = AsyncMock()
+        wrapper.factory.session_manager.get_session.return_value = session_mock
+        postgresql_read_model_mock.return_value = MagicMock()
+
+        # Mock the projection class constructor and handle method
+        projection_mock = MagicMock()
+        error = ValueError("Test error")
+        projection_mock.handle = AsyncMock(side_effect=error)
+        wrapper.projection_class.return_value = projection_mock
+
+        # Mock session close
+        session_mock.close = AsyncMock()
+
+        # Mock inspect.signature to return parameters including unit_of_work
+        with patch(
+            "event_sourcing.infrastructure.factory.projection_wrapper.inspect"
+        ) as inspect_mock:
+            sig_mock = MagicMock()
+            sig_mock.parameters = {
+                "read_model": MagicMock(),
+                "unit_of_work": MagicMock(),
+            }
+            inspect_mock.signature.return_value = sig_mock
+
+            with pytest.raises(ValueError, match="Test error"):
+                await wrapper.handle(event_mock)
+
         session_mock.close.assert_awaited_once()

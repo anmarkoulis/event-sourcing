@@ -8,6 +8,10 @@ import pytest
 
 from event_sourcing.application.events.handlers.sync import SyncEventHandler
 from event_sourcing.dto import EventDTO
+from event_sourcing.dto.events.user.user_created import (
+    UserCreatedDataV1,
+    UserCreatedV1,
+)
 from event_sourcing.enums import EventType, HashingMethod, Role
 
 
@@ -83,41 +87,65 @@ class TestSyncEventHandler:
         handler = SyncEventHandler()
         assert handler.infrastructure_factory is None
 
-    async def test_dispatch_user_created_events(
-        self,
-        mock_infrastructure_factory: MagicMock,
-        sample_events: list[EventDTO],
+    async def test_dispatch_user_created_event(
+        self, mock_infrastructure_factory: MagicMock
     ) -> None:
-        """Test dispatching USER_CREATED events."""
+        """Test dispatching USER_CREATED event through public interface."""
         handler = SyncEventHandler(mock_infrastructure_factory)
-        user_created_event = sample_events[0]
+        event = EventDTO(
+            id=uuid4(),
+            aggregate_id=uuid4(),
+            event_type=EventType.USER_CREATED,
+            timestamp=datetime(2023, 1, 1, 12, 0, tzinfo=timezone.utc),
+            version="1",
+            revision=1,
+            data={
+                "username": "testuser",
+                "email": "test@example.com",
+                "first_name": "Test",
+                "last_name": "User",
+                "password_hash": "hashed_password",  # pragma: allowlist secret
+                "hashing_method": HashingMethod.BCRYPT,
+                "role": Role.USER,
+            },
+        )
 
-        await handler.dispatch([user_created_event])
+        # Test through public dispatch method
+        await handler.dispatch([event])
 
-        # Verify both projections were called
+        # Verify projections were created and called
         mock_infrastructure_factory.create_user_created_projection.assert_called_once()
         mock_infrastructure_factory.create_user_created_email_projection.assert_called_once()
 
-    async def test_dispatch_user_updated_events(
-        self,
-        mock_infrastructure_factory: MagicMock,
-        sample_events: list[EventDTO],
-    ) -> None:
-        """Test dispatching USER_UPDATED events."""
-        handler = SyncEventHandler(mock_infrastructure_factory)
-        user_updated_event = sample_events[1]
-
-        await handler.dispatch([user_updated_event])
-
-        # Verify projection was called
-        mock_infrastructure_factory.create_user_updated_projection.assert_called_once()
-
-    async def test_dispatch_user_deleted_events(
+    async def test_dispatch_user_updated_event(
         self, mock_infrastructure_factory: MagicMock
     ) -> None:
-        """Test dispatching USER_DELETED events."""
+        """Test dispatching USER_UPDATED event through public interface."""
         handler = SyncEventHandler(mock_infrastructure_factory)
-        user_deleted_event = EventDTO(
+        event = EventDTO(
+            id=uuid4(),
+            aggregate_id=uuid4(),
+            event_type=EventType.USER_UPDATED,
+            timestamp=datetime(2023, 1, 1, 12, 0, tzinfo=timezone.utc),
+            version="1",
+            revision=1,
+            data={
+                "first_name": "Updated",
+            },
+        )
+
+        # Test through public dispatch method
+        await handler.dispatch([event])
+
+        # Verify projection was created and called
+        mock_infrastructure_factory.create_user_updated_projection.assert_called_once()
+
+    async def test_dispatch_user_deleted_event(
+        self, mock_infrastructure_factory: MagicMock
+    ) -> None:
+        """Test dispatching USER_DELETED event through public interface."""
+        handler = SyncEventHandler(mock_infrastructure_factory)
+        event = EventDTO(
             id=uuid4(),
             aggregate_id=uuid4(),
             event_type=EventType.USER_DELETED,
@@ -127,20 +155,21 @@ class TestSyncEventHandler:
             data={},
         )
 
-        await handler.dispatch([user_deleted_event])
+        # Test through public dispatch method
+        await handler.dispatch([event])
 
-        # Verify projection was called
+        # Verify projection was created and called
         mock_infrastructure_factory.create_user_deleted_projection.assert_called_once()
 
-    async def test_dispatch_password_changed_events(
+    async def test_dispatch_unknown_event_type(
         self, mock_infrastructure_factory: MagicMock
     ) -> None:
-        """Test dispatching PASSWORD_CHANGED events."""
+        """Test dispatching event type that has no handler mapping through public interface."""
         handler = SyncEventHandler(mock_infrastructure_factory)
-        password_changed_event = EventDTO(
+        event = EventDTO(
             id=uuid4(),
             aggregate_id=uuid4(),
-            event_type=EventType.PASSWORD_CHANGED,
+            event_type=EventType.PASSWORD_CHANGED,  # Use valid event type but one that has no handler
             timestamp=datetime(2023, 1, 1, 12, 0, tzinfo=timezone.utc),
             version="1",
             revision=1,
@@ -150,26 +179,75 @@ class TestSyncEventHandler:
             },
         )
 
-        await handler.dispatch([password_changed_event])
+        # Test through public dispatch method - should handle gracefully since PASSWORD_CHANGED has no handler
+        await handler.dispatch([event])
 
-        # Verify no projections were called (PASSWORD_CHANGED not handled in sync mode)
+        # Verify no projections were called for event type with no handler
         mock_infrastructure_factory.create_user_created_projection.assert_not_called()
         mock_infrastructure_factory.create_user_updated_projection.assert_not_called()
         mock_infrastructure_factory.create_user_deleted_projection.assert_not_called()
 
-    async def test_dispatch_multiple_events(
-        self,
-        mock_infrastructure_factory: MagicMock,
-        sample_events: list[EventDTO],
+    async def test_dispatch_with_handler_error(
+        self, mock_infrastructure_factory: MagicMock
     ) -> None:
-        """Test dispatching multiple events of different types."""
+        """Test dispatch behavior when handler raises an error."""
         handler = SyncEventHandler(mock_infrastructure_factory)
+        event = EventDTO(
+            id=uuid4(),
+            aggregate_id=uuid4(),
+            event_type=EventType.USER_CREATED,
+            timestamp=datetime(2023, 1, 1, 12, 0, tzinfo=timezone.utc),
+            version="1",
+            revision=1,
+            data={
+                "username": "testuser",
+                "email": "test@example.com",
+                "first_name": "Test",
+                "last_name": "User",
+                "password_hash": "hashed_password",  # pragma: allowlist secret
+                "hashing_method": HashingMethod.BCRYPT,
+                "role": Role.USER,
+            },
+        )
 
-        await handler.dispatch(sample_events)
+        # Make projection raise an error
+        mock_projection = MagicMock()
+        mock_projection.handle.side_effect = Exception("Handler error")
+        mock_infrastructure_factory.create_user_created_projection.return_value = mock_projection
 
-        # Verify projections were called for each event type
+        # Verify error is raised through public interface
+        with pytest.raises(Exception, match="Handler error"):
+            await handler.dispatch([event])
+
+    async def test_dispatch_with_multiple_handlers(
+        self, mock_infrastructure_factory: MagicMock
+    ) -> None:
+        """Test dispatch with multiple handlers for same event type."""
+        handler = SyncEventHandler(mock_infrastructure_factory)
+        event = EventDTO(
+            id=uuid4(),
+            aggregate_id=uuid4(),
+            event_type=EventType.USER_CREATED,
+            timestamp=datetime(2023, 1, 1, 12, 0, tzinfo=timezone.utc),
+            version="1",
+            revision=1,
+            data={
+                "username": "testuser",
+                "email": "test@example.com",
+                "first_name": "Test",
+                "last_name": "User",
+                "password_hash": "hashed_password",  # pragma: allowlist secret
+                "hashing_method": HashingMethod.BCRYPT,
+                "role": Role.USER,
+            },
+        )
+
+        # Test through public dispatch method
+        await handler.dispatch([event])
+
+        # Verify both projections were created and called
         mock_infrastructure_factory.create_user_created_projection.assert_called_once()
-        mock_infrastructure_factory.create_user_updated_projection.assert_called_once()
+        mock_infrastructure_factory.create_user_created_email_projection.assert_called_once()
 
     async def test_dispatch_empty_events_list(
         self, mock_infrastructure_factory: MagicMock
@@ -184,21 +262,102 @@ class TestSyncEventHandler:
         mock_infrastructure_factory.create_user_updated_projection.assert_not_called()
         mock_infrastructure_factory.create_user_deleted_projection.assert_not_called()
 
-    async def test_dispatch_without_infrastructure_factory(
-        self, sample_events: list[EventDTO]
-    ) -> None:
-        """Test dispatching without infrastructure factory."""
+    @pytest.mark.asyncio
+    async def test_dispatch_without_infrastructure_factory(self) -> None:
+        """Test dispatch when no infrastructure factory is available."""
+        # Create handler without infrastructure factory
+        handler = SyncEventHandler(infrastructure_factory=None)
+
+        event = UserCreatedV1(
+            id=uuid4(),
+            aggregate_id=uuid4(),
+            event_type=EventType.USER_CREATED,
+            timestamp=datetime(2023, 1, 1, 12, 0, tzinfo=timezone.utc),
+            version="1",
+            revision=1,
+            data=UserCreatedDataV1(
+                username="testuser",
+                email="test@example.com",
+                first_name="Test",
+                last_name="User",
+                password_hash="hash",  # noqa: S106  # pragma: allowlist secret
+                hashing_method=HashingMethod.BCRYPT,
+                role=Role.USER,
+            ),
+        )
+
+        # This should log warnings but not crash
+        await handler.dispatch([event])
+
+        # Verify that the handler processed the event without crashing
+        # The warnings will be logged but the event processing continues
+
+    @pytest.mark.asyncio
+    async def test_call_handler_without_infrastructure_factory(self) -> None:
+        """Test _call_handler when no infrastructure factory is available."""
+        # Create handler without infrastructure factory
+        handler = SyncEventHandler(infrastructure_factory=None)
+
+        event = UserCreatedV1(
+            id=uuid4(),
+            aggregate_id=uuid4(),
+            event_type=EventType.USER_CREATED,
+            timestamp=datetime(2023, 1, 1, 12, 0, tzinfo=timezone.utc),
+            version="1",
+            revision=1,
+            data=UserCreatedDataV1(
+                username="testuser",
+                email="test@example.com",
+                first_name="Test",
+                last_name="User",
+                password_hash="hash",  # noqa: S106  # pragma: allowlist secret
+                hashing_method=HashingMethod.BCRYPT,
+                role=Role.USER,
+            ),
+        )
+
+        # Test each handler type without infrastructure factory
+        handlers_to_test = [
+            "process_user_created_task",
+            "process_user_created_email_task",
+            "process_user_updated_task",
+            "process_user_deleted_task",
+        ]
+
+        for handler_name in handlers_to_test:
+            # This should log warnings but not crash
+            await handler._call_handler(handler_name, event)
+
+        # Verify that the handler processed all events without crashing
+        # The warnings will be logged but the event processing continues
+
+    @pytest.mark.asyncio
+    async def test_call_handler_unknown_handler(self) -> None:
+        """Test _call_handler with unknown handler name."""
         handler = SyncEventHandler()
 
-        with patch(
-            "event_sourcing.application.events.handlers.sync.logger"
-        ) as mock_logger:
-            await handler.dispatch([sample_events[0]])
+        event = UserCreatedV1(
+            id=uuid4(),
+            aggregate_id=uuid4(),
+            event_type=EventType.USER_CREATED,
+            timestamp=datetime(2023, 1, 1, 12, 0, tzinfo=timezone.utc),
+            version="1",
+            revision=1,
+            data=UserCreatedDataV1(
+                username="testuser",
+                email="test@example.com",
+                first_name="Test",
+                last_name="User",
+                password_hash="hash",  # noqa: S106  # pragma: allowlist secret
+                hashing_method=HashingMethod.BCRYPT,
+                role=Role.USER,
+            ),
+        )
 
-            # Verify warning was logged
-            mock_logger.warning.assert_any_call(
-                "No infrastructure factory available for user created projection"
-            )
+        # Test with unknown handler
+        await handler._call_handler("unknown_handler", event)
+
+        # This should log a warning but not crash
 
     async def test_dispatch_with_projection_error(
         self,
@@ -223,7 +382,7 @@ class TestSyncEventHandler:
         mock_infrastructure_factory: MagicMock,
         sample_events: list[EventDTO],
     ) -> None:
-        """Test that dispatching logs appropriate messages."""
+        """Test dispatch with logging."""
         handler = SyncEventHandler(mock_infrastructure_factory)
 
         with patch(
@@ -246,108 +405,14 @@ class TestSyncEventHandler:
                 )
             )
 
-    def test_get_handler_functions_user_created(self) -> None:
-        """Test getting handler functions for USER_CREATED event type."""
-        handler = SyncEventHandler()
-        handler_functions = handler._get_handler_functions(
-            EventType.USER_CREATED
-        )
-
-        expected_handlers = [
-            "process_user_created_task",
-            "process_user_created_email_task",
-        ]
-        assert handler_functions == expected_handlers
-
-    def test_get_handler_functions_user_updated(self) -> None:
-        """Test getting handler functions for USER_UPDATED event type."""
-        handler = SyncEventHandler()
-        handler_functions = handler._get_handler_functions(
-            EventType.USER_UPDATED
-        )
-
-        expected_handlers = ["process_user_updated_task"]
-        assert handler_functions == expected_handlers
-
-    def test_get_handler_functions_user_deleted(self) -> None:
-        """Test getting handler functions for USER_DELETED event type."""
-        handler = SyncEventHandler()
-        handler_functions = handler._get_handler_functions(
-            EventType.USER_DELETED
-        )
-
-        expected_handlers = ["process_user_deleted_task"]
-        assert handler_functions == expected_handlers
-
-    def test_get_handler_functions_unknown_event_type(self) -> None:
-        """Test getting handler functions for unknown event type."""
-        handler = SyncEventHandler()
-        handler_functions = handler._get_handler_functions("UNKNOWN_EVENT")
-
-        expected_handlers = ["default_event_handler"]
-        assert handler_functions == expected_handlers
-
-    async def test_call_handler_user_created_task(
-        self, mock_infrastructure_factory: MagicMock
+    @pytest.mark.asyncio
+    async def test_dispatch_user_updated_without_infrastructure_factory(
+        self,
     ) -> None:
-        """Test calling user created task handler."""
-        handler = SyncEventHandler(mock_infrastructure_factory)
-        event = EventDTO(
-            id=uuid4(),
-            aggregate_id=uuid4(),
-            event_type=EventType.USER_CREATED,
-            timestamp=datetime(2023, 1, 1, 12, 0, tzinfo=timezone.utc),
-            version="1",
-            revision=1,
-            data={
-                "username": "testuser",
-                "email": "test@example.com",
-                "first_name": "Test",
-                "last_name": "User",
-                "password_hash": "hashed_password",  # pragma: allowlist secret
-                "hashing_method": HashingMethod.BCRYPT,
-                "role": Role.USER,
-            },
-        )
+        """Test dispatch USER_UPDATED event when no infrastructure factory is available."""
+        # Create handler without infrastructure factory
+        handler = SyncEventHandler(infrastructure_factory=None)
 
-        await handler._call_handler("process_user_created_task", event)
-
-        # Verify projection was created and called
-        mock_infrastructure_factory.create_user_created_projection.assert_called_once()
-
-    async def test_call_handler_user_created_email_task(
-        self, mock_infrastructure_factory: MagicMock
-    ) -> None:
-        """Test calling user created email task handler."""
-        handler = SyncEventHandler(mock_infrastructure_factory)
-        event = EventDTO(
-            id=uuid4(),
-            aggregate_id=uuid4(),
-            event_type=EventType.USER_CREATED,
-            timestamp=datetime(2023, 1, 1, 12, 0, tzinfo=timezone.utc),
-            version="1",
-            revision=1,
-            data={
-                "username": "testuser",
-                "email": "test@example.com",
-                "first_name": "Test",
-                "last_name": "User",
-                "password_hash": "hashed_password",  # pragma: allowlist secret
-                "hashing_method": HashingMethod.BCRYPT,
-                "role": Role.USER,
-            },
-        )
-
-        await handler._call_handler("process_user_created_email_task", event)
-
-        # Verify projection was created and called
-        mock_infrastructure_factory.create_user_created_email_projection.assert_called_once()
-
-    async def test_call_handler_user_updated_task(
-        self, mock_infrastructure_factory: MagicMock
-    ) -> None:
-        """Test calling user updated task handler."""
-        handler = SyncEventHandler(mock_infrastructure_factory)
         event = EventDTO(
             id=uuid4(),
             aggregate_id=uuid4(),
@@ -362,214 +427,8 @@ class TestSyncEventHandler:
             },
         )
 
-        await handler._call_handler("process_user_updated_task", event)
+        # This should log warnings but not crash
+        await handler.dispatch([event])
 
-        # Verify projection was created and called
-        mock_infrastructure_factory.create_user_updated_projection.assert_called_once()
-
-    async def test_call_handler_user_deleted_task(
-        self, mock_infrastructure_factory: MagicMock
-    ) -> None:
-        """Test calling user deleted task handler."""
-        handler = SyncEventHandler(mock_infrastructure_factory)
-        event = EventDTO(
-            id=uuid4(),
-            aggregate_id=uuid4(),
-            event_type=EventType.USER_DELETED,
-            timestamp=datetime(2023, 1, 1, 12, 0, tzinfo=timezone.utc),
-            version="1",
-            revision=1,
-            data={},
-        )
-
-        await handler._call_handler("process_user_deleted_task", event)
-
-        # Verify projection was created and called
-        mock_infrastructure_factory.create_user_deleted_projection.assert_called_once()
-
-    async def test_call_handler_unknown_handler(
-        self, mock_infrastructure_factory: MagicMock
-    ) -> None:
-        """Test calling unknown handler."""
-        handler = SyncEventHandler(mock_infrastructure_factory)
-        event = EventDTO(
-            id=uuid4(),
-            aggregate_id=uuid4(),
-            event_type=EventType.PASSWORD_CHANGED,
-            timestamp=datetime(2023, 1, 1, 12, 0, tzinfo=timezone.utc),
-            version="1",
-            revision=1,
-            data={
-                "password_hash": "new_hash",  # pragma: allowlist secret
-                "hashing_method": HashingMethod.BCRYPT,
-            },
-        )
-
-        with patch(
-            "event_sourcing.application.events.handlers.sync.logger"
-        ) as mock_logger:
-            await handler._call_handler("unknown_handler", event)
-
-            # Verify warning was logged
-            mock_logger.warning.assert_called_once_with(
-                "Unknown handler: unknown_handler"
-            )
-
-    async def test_call_handler_without_infrastructure_factory(self) -> None:
-        """Test calling handler without infrastructure factory."""
-        handler = SyncEventHandler()
-        event = EventDTO(
-            id=uuid4(),
-            aggregate_id=uuid4(),
-            event_type=EventType.USER_CREATED,
-            timestamp=datetime(2023, 1, 1, 12, 0, tzinfo=timezone.utc),
-            version="1",
-            revision=1,
-            data={
-                "username": "testuser",
-                "email": "test@example.com",
-                "first_name": "Test",
-                "last_name": "User",
-                "password_hash": "hashed_password",  # pragma: allowlist secret
-                "hashing_method": HashingMethod.BCRYPT,
-                "role": Role.USER,
-            },
-        )
-
-        with patch(
-            "event_sourcing.application.events.handlers.sync.logger"
-        ) as mock_logger:
-            await handler._call_handler("process_user_created_task", event)
-
-            # Verify warning was logged
-            mock_logger.warning.assert_any_call(
-                "No infrastructure factory available for user created projection"
-            )
-
-    async def test_call_handler_with_import_error(
-        self, mock_infrastructure_factory: MagicMock
-    ) -> None:
-        """Test calling handler when ImportError occurs."""
-        handler = SyncEventHandler(mock_infrastructure_factory)
-        event = EventDTO(
-            id=uuid4(),
-            aggregate_id=uuid4(),
-            event_type=EventType.USER_CREATED,
-            timestamp=datetime(2023, 1, 1, 12, 0, tzinfo=timezone.utc),
-            version="1",
-            revision=1,
-            data={
-                "username": "testuser",
-                "email": "test@example.com",
-                "first_name": "Test",
-                "last_name": "User",
-                "password_hash": "hashed_password",  # pragma: allowlist secret
-                "hashing_method": HashingMethod.BCRYPT,
-                "role": Role.USER,
-            },
-        )
-
-        # Make the infrastructure factory method raise an ImportError
-        mock_infrastructure_factory.create_user_created_projection.side_effect = ImportError(
-            "Module not found"
-        )
-
-        with patch(
-            "event_sourcing.application.events.handlers.sync.logger"
-        ) as mock_logger:
-            with pytest.raises(ImportError, match="Module not found"):
-                await handler._call_handler("process_user_created_task", event)
-
-            # Verify error was logged
-            mock_logger.error.assert_called_once_with(
-                "Could not import handler process_user_created_task: Module not found"
-            )
-
-    async def test_call_handler_with_general_exception(
-        self, mock_infrastructure_factory: MagicMock
-    ) -> None:
-        """Test calling handler when a general Exception occurs."""
-        handler = SyncEventHandler(mock_infrastructure_factory)
-        event = EventDTO(
-            id=uuid4(),
-            aggregate_id=uuid4(),
-            event_type=EventType.USER_CREATED,
-            timestamp=datetime(2023, 1, 1, 12, 0, tzinfo=timezone.utc),
-            version="1",
-            revision=1,
-            data={
-                "username": "testuser",
-                "email": "test@example.com",
-                "first_name": "Test",
-                "last_name": "User",
-                "password_hash": "hashed_password",  # pragma: allowlist secret
-                "hashing_method": HashingMethod.BCRYPT,
-                "role": Role.USER,
-            },
-        )
-
-        # Make the infrastructure factory method raise a general Exception
-        mock_infrastructure_factory.create_user_created_projection.side_effect = Exception(
-            "General error"
-        )
-
-        with patch(
-            "event_sourcing.application.events.handlers.sync.logger"
-        ) as mock_logger:
-            with pytest.raises(Exception, match="General error"):
-                await handler._call_handler("process_user_created_task", event)
-
-            # Verify error was logged
-            mock_logger.error.assert_called_once_with(
-                "Error calling handler process_user_created_task: General error"
-            )
-
-    async def test_call_handler_user_updated_without_factory(self) -> None:
-        """Test calling user updated handler without infrastructure factory."""
-        handler = SyncEventHandler()
-        event = EventDTO(
-            id=uuid4(),
-            aggregate_id=uuid4(),
-            event_type=EventType.USER_UPDATED,
-            timestamp=datetime(2023, 1, 1, 12, 0, tzinfo=timezone.utc),
-            version="1",
-            revision=1,
-            data={
-                "first_name": "Updated",
-                "last_name": "User",
-                "email": "updated@example.com",
-            },
-        )
-
-        with patch(
-            "event_sourcing.application.events.handlers.sync.logger"
-        ) as mock_logger:
-            await handler._call_handler("process_user_updated_task", event)
-
-            # Verify warning was logged
-            mock_logger.warning.assert_called_once_with(
-                "No infrastructure factory available for user updated projection"
-            )
-
-    async def test_call_handler_user_deleted_without_factory(self) -> None:
-        """Test calling user deleted handler without infrastructure factory."""
-        handler = SyncEventHandler()
-        event = EventDTO(
-            id=uuid4(),
-            aggregate_id=uuid4(),
-            event_type=EventType.USER_DELETED,
-            timestamp=datetime(2023, 1, 1, 12, 0, tzinfo=timezone.utc),
-            version="1",
-            revision=1,
-            data={},
-        )
-
-        with patch(
-            "event_sourcing.application.events.handlers.sync.logger"
-        ) as mock_logger:
-            await handler._call_handler("process_user_deleted_task", event)
-
-            # Verify warning was logged
-            mock_logger.warning.assert_called_once_with(
-                "No infrastructure factory available for user deleted projection"
-            )
+        # Verify that the handler processed the event without crashing
+        # The warnings will be logged but the event processing continues

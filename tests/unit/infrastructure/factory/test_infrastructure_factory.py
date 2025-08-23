@@ -34,9 +34,6 @@ class TestInfrastructureFactory:
         """Test InfrastructureFactory initialization."""
         factory = InfrastructureFactory(database_url)
         assert factory.database_url == database_url
-        assert factory._database_manager is None
-        assert factory._event_handler is None
-        assert factory._session_manager is None
 
     @pytest.mark.asyncio
     @patch(
@@ -52,46 +49,60 @@ class TestInfrastructureFactory:
 
         database_manager_mock.assert_called_once_with(factory.database_url)
         assert result == database_manager_mock.return_value
-        assert factory._database_manager == result
 
     @pytest.mark.asyncio
+    @patch(
+        "event_sourcing.infrastructure.factory.infrastructure_factory.DatabaseManager"
+    )
     async def test_database_manager_property_cached(
-        self, factory: InfrastructureFactory
+        self, database_manager_mock: MagicMock, factory: InfrastructureFactory
     ) -> None:
         """Test database_manager property when already cached."""
-        cached_manager = MagicMock()
-        factory._database_manager = cached_manager
+        # Mock the DatabaseManager to avoid real database connections
+        database_manager_mock.return_value = MagicMock()
 
-        result = factory.database_manager
+        # First call to populate cache
+        first_result = factory.database_manager
 
-        assert result == cached_manager
+        # Second call should return same instance
+        second_result = factory.database_manager
+
+        assert second_result == first_result
 
     @pytest.mark.asyncio
+    @patch(
+        "event_sourcing.infrastructure.factory.infrastructure_factory.DatabaseManager"
+    )
     async def test_session_manager_property_first_time(
-        self, factory: InfrastructureFactory
+        self, database_manager_mock: MagicMock, factory: InfrastructureFactory
     ) -> None:
         """Test session_manager property when accessed first time."""
-        # Mock database_manager property
-        mock_db_manager = MagicMock()
-        factory._database_manager = mock_db_manager
+        # Mock the DatabaseManager to avoid real database connections
+        database_manager_mock.return_value = MagicMock()
 
         result = factory.session_manager
 
         assert result is not None
-        assert result.database_manager == mock_db_manager
-        assert factory._session_manager == result
+        assert result.database_manager == factory.database_manager
 
     @pytest.mark.asyncio
+    @patch(
+        "event_sourcing.infrastructure.factory.infrastructure_factory.DatabaseManager"
+    )
     async def test_session_manager_property_cached(
-        self, factory: InfrastructureFactory
+        self, database_manager_mock: MagicMock, factory: InfrastructureFactory
     ) -> None:
         """Test session_manager property when already cached."""
-        cached_session_manager = MagicMock()
-        factory._session_manager = cached_session_manager
+        # Mock the DatabaseManager to avoid real database connections
+        database_manager_mock.return_value = MagicMock()
 
-        result = factory.session_manager
+        # First call to populate cache
+        first_result = factory.session_manager
 
-        assert result == cached_session_manager
+        # Second call should return same instance
+        second_result = factory.session_manager
+
+        assert second_result == first_result
 
     @pytest.mark.asyncio
     @patch("builtins.__import__")
@@ -106,19 +117,19 @@ class TestInfrastructureFactory:
         result = factory.event_handler
 
         assert result is not None
-        assert factory._event_handler == result
 
     @pytest.mark.asyncio
     async def test_event_handler_property_cached(
         self, factory: InfrastructureFactory
     ) -> None:
         """Test event_handler property when already cached."""
-        cached_event_handler = MagicMock()
-        factory._event_handler = cached_event_handler
+        # First call to populate cache
+        first_result = factory.event_handler
 
-        result = factory.event_handler
+        # Second call should return same instance
+        second_result = factory.event_handler
 
-        assert result == cached_event_handler
+        assert second_result == first_result
 
     @pytest.mark.asyncio
     @patch(
@@ -133,11 +144,13 @@ class TestInfrastructureFactory:
         email_provider_factory_mock: MagicMock,
         factory: InfrastructureFactory,
     ) -> None:
-        """Test email providers initialization."""
-        factory._initialize_email_providers()
+        """Test email providers initialization through public interface."""
+        # Test that the logging provider was registered by creating an email provider
+        factory.create_email_provider("logging")
 
-        email_provider_factory_mock.register_provider.assert_called_once_with(
-            "logging", logging_email_provider_mock
+        # Verify that the provider factory was used to create the provider
+        email_provider_factory_mock.create_provider.assert_called_once_with(
+            "logging", {}
         )
 
     @pytest.mark.asyncio
@@ -375,33 +388,54 @@ class TestInfrastructureFactory:
         assert result is None
 
     @pytest.mark.asyncio
+    @patch(
+        "event_sourcing.infrastructure.factory.infrastructure_factory.DatabaseManager"
+    )
     async def test_close_with_database_manager(
-        self, factory: InfrastructureFactory
+        self, database_manager_mock: MagicMock, factory: InfrastructureFactory
     ) -> None:
         """Test closing factory with database manager."""
-        mock_db_manager = MagicMock()
-        mock_db_manager.close = AsyncMock()
-        factory._database_manager = mock_db_manager
+        # Mock the DatabaseManager to avoid real database connections
+        mock_db_manager1 = MagicMock()
+        mock_db_manager1.close = AsyncMock()
+        mock_db_manager2 = MagicMock()
+        mock_db_manager2.close = AsyncMock()
+
+        # First call returns first instance, second call returns second instance
+        database_manager_mock.side_effect = [
+            mock_db_manager1,
+            mock_db_manager2,
+        ]
+
+        # Access database_manager to create it
+        db_manager = factory.database_manager
 
         await factory.close()
 
-        mock_db_manager.close.assert_awaited_once()
-        assert factory._database_manager is None
-        assert factory._event_handler is None
-        assert factory._session_manager is None
+        # Verify that after close, accessing database_manager creates a new instance
+        new_db_manager = factory.database_manager
+        assert new_db_manager is not db_manager
+        assert new_db_manager is mock_db_manager2
+        assert db_manager is mock_db_manager1
 
     @pytest.mark.asyncio
+    @patch(
+        "event_sourcing.infrastructure.factory.infrastructure_factory.DatabaseManager"
+    )
     async def test_close_without_database_manager(
-        self, factory: InfrastructureFactory
+        self, database_manager_mock: MagicMock, factory: InfrastructureFactory
     ) -> None:
         """Test closing factory without database manager."""
-        factory._database_manager = None
+        # Mock the DatabaseManager to avoid real database connections
+        mock_db_manager = MagicMock()
+        mock_db_manager.close = AsyncMock()
+        database_manager_mock.return_value = mock_db_manager
 
         await factory.close()
 
-        assert factory._database_manager is None
-        assert factory._event_handler is None
-        assert factory._session_manager is None
+        # Verify that after close, accessing database_manager creates a new instance
+        db_manager = factory.database_manager
+        assert db_manager is not None
 
 
 class TestQueryHandlerWrappers:
@@ -428,16 +462,14 @@ class TestQueryHandlerWrappers:
 
         # Create the factory and get the wrapper
         factory = InfrastructureFactory("test_url")
-        factory._database_manager = MagicMock()
-        factory._session_manager = factory_mock
 
         wrapper = factory.create_get_user_query_handler()
 
-        # Test that the wrapper has the expected interface
+        # Test that the wrapper has the expected public interface
         assert hasattr(wrapper, "handle")
-        assert hasattr(wrapper, "_create_handler_with_session")
         assert callable(wrapper.handle)
-        assert callable(wrapper._create_handler_with_session)
+        assert hasattr(wrapper, "factory")
+        assert wrapper.factory == factory
 
         # Test that the wrapper is an instance of the expected class
         assert "QueryHandlerWrapper" in str(type(wrapper))
@@ -446,21 +478,19 @@ class TestQueryHandlerWrappers:
     async def test_get_user_query_handler_wrapper_methods(
         self, factory_mock: MagicMock
     ) -> None:
-        """Test GetUserQueryHandler wrapper internal methods."""
+        """Test GetUserQueryHandler wrapper public methods."""
         from event_sourcing.infrastructure.factory import InfrastructureFactory
 
         # Create the factory and get the wrapper
         factory = InfrastructureFactory("test_url")
-        factory._database_manager = MagicMock()
-        factory._session_manager = factory_mock
 
         wrapper = factory.create_get_user_query_handler()
 
-        # Test that the wrapper has the expected methods and they are callable
+        # Test that the wrapper has the expected public methods and they are callable
         assert hasattr(wrapper, "handle")
-        assert hasattr(wrapper, "_create_handler_with_session")
         assert callable(wrapper.handle)
-        assert callable(wrapper._create_handler_with_session)
+        assert hasattr(wrapper, "factory")
+        assert wrapper.factory == factory
 
         # Test that the wrapper is an instance of the expected class
         assert "QueryHandlerWrapper" in str(type(wrapper))
@@ -474,36 +504,32 @@ class TestQueryHandlerWrappers:
 
         # Create the factory and get the wrapper
         factory = InfrastructureFactory("test_url")
-        factory._database_manager = MagicMock()
-        factory._session_manager = factory_mock
 
         wrapper = factory.create_get_user_history_query_handler()
 
-        # Test that the wrapper has the expected interface
+        # Test that the wrapper has the expected public interface
         assert hasattr(wrapper, "handle")
-        assert hasattr(wrapper, "_create_handler_with_session")
         assert callable(wrapper.handle)
-        assert callable(wrapper._create_handler_with_session)
+        assert hasattr(wrapper, "factory")
+        assert wrapper.factory == factory
 
     @pytest.mark.asyncio
     async def test_get_user_history_query_handler_wrapper_methods(
         self, factory_mock: MagicMock
     ) -> None:
-        """Test GetUserHistoryQueryHandler wrapper internal methods."""
+        """Test GetUserHistoryQueryHandler wrapper public methods."""
         from event_sourcing.infrastructure.factory import InfrastructureFactory
 
         # Create the factory and get the wrapper
         factory = InfrastructureFactory("test_url")
-        factory._database_manager = MagicMock()
-        factory._session_manager = factory_mock
 
         wrapper = factory.create_get_user_history_query_handler()
 
-        # Test that the wrapper has the expected methods and they are callable
+        # Test that the wrapper has the expected public methods and they are callable
         assert hasattr(wrapper, "handle")
-        assert hasattr(wrapper, "_create_handler_with_session")
         assert callable(wrapper.handle)
-        assert callable(wrapper._create_handler_with_session)
+        assert hasattr(wrapper, "factory")
+        assert wrapper.factory == factory
 
         # Test that the wrapper is an instance of the expected class
         assert "QueryHandlerWrapper" in str(type(wrapper))
@@ -517,36 +543,11 @@ class TestQueryHandlerWrappers:
 
         # Create the factory and get the wrapper
         factory = InfrastructureFactory("test_url")
-        factory._database_manager = MagicMock()
-        factory._session_manager = factory_mock
 
         wrapper = factory.create_list_users_query_handler()
 
-        # Test that the wrapper has the expected interface
+        # Test that the wrapper has the expected public interface
         assert hasattr(wrapper, "handle")
-        assert hasattr(wrapper, "_create_handler_with_session")
         assert callable(wrapper.handle)
-        assert callable(wrapper._create_handler_with_session)
-
-    @pytest.mark.asyncio
-    async def test_list_users_query_handler_wrapper_methods(
-        self, factory_mock: MagicMock
-    ) -> None:
-        """Test ListUsersQueryHandler wrapper internal methods."""
-        from event_sourcing.infrastructure.factory import InfrastructureFactory
-
-        # Create the factory and get the wrapper
-        factory = InfrastructureFactory("test_url")
-        factory._database_manager = MagicMock()
-        factory._session_manager = factory_mock
-
-        wrapper = factory.create_list_users_query_handler()
-
-        # Test that the wrapper has the expected methods and they are callable
-        assert hasattr(wrapper, "handle")
-        assert hasattr(wrapper, "_create_handler_with_session")
-        assert callable(wrapper.handle)
-        assert callable(wrapper._create_handler_with_session)
-
-        # Test that the wrapper is an instance of the expected class
-        assert "QueryHandlerWrapper" in str(type(wrapper))
+        assert hasattr(wrapper, "factory")
+        assert wrapper.factory == factory

@@ -1,7 +1,7 @@
 """Unit tests for Celery event handler module."""
 
 from datetime import datetime, timezone
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock, Mock, patch
 from uuid import uuid4
 
 import pytest
@@ -70,53 +70,75 @@ class TestCeleryEventHandler:
             ),
         ]
 
-    async def test_dispatch_user_created_events(
+    async def test_dispatch_user_created_event(
         self,
         celery_event_handler: CeleryEventHandler,
         mock_celery_app: MagicMock,
-        sample_events: list[EventDTO],
     ) -> None:
-        """Test dispatching USER_CREATED events."""
-        user_created_event = sample_events[0]
-
-        await celery_event_handler.dispatch([user_created_event])
-
-        # Verify Celery tasks were sent
-        assert mock_celery_app.send_task.call_count == 2
-
-        # Check first call (process_user_created_task)
-        first_call = mock_celery_app.send_task.call_args_list[0]
-        assert first_call.args[0] == "process_user_created_task"
-        assert first_call.kwargs["args"] == [user_created_event.model_dump()]
-
-        # Check second call (process_user_created_email_task)
-        second_call = mock_celery_app.send_task.call_args_list[1]
-        assert second_call.args[0] == "process_user_created_email_task"
-        assert second_call.kwargs["args"] == [user_created_event.model_dump()]
-
-    async def test_dispatch_user_updated_events(
-        self,
-        celery_event_handler: CeleryEventHandler,
-        mock_celery_app: MagicMock,
-        sample_events: list[EventDTO],
-    ) -> None:
-        """Test dispatching USER_UPDATED events."""
-        user_updated_event = sample_events[1]
-
-        await celery_event_handler.dispatch([user_updated_event])
-
-        # Verify Celery task was sent
-        mock_celery_app.send_task.assert_called_once_with(
-            "process_user_updated_task", args=[user_updated_event.model_dump()]
+        """Test dispatching USER_CREATED event through public interface."""
+        event = EventDTO(
+            id=uuid4(),
+            aggregate_id=uuid4(),
+            event_type=EventType.USER_CREATED,
+            timestamp=datetime(2023, 1, 1, 12, 0, tzinfo=timezone.utc),
+            version="1",
+            revision=1,
+            data={
+                "username": "testuser",
+                "email": "test@example.com",
+                "first_name": "Test",
+                "last_name": "User",
+                "password_hash": "hashed_password",  # pragma: allowlist secret
+                "hashing_method": HashingMethod.BCRYPT,
+                "role": Role.USER,
+            },
         )
 
-    async def test_dispatch_user_deleted_events(
+        # Test through public dispatch method
+        await celery_event_handler.dispatch([event])
+
+        # Verify both tasks were dispatched
+        assert mock_celery_app.send_task.call_count == 2
+        mock_celery_app.send_task.assert_any_call(
+            "process_user_created_task", args=[event.model_dump()]
+        )
+        mock_celery_app.send_task.assert_any_call(
+            "process_user_created_email_task", args=[event.model_dump()]
+        )
+
+    async def test_dispatch_user_updated_event(
         self,
         celery_event_handler: CeleryEventHandler,
         mock_celery_app: MagicMock,
     ) -> None:
-        """Test dispatching USER_DELETED events."""
-        user_deleted_event = EventDTO(
+        """Test dispatching USER_UPDATED event through public interface."""
+        event = EventDTO(
+            id=uuid4(),
+            aggregate_id=uuid4(),
+            event_type=EventType.USER_UPDATED,
+            timestamp=datetime(2023, 1, 1, 12, 0, tzinfo=timezone.utc),
+            version="1",
+            revision=1,
+            data={
+                "first_name": "Updated",
+            },
+        )
+
+        # Test through public dispatch method
+        await celery_event_handler.dispatch([event])
+
+        # Verify task was dispatched
+        mock_celery_app.send_task.assert_called_once_with(
+            "process_user_updated_task", args=[event.model_dump()]
+        )
+
+    async def test_dispatch_user_deleted_event(
+        self,
+        celery_event_handler: CeleryEventHandler,
+        mock_celery_app: MagicMock,
+    ) -> None:
+        """Test dispatching USER_DELETED event through public interface."""
+        event = EventDTO(
             id=uuid4(),
             aggregate_id=uuid4(),
             event_type=EventType.USER_DELETED,
@@ -126,20 +148,21 @@ class TestCeleryEventHandler:
             data={},
         )
 
-        await celery_event_handler.dispatch([user_deleted_event])
+        # Test through public dispatch method
+        await celery_event_handler.dispatch([event])
 
-        # Verify Celery task was sent
+        # Verify task was dispatched
         mock_celery_app.send_task.assert_called_once_with(
-            "process_user_deleted_task", args=[user_deleted_event.model_dump()]
+            "process_user_deleted_task", args=[event.model_dump()]
         )
 
-    async def test_dispatch_password_changed_events(
+    async def test_dispatch_password_changed_event(
         self,
         celery_event_handler: CeleryEventHandler,
         mock_celery_app: MagicMock,
     ) -> None:
-        """Test dispatching PASSWORD_CHANGED events."""
-        password_changed_event = EventDTO(
+        """Test dispatching PASSWORD_CHANGED event through public interface."""
+        event = EventDTO(
             id=uuid4(),
             aggregate_id=uuid4(),
             event_type=EventType.PASSWORD_CHANGED,
@@ -152,22 +175,78 @@ class TestCeleryEventHandler:
             },
         )
 
-        await celery_event_handler.dispatch([password_changed_event])
+        # Test through public dispatch method
+        await celery_event_handler.dispatch([event])
 
-        # Verify Celery task was sent
+        # Verify task was dispatched
         mock_celery_app.send_task.assert_called_once_with(
-            "process_password_changed_task",
-            args=[password_changed_event.model_dump()],
+            "process_password_changed_task", args=[event.model_dump()]
+        )
+
+    async def test_dispatch_unknown_event_type(
+        self,
+        celery_event_handler: CeleryEventHandler,
+        mock_celery_app: MagicMock,
+    ) -> None:
+        """Test dispatching event type that has no handler mapping through public interface."""
+        # Create a mock event with an invalid event type to test default handler
+
+        mock_event = Mock()
+        mock_event.id = uuid4()
+        mock_event.aggregate_id = uuid4()
+        mock_event.event_type = (
+            "INVALID_EVENT_TYPE"  # This will trigger the default case
+        )
+        mock_event.timestamp = datetime(2023, 1, 1, 12, 0, tzinfo=timezone.utc)
+        mock_event.version = "1"
+        mock_event.revision = 1
+        mock_event.data = {}
+        mock_event.model_dump.return_value = {
+            "id": str(mock_event.id),
+            "aggregate_id": str(mock_event.aggregate_id),
+            "event_type": mock_event.event_type,
+            "timestamp": mock_event.timestamp.isoformat(),
+            "version": mock_event.version,
+            "revision": mock_event.revision,
+            "data": mock_event.data,
+        }
+
+        # Test through public dispatch method - should handle gracefully and use default handler
+        await celery_event_handler.dispatch([mock_event])
+
+        # Verify default task was dispatched
+        mock_celery_app.send_task.assert_called_once_with(
+            "default_event_handler", args=[mock_event.model_dump()]
         )
 
     async def test_dispatch_multiple_events(
         self,
         celery_event_handler: CeleryEventHandler,
         mock_celery_app: MagicMock,
-        sample_events: list[EventDTO],
     ) -> None:
-        """Test dispatching multiple events of different types."""
-        await celery_event_handler.dispatch(sample_events)
+        """Test dispatching multiple events of different types through public interface."""
+        events = [
+            EventDTO(
+                id=uuid4(),
+                aggregate_id=uuid4(),
+                event_type=EventType.USER_CREATED,
+                timestamp=datetime(2023, 1, 1, 12, 0, tzinfo=timezone.utc),
+                version="1",
+                revision=1,
+                data={"username": "testuser"},
+            ),
+            EventDTO(
+                id=uuid4(),
+                aggregate_id=uuid4(),
+                event_type=EventType.USER_UPDATED,
+                timestamp=datetime(2023, 1, 1, 12, 0, tzinfo=timezone.utc),
+                version="1",
+                revision=1,
+                data={"first_name": "Updated"},
+            ),
+        ]
+
+        await celery_event_handler.dispatch(events)
 
         # Verify total number of tasks sent
         # USER_CREATED: 2 tasks, USER_UPDATED: 1 task = 3 total
@@ -178,7 +257,7 @@ class TestCeleryEventHandler:
         celery_event_handler: CeleryEventHandler,
         mock_celery_app: MagicMock,
     ) -> None:
-        """Test dispatching empty events list."""
+        """Test dispatching empty events list through public interface."""
         await celery_event_handler.dispatch([])
 
         # Verify no tasks were sent
@@ -188,26 +267,43 @@ class TestCeleryEventHandler:
         self,
         celery_event_handler: CeleryEventHandler,
         mock_celery_app: MagicMock,
-        sample_events: list[EventDTO],
     ) -> None:
-        """Test dispatching when Celery raises an error."""
+        """Test dispatching when Celery raises an error through public interface."""
         mock_celery_app.send_task.side_effect = Exception("Celery error")
+        event = EventDTO(
+            id=uuid4(),
+            aggregate_id=uuid4(),
+            event_type=EventType.USER_CREATED,
+            timestamp=datetime(2023, 1, 1, 12, 0, tzinfo=timezone.utc),
+            version="1",
+            revision=1,
+            data={"username": "testuser"},
+        )
 
         # Verify error is raised
         with pytest.raises(Exception, match="Celery error"):
-            await celery_event_handler.dispatch([sample_events[0]])
+            await celery_event_handler.dispatch([event])
 
     async def test_dispatch_with_logging(
         self,
         celery_event_handler: CeleryEventHandler,
         mock_celery_app: MagicMock,
-        sample_events: list[EventDTO],
     ) -> None:
-        """Test that dispatching logs appropriate messages."""
+        """Test that dispatching logs appropriate messages through public interface."""
+        event = EventDTO(
+            id=uuid4(),
+            aggregate_id=uuid4(),
+            event_type=EventType.USER_CREATED,
+            timestamp=datetime(2023, 1, 1, 12, 0, tzinfo=timezone.utc),
+            version="1",
+            revision=1,
+            data={"username": "testuser"},
+        )
+
         with patch(
             "event_sourcing.application.events.handlers.celery.logger"
         ) as mock_logger:
-            await celery_event_handler.dispatch([sample_events[0]])
+            await celery_event_handler.dispatch([event])
 
             # Verify debug logging
             mock_logger.debug.assert_any_call(
@@ -215,12 +311,12 @@ class TestCeleryEventHandler:
             )
             mock_logger.debug.assert_any_call(
                 "Dispatching event {} to task process_user_created_task".format(
-                    sample_events[0].id
+                    event.id
                 )
             )
             mock_logger.debug.assert_any_call(
                 "Successfully dispatched event {} to task process_user_created_task".format(
-                    sample_events[0].id
+                    event.id
                 )
             )
 
@@ -228,59 +324,3 @@ class TestCeleryEventHandler:
         """Test that CeleryEventHandler is properly initialized with a Celery app."""
         handler = CeleryEventHandler(mock_celery_app)
         assert handler.celery_app == mock_celery_app
-
-    def test_get_task_names_user_created(
-        self, celery_event_handler: CeleryEventHandler
-    ) -> None:
-        """Test getting task names for USER_CREATED event type."""
-        task_names = celery_event_handler._get_task_names(
-            EventType.USER_CREATED
-        )
-
-        expected_tasks = [
-            "process_user_created_task",
-            "process_user_created_email_task",
-        ]
-        assert task_names == expected_tasks
-
-    def test_get_task_names_user_updated(
-        self, celery_event_handler: CeleryEventHandler
-    ) -> None:
-        """Test getting task names for USER_UPDATED event type."""
-        task_names = celery_event_handler._get_task_names(
-            EventType.USER_UPDATED
-        )
-
-        expected_tasks = ["process_user_updated_task"]
-        assert task_names == expected_tasks
-
-    def test_get_task_names_user_deleted(
-        self, celery_event_handler: CeleryEventHandler
-    ) -> None:
-        """Test getting task names for USER_DELETED event type."""
-        task_names = celery_event_handler._get_task_names(
-            EventType.USER_DELETED
-        )
-
-        expected_tasks = ["process_user_deleted_task"]
-        assert task_names == expected_tasks
-
-    def test_get_task_names_password_changed(
-        self, celery_event_handler: CeleryEventHandler
-    ) -> None:
-        """Test getting task names for PASSWORD_CHANGED event type."""
-        task_names = celery_event_handler._get_task_names(
-            EventType.PASSWORD_CHANGED
-        )
-
-        expected_tasks = ["process_password_changed_task"]
-        assert task_names == expected_tasks
-
-    def test_get_task_names_unknown_event_type(
-        self, celery_event_handler: CeleryEventHandler
-    ) -> None:
-        """Test getting task names for unknown event type."""
-        task_names = celery_event_handler._get_task_names("UNKNOWN_EVENT")
-
-        expected_tasks = ["default_event_handler"]
-        assert task_names == expected_tasks
