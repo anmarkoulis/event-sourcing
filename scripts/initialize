@@ -6,6 +6,6 @@ set -o nounset
 
 
 # Create admin user
-python -m event_sourcing.cli users create-admin --force
+python -m event_sourcing.cli users create-admin
 
 exec "$@"
