@@ -714,8 +714,8 @@ This is what gives us the audit trail we need for debugging - we can see exactly
 ## Key characteristics:
 - **Append-only**: Events are never modified or deleted
 - **Streams per aggregate**: Each user has their own ordered event stream
-- **Immutable**: Once written, events are permanent
 - **Replayable**: Can rebuild any point in time from the stream
+- **Write model**: We also refer to this as the write model
 
 ## **The stream is the source of truth** - rebuild any point in time
 
@@ -920,7 +920,7 @@ class ChangePasswordCommandHandler(CommandHandler[ChangePasswordCommand]):
             await self.event_handler.dispatch(new_events)
 ```
 
-## **Command Handler orchestrates: Event Store + Event Handler with Unit of Work**
+## **Command Handler: Aggregate State Reconstruction & Business Logic Execution**
 
 <!--
 Behind the API, command handlers are the orchestrators - they don't contain business logic, they delegate and coordinate. Here's our ChangePasswordCommandHandler: it leverages the event store to retrieve all existing events for the user, creates a UserAggregate and replays events to reconstruct its current state, calls the aggregate's business method to produce new events, and then handles both storage and dispatch.
@@ -958,6 +958,7 @@ class UserAggregate(Aggregate):
 ## **Aggregates are pure Python classes that contain business rules and produce events**
 
 <!--
+19min
 Now, where does the actual business logic live? It's in the aggregates - a concept borrowed from Domain-Driven Design (DDD). Aggregates are pure Python classes that contain all the business rules and domain logic. They don't have any dependencies on infrastructure, databases, or external services. They just take commands (like change_password) and produce events (like PASSWORD_CHANGED). The apply method is crucial for event sourcing - it's how we reconstruct the aggregate's current state by replaying all previous events. This gives us a clean separation between business logic and infrastructure concerns.
 -->
 
@@ -1019,7 +1020,7 @@ def process_user_created_task(self, event: Dict[str, Any]) -> None:
     logger.info(f"Successfully processed USER_CREATED event for user {EventDTO(**event).aggregate_id}")
 ```
 
-## **Celery tasks use async_to_sync to bridge async projections with sync Celery**
+## **Celery Tasks: Reliable Event Consumption**
 
 <!--
 On the receiving end, Celery tasks are wrappers that call the appropriate projection handlers. Here's how it works: we define a Celery task that receives an event, get the projection from the infrastructure factory, and use async_to_sync to convert the async projection.handle method to sync for Celery. The task is just a wrapper - the actual business logic is in the projection handlers, and async_to_sync bridges the gap between async projections and sync Celery tasks.
@@ -1160,7 +1161,6 @@ class TestSarahAccountDeletion(AsyncIOIsolatedTestCase):
 
         # Assert - Verify business logic behavior
         self.assertTrue(result.is_success)
-        self.assertEqual(sarah.status, "deleted")
         self.assertEqual(sarah.deleted_by, "admin@company.com")
         self.assertEqual(sarah.deletion_reason, "User requested account deletion")
 ```
