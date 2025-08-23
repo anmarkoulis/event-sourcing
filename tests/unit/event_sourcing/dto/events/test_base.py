@@ -10,42 +10,42 @@ from event_sourcing.dto.events.base import EventDTO
 from event_sourcing.enums import EventType
 
 
-class TestEventData(BaseModel):
-    """Test event data class for testing EventDTO."""
+class ExampleEventData(BaseModel):
+    """Example event data class for testing EventDTO."""
 
     field1: str
     field2: int
 
 
-class TestEventDataV1(BaseModel):
-    """Test event data class with V1 suffix for version testing."""
+class ExampleEventDataV1(BaseModel):
+    """Example event data class with V1 suffix for version testing."""
 
     field1: str
     field2: int
 
 
-class TestEventDataV2(BaseModel):
-    """Test event data class with V2 suffix for version testing."""
+class ExampleEventDataV2(BaseModel):
+    """Example event data class with V2 suffix for version testing."""
 
     field1: str
     field2: int
     field3: bool
 
 
-class TestEventDTO(EventDTO[TestEventData]):
-    """Test EventDTO subclass for testing."""
+class ExampleEventDTO(EventDTO[ExampleEventData]):
+    """Example EventDTO subclass for testing."""
 
 
-class TestEventDTOV1(EventDTO[TestEventDataV1]):
-    """Test EventDTO subclass with V1 suffix for version testing."""
+class ExampleEventDTOV1(EventDTO[ExampleEventDataV1]):
+    """Example EventDTO subclass with V1 suffix for version testing."""
 
 
-class TestEventDTOV2(EventDTO[TestEventDataV2]):
-    """Test EventDTO subclass with V2 suffix for version testing."""
+class ExampleEventDTOV2(EventDTO[ExampleEventDataV2]):
+    """Example EventDTO subclass with V2 suffix for version testing."""
 
 
-class TestEventDTONoVersion(EventDTO[TestEventData]):
-    """Test EventDTO subclass without version suffix."""
+class ExampleEventDTONoVersion(EventDTO[ExampleEventData]):
+    """Example EventDTO subclass without version suffix."""
 
 
 class TestEventDTOClass:
@@ -62,15 +62,15 @@ class TestEventDTOClass:
         return datetime(2023, 1, 1, 12, 0, 0, tzinfo=timezone.utc)
 
     @pytest.fixture
-    def test_data(self) -> TestEventData:
+    def test_data(self) -> ExampleEventData:
         """Provide test event data."""
-        return TestEventData(field1="test_value", field2=42)
+        return ExampleEventData(field1="test_value", field2=42)
 
     def test_init_with_required_fields(
         self,
         aggregate_id: uuid.UUID,
         timestamp: datetime,
-        test_data: TestEventData,
+        test_data: ExampleEventData,
     ) -> None:
         """Test EventDTO initialization with required fields."""
         event = EventDTO(
@@ -94,7 +94,7 @@ class TestEventDTOClass:
         self,
         aggregate_id: uuid.UUID,
         timestamp: datetime,
-        test_data: TestEventData,
+        test_data: ExampleEventData,
     ) -> None:
         """Test EventDTO initialization with default ID generation."""
         event1 = EventDTO(
@@ -124,7 +124,7 @@ class TestEventDTOClass:
         self,
         aggregate_id: uuid.UUID,
         timestamp: datetime,
-        test_data: TestEventData,
+        test_data: ExampleEventData,
     ) -> None:
         """Test EventDTO initialization with custom ID."""
         custom_id = uuid.uuid4()
@@ -142,17 +142,17 @@ class TestEventDTOClass:
 
     def test_get_version_v1_suffix(self) -> None:
         """Test get_version method for class with V1 suffix."""
-        version = TestEventDTOV1.get_version()
+        version = ExampleEventDTOV1.get_version()
         assert version == "1"
 
     def test_get_version_v2_suffix(self) -> None:
         """Test get_version method for class with V2 suffix."""
-        version = TestEventDTOV2.get_version()
+        version = ExampleEventDTOV2.get_version()
         assert version == "2"  # Now properly handles V2
 
     def test_get_version_no_suffix(self) -> None:
         """Test get_version method for class without version suffix."""
-        version = TestEventDTONoVersion.get_version()
+        version = ExampleEventDTONoVersion.get_version()
         assert version == "1"  # Default version
 
     def test_get_version_base_class(self) -> None:
@@ -163,16 +163,16 @@ class TestEventDTOClass:
     def test_get_version_dynamic_class_creation(self) -> None:
         """Test get_version method for dynamically created classes."""
         # Create a class dynamically with V3 suffix
-        TestEventDTOV3 = type(
-            "TestEventDTOV3",
+        ExampleEventDTOV3 = type(
+            "ExampleEventDTOV3",
             (EventDTO,),
-            {"__annotations__": {"data": TestEventData}},
+            {"__annotations__": {"data": ExampleEventData}},
         )
 
         # Cast to EventDTO to help mypy understand the type
         from typing import cast
 
-        event_dto_class = cast(type[EventDTO], TestEventDTOV3)
+        event_dto_class = cast(type[EventDTO], ExampleEventDTOV3)
         version = event_dto_class.get_version()
         assert version == "3"  # Now properly handles V3
 
@@ -182,7 +182,7 @@ class TestEventDTOClass:
         ComplexNameV1 = type(
             "ComplexNameV1",
             (EventDTO,),
-            {"__annotations__": {"data": TestEventData}},
+            {"__annotations__": {"data": ExampleEventData}},
         )
 
         # Cast to EventDTO to help mypy understand the type
@@ -198,7 +198,7 @@ class TestEventDTOClass:
         NoVersionClass = type(
             "NoVersionClass",
             (EventDTO,),
-            {"__annotations__": {"data": TestEventData}},
+            {"__annotations__": {"data": ExampleEventData}},
         )
 
         # Cast to EventDTO to help mypy understand the type
@@ -214,7 +214,7 @@ class TestEventDTOClass:
         LowercaseV2 = type(
             "LowercaseV2",
             (EventDTO,),
-            {"__annotations__": {"data": TestEventData}},
+            {"__annotations__": {"data": ExampleEventData}},
         )
 
         # Cast to EventDTO to help mypy understand the type
@@ -241,13 +241,13 @@ class TestEventDTOClass:
         from typing import cast
 
         for class_name, expected_version in test_cases:
-            TestClass = type(
+            ExampleClass = type(
                 class_name,
                 (EventDTO,),
-                {"__annotations__": {"data": TestEventData}},
+                {"__annotations__": {"data": ExampleEventData}},
             )
             # Cast to EventDTO to help mypy understand the type
-            event_dto_class = cast(type[EventDTO], TestClass)
+            event_dto_class = cast(type[EventDTO], ExampleClass)
             version = event_dto_class.get_version()
             assert version == expected_version, (
                 f"Expected {expected_version} for {class_name}, got {version}"
@@ -255,16 +255,16 @@ class TestEventDTOClass:
 
     def test_type_safety_with_generic(self) -> None:
         """Test that EventDTO maintains type safety with generics."""
-        event = EventDTO[TestEventData](
+        event = EventDTO[ExampleEventData](
             aggregate_id=uuid.uuid4(),
             event_type=EventType.USER_CREATED,
             timestamp=datetime.now(timezone.utc),
             version="1",
             revision=1,
-            data=TestEventData(field1="test", field2=42),
+            data=ExampleEventData(field1="test", field2=42),
         )
 
-        # Type checker should know that data is TestEventData
+        # Type checker should know that data is ExampleEventData
         assert event.data.field1 == "test"
         assert event.data.field2 == 42
 
@@ -279,7 +279,7 @@ class TestEventDTOClass:
                 timestamp=datetime.now(timezone.utc),
                 version="1",
                 revision=0,  # Invalid: must be >= 1
-                data=TestEventData(field1="test", field2=42),
+                data=ExampleEventData(field1="test", field2=42),
             )
 
     def test_version_validation(self) -> None:
@@ -293,7 +293,7 @@ class TestEventDTOClass:
                 timestamp=datetime.now(timezone.utc),
                 version="",  # Invalid: empty string
                 revision=1,
-                data=TestEventData(field1="test", field2=42),
+                data=ExampleEventData(field1="test", field2=42),
             )
 
     def test_required_fields_validation(self) -> None:
@@ -318,7 +318,7 @@ class TestEventDTOClass:
                 timestamp=datetime.now(timezone.utc),
                 version="1",
                 revision=1,
-                data=TestEventData(field1="test", field2=42),
+                data=ExampleEventData(field1="test", field2=42),
             )
 
     def test_aggregate_id_validation(self) -> None:
@@ -330,7 +330,7 @@ class TestEventDTOClass:
                 timestamp=datetime.now(timezone.utc),
                 version="1",
                 revision=1,
-                data=TestEventData(field1="test", field2=42),
+                data=ExampleEventData(field1="test", field2=42),
             )
 
     def test_timestamp_validation(self) -> None:
@@ -342,5 +342,5 @@ class TestEventDTOClass:
                 timestamp="not-a-datetime",  # Invalid: must be datetime
                 version="1",
                 revision=1,
-                data=TestEventData(field1="test", field2=42),
+                data=ExampleEventData(field1="test", field2=42),
             )
