@@ -6,7 +6,7 @@ functionality without any mocking.
 """
 
 import uuid
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from typing import TYPE_CHECKING, List
 
 import pytest
@@ -66,7 +66,7 @@ class TestPostgreSQLEventStore:
                 id=uuid.uuid4(),
                 aggregate_id=sample_user_id,
                 event_type=EventType.USER_UPDATED,
-                timestamp=base_time.replace(second=base_time.second + 1),
+                timestamp=base_time + timedelta(seconds=1),
                 version="1",
                 revision=2,
                 data=UserUpdatedDataV1(first_name="Updated", last_name="Name"),
@@ -75,7 +75,7 @@ class TestPostgreSQLEventStore:
                 id=uuid.uuid4(),
                 aggregate_id=sample_user_id,
                 event_type=EventType.USER_UPDATED,
-                timestamp=base_time.replace(second=base_time.second + 2),
+                timestamp=base_time + timedelta(seconds=2),
                 version="1",
                 revision=3,
                 data=UserUpdatedDataV1(email="updated@example.com"),
@@ -320,6 +320,54 @@ class TestPostgreSQLEventStore:
         # Should find only 2 events due to limit
         assert len(found_events) == 2
 
+    async def test_search_events_by_aggregate_id(
+        self,
+        event_store: "PostgreSQLEventStore",
+        sample_events: List[EventDTO],
+        db: AsyncSession,
+    ) -> None:
+        """Test searching events by aggregate ID."""
+        # Append and commit events
+        await event_store.append_to_stream(
+            aggregate_id=sample_events[0].aggregate_id,
+            aggregate_type=AggregateTypeEnum.USER,
+            events=sample_events,
+        )
+        await db.commit()
+
+        # Search for events with specific aggregate ID
+        found_events = await event_store.search_events(
+            aggregate_type=AggregateTypeEnum.USER,
+            query_params={"aggregate_id": str(sample_events[0].aggregate_id)},
+        )
+
+        # Should find all 3 events for this aggregate
+        assert len(found_events) == 3
+        assert all(
+            event.aggregate_id == sample_events[0].aggregate_id
+            for event in found_events
+        )
+
+    async def test_unsupported_aggregate_type_raises_error_on_search(
+        self, event_store: "PostgreSQLEventStore"
+    ) -> None:
+        """Test that unsupported aggregate types raise appropriate errors when searching events."""
+        from event_sourcing.exceptions import UnsupportedAggregateTypeError
+
+        with pytest.raises(
+            UnsupportedAggregateTypeError, match="Unsupported aggregate type"
+        ):
+            # Test with an invalid aggregate type to ensure proper error handling
+            from typing import cast
+
+            invalid_aggregate_type = cast(
+                AggregateTypeEnum, "UNSUPPORTED_TYPE"
+            )
+            await event_store.search_events(
+                aggregate_type=invalid_aggregate_type,
+                query_params={},
+            )
+
     async def test_unsupported_aggregate_type_raises_error(
         self, event_store: "PostgreSQLEventStore"
     ) -> None:
@@ -338,6 +386,45 @@ class TestPostgreSQLEventStore:
             await event_store.get_stream(
                 aggregate_id=uuid.uuid4(),
                 aggregate_type=invalid_aggregate_type,
+            )
+
+    async def test_unsupported_aggregate_type_raises_error_on_append(
+        self, event_store: "PostgreSQLEventStore", sample_user_id: uuid.UUID
+    ) -> None:
+        """Test that unsupported aggregate types raise appropriate errors when appending to stream."""
+        from event_sourcing.exceptions import UnsupportedAggregateTypeError
+
+        # Create a sample event
+        sample_event = EventDTO(
+            id=uuid.uuid4(),
+            aggregate_id=sample_user_id,
+            event_type=EventType.USER_CREATED,
+            timestamp=datetime.now(timezone.utc),
+            version="1",
+            revision=1,
+            data=UserCreatedDataV1(
+                username="testuser",
+                email="test@example.com",
+                first_name="Test",
+                last_name="User",
+                password_hash="hashed_password",  # pragma: allowlist secret
+                hashing_method=HashingMethod.BCRYPT,
+            ),
+        )
+
+        with pytest.raises(
+            UnsupportedAggregateTypeError, match="Unsupported aggregate type"
+        ):
+            # Test with an invalid aggregate type to ensure proper error handling
+            from typing import cast
+
+            invalid_aggregate_type = cast(
+                AggregateTypeEnum, "UNSUPPORTED_TYPE"
+            )
+            await event_store.append_to_stream(
+                aggregate_id=sample_user_id,
+                aggregate_type=invalid_aggregate_type,
+                events=[sample_event],
             )
 
     async def test_duplicate_event_id_in_same_call(

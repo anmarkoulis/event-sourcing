@@ -4,7 +4,6 @@ from .permissions import (
     CreateUserPermissionDep,
     DeleteUserPermissionDep,
     ReadUserPermissionDep,
-    UpdateUserPermissionDep,
 )
 from .services import (
     AuthServiceInterface,
@@ -22,6 +21,5 @@ __all__ = [
     "JWTAuthService",
     "CreateUserPermissionDep",
     "ReadUserPermissionDep",
-    "UpdateUserPermissionDep",
     "DeleteUserPermissionDep",
 ]

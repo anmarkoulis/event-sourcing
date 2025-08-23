@@ -14,10 +14,6 @@ from event_sourcing.application.commands.user.create_user import (
 from event_sourcing.cli.handlers.exception import cli_error_handler
 from event_sourcing.config.settings import settings
 from event_sourcing.enums import Role
-from event_sourcing.exceptions import (
-    EmailAlreadyExistsError,
-    UsernameAlreadyExistsError,
-)
 from event_sourcing.infrastructure.provider import get_infrastructure_factory
 from event_sourcing.utils import log_typer_command
 
@@ -100,21 +96,7 @@ async def create_admin_user(
         role=Role.ADMIN,
     )
 
-    # Execute the command with exception handling for domain errors
-    try:
-        await command_handler.handle(command)
-        typer.echo(f"✅ Admin user '{username}' created successfully!")
-        typer.echo(f"User ID: {command.user_id}")
-    except (
-        UsernameAlreadyExistsError,
-        EmailAlreadyExistsError,
-    ) as e:
-        # Handle domain exceptions about duplicate users gracefully
-        if isinstance(e, UsernameAlreadyExistsError):
-            typer.echo(f"⚠️  User '{username}' already exists!")
-        elif isinstance(e, EmailAlreadyExistsError):
-            typer.echo(f"⚠️  User with email '{email}' already exists!")
-
-        typer.echo("Admin user creation skipped - user already exists.")
-        # Don't raise an exception, just return gracefully
-        return
+    # Execute the command
+    await command_handler.handle(command)
+    typer.echo(f"✅ Admin user '{username}' created successfully!")
+    typer.echo(f"User ID: {command.user_id}")

@@ -9,7 +9,7 @@ from event_sourcing.infrastructure.unit_of_work import SQLAUnitOfWork
 
 logger = logging.getLogger(__name__)
 
-if TYPE_CHECKING:
+if TYPE_CHECKING:  # pragma: no cover
     from .infrastructure_factory import InfrastructureFactory
 
 
@@ -54,11 +54,7 @@ class CommandHandlerWrapper:
         # Check if the handler class expects hashing_service parameter
         sig = inspect.signature(self.handler_class.__init__)
         if "hashing_service" in sig.parameters:
-            from event_sourcing.infrastructure.security import (
-                BcryptHashingService,
-            )
-
-            ctor_kwargs["hashing_service"] = BcryptHashingService()
+            ctor_kwargs["hashing_service"] = self.factory.get_hashing_service()
 
         command_handler = self.handler_class(**ctor_kwargs)
         return command_handler, session

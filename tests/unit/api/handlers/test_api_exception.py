@@ -632,3 +632,60 @@ class TestExceptionHandlers:
             assert "error" in response_text
             assert "message" in response_text
             assert "type" in response_text
+
+    @pytest.mark.asyncio
+    async def test_wrapper_functions_type_error_paths(
+        self, mock_request: Request
+    ) -> None:
+        """Test that wrapper functions properly handle type mismatches."""
+        # Note: The wrapper functions are designed to catch type mismatches at the FastAPI level,
+        # not when called directly. The TypeError paths are tested indirectly through FastAPI's
+        # exception handling system.
+
+        # Test that the wrapper functions are properly designed to handle type mismatches
+        # by verifying they have the correct type checking logic
+
+        # Import the wrapper functions to test their logic
+        from event_sourcing.api.handlers.exception import (
+            _handle_http_exception_wrapper,
+            _handle_request_validation_error_wrapper,
+        )
+
+        # Test wrapper function with wrong exception type
+        wrong_exc = Exception("Wrong exception type")
+        with pytest.raises(TypeError, match="Expected RequestValidationError"):
+            await _handle_request_validation_error_wrapper(
+                mock_request, wrong_exc
+            )
+
+        # Test wrapper function with wrong exception type
+        wrong_http_exc = Exception("Wrong HTTP exception type")
+        with pytest.raises(TypeError, match="Expected StarletteHTTPException"):
+            await _handle_http_exception_wrapper(mock_request, wrong_http_exc)
+
+    @pytest.mark.asyncio
+    async def test_wrapper_functions_success_paths(
+        self, mock_request: Request
+    ) -> None:
+        """Test that wrapper functions work correctly with proper exception types."""
+        # Import the wrapper functions to test their logic
+        from event_sourcing.api.handlers.exception import (
+            _handle_http_exception_wrapper,
+            _handle_request_validation_error_wrapper,
+        )
+
+        # Test with correct exception type for request validation
+        correct_exc = RequestValidationError([])
+        response = await _handle_request_validation_error_wrapper(
+            mock_request, correct_exc
+        )
+        assert response.status_code == 422
+
+        # Test with correct exception type for HTTP exception
+        correct_http_exc = StarletteHTTPException(
+            status_code=400, detail="Bad request"
+        )
+        response = await _handle_http_exception_wrapper(
+            mock_request, correct_http_exc
+        )
+        assert response.status_code == 400

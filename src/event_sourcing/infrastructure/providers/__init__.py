@@ -1,6 +1,11 @@
-from .base import CRMProviderFactory, CRMProviderInterface
+from .email import (
+    EmailProviderFactory,
+    EmailProviderInterface,
+    LoggingEmailProvider,
+)
 
 __all__ = [
-    "CRMProviderInterface",
-    "CRMProviderFactory",
+    "EmailProviderInterface",
+    "EmailProviderFactory",
+    "LoggingEmailProvider",
 ]

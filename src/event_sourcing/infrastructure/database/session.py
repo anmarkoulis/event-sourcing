@@ -1,5 +1,4 @@
 import logging
-from typing import Any, Optional
 
 from sqlalchemy.ext.asyncio import (
     AsyncSession,
@@ -32,22 +31,3 @@ class DatabaseManager:
         """Close the database engine"""
         await self.engine.dispose()
         logger.debug("Database engine closed")
-
-
-class AsyncDBContextManager:
-    """Context manager for database sessions"""
-
-    def __init__(self, database_manager: DatabaseManager) -> None:
-        self.database_manager = database_manager
-        self.session: Optional[AsyncSession] = None
-
-    async def __aenter__(self) -> AsyncSession:
-        self.session = await self.database_manager.get_session()
-        return self.session
-
-    async def __aexit__(
-        self, exc_type: Any, exc_val: Any, exc_tb: Any
-    ) -> None:
-        if self.session:
-            await self.session.close()
-            logger.debug("Database session closed")

@@ -98,40 +98,6 @@ class PostgreSQLReadModel(ReadModel):
         logger.debug(f"Retrieved user {user_id}")
         return user_dto
 
-    async def get_user_by_username(self, username: str) -> Optional[UserDTO]:
-        """Get a specific user by username.
-
-        :param username: Username to search for.
-        :return: User DTO if found, None otherwise.
-        """
-        logger.debug(f"Getting user by username: {username}")
-
-        query = select(User).where(
-            User.username == username,
-            User.deleted_at.is_(None),  # Exclude deleted users
-        )
-
-        result = await self.session.execute(query)
-        user_model = result.scalar_one_or_none()
-
-        if not user_model:
-            logger.debug(f"User with username {username} not found")
-            return None
-
-        user_dto = UserDTO(
-            id=user_model.id,
-            username=user_model.username,
-            email=user_model.email,
-            first_name=user_model.first_name,
-            last_name=user_model.last_name,
-            role=user_model.role,
-            created_at=user_model.created_at,
-            updated_at=user_model.updated_at,
-        )
-
-        logger.debug(f"Retrieved user by username: {username}")
-        return user_dto
-
     async def delete_user(self, user_id: str) -> None:
         """Delete user from read model"""
         logger.debug(f"Deleting user {user_id} from read model")

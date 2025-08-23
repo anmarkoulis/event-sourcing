@@ -1,6 +1,6 @@
 """Permission dependencies for API endpoints using JWT scopes."""
 
-from typing import Annotated, Callable, Optional
+from typing import Annotated, Optional
 
 from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
@@ -72,15 +72,6 @@ async def require_read_user_permission(
     )
 
 
-async def require_update_user_permission(
-    credentials: Optional[HTTPAuthorizationCredentials] = Depends(security),
-    auth_service: AuthServiceInterface = Depends(get_auth_service),
-) -> UserDTO:
-    return await get_current_user_with_scope(
-        Permission.USER_UPDATE, credentials, auth_service
-    )
-
-
 async def require_update_specific_user_permission(
     user_id: str,
     credentials: Optional[HTTPAuthorizationCredentials] = Depends(security),
@@ -110,35 +101,13 @@ async def require_update_specific_user_permission(
 
     # Regular users can only update their own data
     if str(current_user.id) == user_id:
-        if Permission.USER_UPDATE in scopes:
-            return current_user
-        else:
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail="Insufficient permissions. Required scope: user:update",
-            )
+        return current_user
 
     # Regular users cannot update other users' data
     raise HTTPException(
         status_code=status.HTTP_403_FORBIDDEN,
         detail="Insufficient permissions. You can only update your own user data.",
     )
-
-
-def create_update_specific_user_permission_dep(user_id: str) -> Callable:
-    """Factory function to create a permission dependency for a specific user."""
-
-    async def _require_update_specific_user_permission(
-        credentials: Optional[HTTPAuthorizationCredentials] = Depends(
-            security
-        ),
-        auth_service: AuthServiceInterface = Depends(get_auth_service),
-    ) -> UserDTO:
-        return await require_update_specific_user_permission(
-            user_id, credentials, auth_service
-        )
-
-    return _require_update_specific_user_permission
 
 
 async def require_update_specific_user_permission_dep(
@@ -167,9 +136,6 @@ CreateUserPermissionDep = Annotated[
 ]
 ReadUserPermissionDep = Annotated[
     UserDTO, Depends(require_read_user_permission)
-]
-UpdateUserPermissionDep = Annotated[
-    UserDTO, Depends(require_update_user_permission)
 ]
 UpdateSpecificUserPermissionDep = Annotated[
     UserDTO, Depends(require_update_specific_user_permission)

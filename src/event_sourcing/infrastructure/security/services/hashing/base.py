@@ -5,7 +5,7 @@ from abc import ABC, abstractmethod
 from event_sourcing.enums import HashingMethod
 
 
-class HashingServiceInterface(ABC):
+class HashingServiceInterface(ABC):  # pragma: no cover
     """Interface for password hashing services."""
 
     @abstractmethod

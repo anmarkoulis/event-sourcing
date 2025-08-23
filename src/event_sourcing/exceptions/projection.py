@@ -42,29 +42,3 @@ class EmailProjectionError(ProjectionProcessingError):
         super().__init__(message, details)
         self.email_type = email_type
         self.recipient = recipient
-
-
-class ProjectionConfigurationError(ProjectionError):
-    """Exception raised when projection configuration is invalid."""
-
-    def __init__(
-        self,
-        message: str,
-        config_key: Optional[str] = None,
-        details: Optional[Dict[str, Any]] = None,
-    ) -> None:
-        super().__init__(message, details)
-        self.config_key = config_key
-
-
-class ProjectionDependencyError(ProjectionError):
-    """Exception raised when projection dependencies are missing or invalid."""
-
-    def __init__(
-        self,
-        message: str,
-        dependency: Optional[str] = None,
-        details: Optional[Dict[str, Any]] = None,
-    ) -> None:
-        super().__init__(message, details)
-        self.dependency = dependency

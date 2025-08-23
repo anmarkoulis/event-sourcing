@@ -14,7 +14,7 @@ from pydantic import BaseModel
 from event_sourcing.dto.user import UserDTO
 
 
-class AuthServiceInterface(ABC):
+class AuthServiceInterface(ABC):  # pragma: no cover
     """Interface for authentication services."""
 
     @abstractmethod

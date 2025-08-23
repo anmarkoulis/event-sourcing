@@ -38,9 +38,9 @@ class EmailProviderInterface(ABC):
         :return: True if provider is available, False otherwise.
         """
 
+    @abstractmethod
     def get_config(self) -> Dict[str, Any]:
         """Get provider configuration (optional method).
 
         :return: Dictionary containing provider configuration.
         """
-        return {}
