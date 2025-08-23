@@ -11,8 +11,10 @@ from event_sourcing.dto import EventDTO, EventFactory
 from event_sourcing.enums import EventType, HashingMethod
 from event_sourcing.exceptions import (
     InvalidEmailFormatError,
+    PasswordMustBeDifferentError,
     PasswordRequiredError,
     UsernameTooShortError,
+    UserNotFoundError,
 )
 
 
@@ -324,6 +326,58 @@ class TestUserAggregate:
             user_aggregate.change_password(
                 "new_password", HashingMethod.BCRYPT
             )
+
+    def test_change_password_same_password(
+        self, user_aggregate: UserAggregate, valid_user_data: dict
+    ) -> None:
+        """Test password change fails when new password is same as current."""
+        # First create a user
+        user_aggregate.create_user(**valid_user_data)
+        current_password = valid_user_data["password_hash"]
+
+        # Try to change to the same password
+        with pytest.raises(
+            PasswordMustBeDifferentError,
+            match="New password must be different from current password",
+        ):
+            user_aggregate.change_password(
+                current_password, HashingMethod.BCRYPT
+            )
+
+    def test_update_user_not_exists(
+        self, user_aggregate: UserAggregate
+    ) -> None:
+        """Test user update fails when user doesn't exist."""
+        # Try to update a user that hasn't been created
+        with pytest.raises(
+            UserNotFoundError,
+            match=f"User {user_aggregate.aggregate_id} not found",
+        ):
+            user_aggregate.update_user(first_name="Updated")
+
+    def test_change_password_not_exists(
+        self, user_aggregate: UserAggregate
+    ) -> None:
+        """Test password change fails when user doesn't exist."""
+        # Try to change password for a user that hasn't been created
+        with pytest.raises(
+            UserNotFoundError,
+            match=f"User {user_aggregate.aggregate_id} not found",
+        ):
+            user_aggregate.change_password(
+                "new_password", HashingMethod.BCRYPT
+            )
+
+    def test_delete_user_not_exists(
+        self, user_aggregate: UserAggregate
+    ) -> None:
+        """Test user deletion fails when user doesn't exist."""
+        # Try to delete a user that hasn't been created
+        with pytest.raises(
+            UserNotFoundError,
+            match=f"User {user_aggregate.aggregate_id} not found",
+        ):
+            user_aggregate.delete_user()
 
     def test_delete_user_success(
         self, user_aggregate: UserAggregate, valid_user_data: dict
