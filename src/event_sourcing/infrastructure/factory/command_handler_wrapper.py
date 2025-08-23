@@ -9,7 +9,7 @@ from event_sourcing.infrastructure.unit_of_work import SQLAUnitOfWork
 
 logger = logging.getLogger(__name__)
 
-if TYPE_CHECKING:
+if TYPE_CHECKING:  # pragma: no cover
     from .infrastructure_factory import InfrastructureFactory
 
 

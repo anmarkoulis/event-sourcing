@@ -15,7 +15,7 @@ from .command_handler_wrapper import CommandHandlerWrapper
 from .projection_wrapper import ProjectionWrapper
 from .session_manager import SessionManager
 
-if TYPE_CHECKING:
+if TYPE_CHECKING:  # pragma: no cover
     from event_sourcing.infrastructure.security import (
         AuthServiceInterface,
         HashingServiceInterface,
@@ -79,7 +79,7 @@ class InfrastructureFactory:
 
             if settings.SYNC_EVENT_HANDLER:
                 self._event_handler = SyncEventHandler(self)
-            else:
+            else:  # pragma: no cover
                 # Import the Celery app and inject it into the handler
                 from event_sourcing.config.celery_app import app
 
