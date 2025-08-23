@@ -152,7 +152,7 @@ def _get_exit_code(exc: Exception) -> int:
             return exit_code
 
     # Default to general error
-    return 1
+    return 1  # pragma: no cover
 
 
 def _get_error_message(exc: Exception) -> str:
@@ -171,8 +171,6 @@ def _get_error_message(exc: Exception) -> str:
             if isinstance(exc, base_type):
                 base_message = message
                 break
-        else:
-            base_message = ERROR_MESSAGES[Exception]
 
     # Add specific details if available
     if hasattr(exc, "message") and exc.message:

@@ -843,7 +843,7 @@ class TestUserUpdate:
     async def test_update_user_forbidden_regular_user(
         self, admin_client: AsyncClient, user_client: AsyncClient
     ) -> None:
-        """Test that regular users cannot update users (403)."""
+        """Test that regular users cannot update other users (403)."""
         # Arrange - create a user as admin first
         user_data = {
             "username": "updateforbiddenuser",
@@ -859,6 +859,8 @@ class TestUserUpdate:
         user_id = create_response.json()["user_id"]
 
         # Act - try to update the user with regular user permissions (should fail with 403)
+        # This tests the require_update_user_permission function and the branch where
+        # regular users try to update other users' data
         update_data = {"first_name": "Updated", "last_name": "Name"}
         response = await user_client.put(
             f"/v1/users/{user_id}/", json=update_data
@@ -873,6 +875,99 @@ class TestUserUpdate:
         assert "message" in response_data
         assert response_data["error"] == "HTTP Error"
         assert "insufficient permissions" in response_data["message"].lower()
+        # This should test the specific error message from require_update_specific_user_permission
+        assert (
+            "only update your own user data"
+            in response_data["message"].lower()
+        )
+
+    @pytest.mark.asyncio
+    async def test_update_user_regular_user_own_data_success(
+        self, admin_client: AsyncClient, user_client: AsyncClient
+    ) -> None:
+        """Test that regular users can update their own data successfully."""
+        # Arrange - create a user
+        user_data = {
+            "username": "ownuser",
+            "email": "ownuser@example.com",
+            "first_name": "Own",
+            "last_name": "User",
+            "password": "password123",  # pragma: allowlist secret
+        }
+
+        create_response = await admin_client.post("/v1/users/", json=user_data)
+        assert create_response.status_code == 200
+
+        user_id = create_response.json()["user_id"]
+
+        # Get the user's own JWT token by logging in
+        login_response = await user_client.post(
+            "/v1/auth/login/",
+            json={
+                "username": "ownuser",
+                "password": "password123",  # pragma: allowlist secret
+            },
+        )
+        assert login_response.status_code == 200
+        own_token = login_response.json()["access_token"]
+
+        # Create a client with the user's own token
+        import httpx
+
+        own_client = httpx.AsyncClient(
+            transport=user_client._transport,
+            base_url=user_client.base_url,
+            headers={"Authorization": f"Bearer {own_token}"},
+        )
+
+        # Act - try to update own data (should succeed)
+        # This tests the branch where users update their own data in require_update_specific_user_permission
+        update_data = {"first_name": "MyOwn", "last_name": "Data"}
+        response = await own_client.put(
+            f"/v1/users/{user_id}/", json=update_data
+        )
+
+        # Assert - should succeed because users can update their own data
+        assert response.status_code == 200
+        response_data = response.json()
+        assert "message" in response_data
+        assert response_data["message"] == "User updated successfully"
+
+        # Clean up
+        await own_client.aclose()
+
+    @pytest.mark.asyncio
+    async def test_update_user_admin_can_update_any_user(
+        self, admin_client: AsyncClient
+    ) -> None:
+        """Test that admin users can update any user's data."""
+        # Arrange - create a user
+        user_data = {
+            "username": "adminupdateuser",
+            "email": "adminupdate@example.com",
+            "first_name": "AdminUpdate",
+            "last_name": "User",
+            "password": "password123",  # pragma: allowlist secret
+        }
+
+        create_response = await admin_client.post("/v1/users/", json=user_data)
+        assert create_response.status_code == 200
+
+        user_id = create_response.json()["user_id"]
+
+        # Act - admin updates the user (should succeed)
+        # This tests the admin branch in require_update_specific_user_permission
+        # where admin has user:delete scope (admin role)
+        update_data = {"first_name": "Admin", "last_name": "Updated"}
+        response = await admin_client.put(
+            f"/v1/users/{user_id}/", json=update_data
+        )
+
+        # Assert - should succeed because admin has user:delete scope (admin role)
+        assert response.status_code == 200
+        response_data = response.json()
+        assert "message" in response_data
+        assert response_data["message"] == "User updated successfully"
 
     @pytest.mark.asyncio
     async def test_update_user_success(
@@ -1002,6 +1097,169 @@ class TestUserUpdate:
         )
         assert email_error is not None
         assert "valid email" in email_error.get("msg", "").lower()
+
+    @pytest.mark.asyncio
+    async def test_regular_user_cannot_update_other_user_data(
+        self, user_client: AsyncClient, admin_client: AsyncClient
+    ) -> None:
+        """Test that regular users cannot update other users' data."""
+        # Arrange - create a user
+        user_data = {
+            "username": "permissiontestuser",
+            "email": "permissiontest@example.com",
+            "first_name": "Permission",
+            "last_name": "Test",
+            "password": "password123",  # pragma: allowlist secret
+        }
+
+        create_response = await admin_client.post("/v1/users/", json=user_data)
+        assert create_response.status_code == 200
+        user_id = create_response.json()["user_id"]
+
+        # Act - try to update the user with regular user permissions (should fail)
+        # This tests that regular users cannot update other users' data
+        update_data = {"first_name": "Updated", "last_name": "Name"}
+        response = await user_client.put(
+            f"/v1/users/{user_id}/", json=update_data
+        )
+
+        # Assert - should fail because regular users can only update their own data
+        assert response.status_code == 403
+        response_data = response.json()
+        assert "error" in response_data
+        assert "message" in response_data
+        assert "only update your own user data" in response_data["message"]
+
+    @pytest.mark.asyncio
+    async def test_regular_user_update_own_data_success(
+        self, user_client: AsyncClient, admin_client: AsyncClient
+    ) -> None:
+        """Test that regular users can update their own data."""
+        # Arrange - create a user
+        user_data = {
+            "username": "ownuser",
+            "email": "ownuser@example.com",
+            "first_name": "Own",
+            "last_name": "User",
+            "password": "password123",  # pragma: allowlist secret
+        }
+
+        create_response = await admin_client.post("/v1/users/", json=user_data)
+        assert create_response.status_code == 200
+        user_id = create_response.json()["user_id"]
+
+        # Get the user's own JWT token by logging in
+        login_response = await user_client.post(
+            "/v1/auth/login/",
+            json={
+                "username": "ownuser",
+                "password": "password123",  # pragma: allowlist secret
+            },
+        )
+        assert login_response.status_code == 200
+        own_token = login_response.json()["access_token"]
+
+        # Create a client with the user's own token
+        import httpx
+
+        own_client = httpx.AsyncClient(
+            transport=user_client._transport,
+            base_url=user_client.base_url,
+            headers={"Authorization": f"Bearer {own_token}"},
+        )
+
+        # Act - try to update own data (should succeed)
+        update_data = {"first_name": "MyOwn", "last_name": "Data"}
+        response = await own_client.put(
+            f"/v1/users/{user_id}/", json=update_data
+        )
+
+        # Assert - should succeed because users can update their own data
+        assert response.status_code == 200
+        response_data = response.json()
+        assert "message" in response_data
+        assert response_data["message"] == "User updated successfully"
+
+        # Clean up
+        await own_client.aclose()
+
+    @pytest.mark.asyncio
+    async def test_admin_update_any_user_success(
+        self, admin_client: AsyncClient
+    ) -> None:
+        """Test that admin users can update any user's data."""
+        # Arrange - create a user
+        user_data = {
+            "username": "anyuser",
+            "email": "anyuser@example.com",
+            "first_name": "Any",
+            "last_name": "User",
+            "password": "password123",  # pragma: allowlist secret
+        }
+
+        create_response = await admin_client.post("/v1/users/", json=user_data)
+        assert create_response.status_code == 200
+        user_id = create_response.json()["user_id"]
+
+        # Act - admin updates the user (should succeed)
+        update_data = {"first_name": "Admin", "last_name": "Updated"}
+        response = await admin_client.put(
+            f"/v1/users/{user_id}/", json=update_data
+        )
+
+        # Assert - should succeed because admin has permissions
+        assert response.status_code == 200
+        response_data = response.json()
+        assert "message" in response_data
+        assert response_data["message"] == "User updated successfully"
+
+        # Verify the update by getting the user again
+        get_response = await admin_client.get(f"/v1/users/{user_id}/")
+        assert get_response.status_code == 200
+
+        updated_user = get_response.json()["user"]
+        assert updated_user["first_name"] == "Admin"
+        assert updated_user["last_name"] == "Updated"
+
+    @pytest.mark.asyncio
+    async def test_admin_update_own_data_success(
+        self, admin_client: AsyncClient
+    ) -> None:
+        """Test that admin users can update their own data."""
+        # Arrange - create an admin user
+        admin_data = {
+            "username": "adminown",
+            "email": "adminown@example.com",
+            "first_name": "Admin",
+            "last_name": "Own",
+            "password": "password123",  # pragma: allowlist secret
+        }
+
+        create_response = await admin_client.post(
+            "/v1/users/", json=admin_data
+        )
+        assert create_response.status_code == 200
+        admin_id = create_response.json()["user_id"]
+
+        # Act - admin updates their own data (should succeed)
+        update_data = {"first_name": "MyOwn", "last_name": "AdminData"}
+        response = await admin_client.put(
+            f"/v1/users/{admin_id}/", json=update_data
+        )
+
+        # Assert - should succeed because admins can update their own data
+        assert response.status_code == 200
+        response_data = response.json()
+        assert "message" in response_data
+        assert response_data["message"] == "User updated successfully"
+
+        # Verify the update by getting the user again
+        get_response = await admin_client.get(f"/v1/users/{admin_id}/")
+        assert get_response.status_code == 200
+
+        updated_user = get_response.json()["user"]
+        assert updated_user["first_name"] == "MyOwn"
+        assert updated_user["last_name"] == "AdminData"
 
 
 class TestPasswordChange:
