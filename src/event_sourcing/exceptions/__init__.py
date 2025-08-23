@@ -15,11 +15,7 @@ All exceptions are imported here to maintain backward compatibility.
 # Authentication exceptions
 from .authentication import (
     AuthenticationError,
-    AuthenticationFailedError,
     IncorrectPasswordError,
-    InsufficientPermissionsError,
-    InvalidPasswordError,
-    PasswordMismatchError,
 )
 from .base import EventSourcingError
 
@@ -34,11 +30,8 @@ from .business import (
 
 # Infrastructure exceptions
 from .infrastructure import (
-    ConfigurationError,
-    DatabaseError,
     InfrastructureError,
     MissingRequiredFieldError,
-    SerializationError,
     UnknownProviderError,
     UnsupportedAggregateTypeError,
 )
@@ -46,8 +39,6 @@ from .infrastructure import (
 # Projection exceptions
 from .projection import (
     EmailProjectionError,
-    ProjectionConfigurationError,
-    ProjectionDependencyError,
     ProjectionError,
     ProjectionProcessingError,
 )
@@ -106,20 +97,11 @@ __all__ = [
     "UnsupportedAggregateTypeError",
     "UnknownProviderError",
     "MissingRequiredFieldError",
-    "ConfigurationError",
-    "SerializationError",
-    "DatabaseError",
     # Authentication
     "AuthenticationError",
-    "InvalidPasswordError",
     "IncorrectPasswordError",
-    "PasswordMismatchError",
-    "AuthenticationFailedError",
-    "InsufficientPermissionsError",
     # Projection
     "ProjectionError",
     "ProjectionProcessingError",
     "EmailProjectionError",
-    "ProjectionConfigurationError",
-    "ProjectionDependencyError",
 ]
