@@ -16,7 +16,10 @@ from .projection_wrapper import ProjectionWrapper
 from .session_manager import SessionManager
 
 if TYPE_CHECKING:
-    from event_sourcing.infrastructure.security import AuthServiceInterface
+    from event_sourcing.infrastructure.security import (
+        AuthServiceInterface,
+        HashingServiceInterface,
+    )
 
 logger = logging.getLogger(__name__)
 
@@ -103,6 +106,16 @@ class InfrastructureFactory:
         return EmailProviderFactory.create_provider(
             provider_name, config or {}
         )
+
+    def get_hashing_service(self) -> "HashingServiceInterface":
+        """Get hashing service instance.
+
+        :return: Hashing service instance implementing HashingServiceInterface.
+        """
+        logger.debug("Creating hashing service")
+        from event_sourcing.infrastructure.security import BcryptHashingService
+
+        return BcryptHashingService()
 
     def create_create_user_command_handler(self) -> Any:
         """Create CreateUserCommandHandler with all dependencies.
@@ -415,13 +428,10 @@ class InfrastructureFactory:
             logger.debug("Creating auth service")
 
             logger.debug("Using JWT authentication service")
-            from event_sourcing.infrastructure.security import (
-                BcryptHashingService,
-                JWTAuthService,
-            )
+            from event_sourcing.infrastructure.security import JWTAuthService
 
-            # Create hashing service for JWT auth
-            hashing_service = BcryptHashingService()
+            # Create hashing service using factory method
+            hashing_service = self.get_hashing_service()
 
             # Create JWT auth service with factory reference
             # The auth service will get the event store when needed

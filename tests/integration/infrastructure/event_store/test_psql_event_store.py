@@ -6,7 +6,7 @@ functionality without any mocking.
 """
 
 import uuid
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from typing import TYPE_CHECKING, List
 
 import pytest
@@ -66,7 +66,7 @@ class TestPostgreSQLEventStore:
                 id=uuid.uuid4(),
                 aggregate_id=sample_user_id,
                 event_type=EventType.USER_UPDATED,
-                timestamp=base_time.replace(second=base_time.second + 1),
+                timestamp=base_time + timedelta(seconds=1),
                 version="1",
                 revision=2,
                 data=UserUpdatedDataV1(first_name="Updated", last_name="Name"),
@@ -75,7 +75,7 @@ class TestPostgreSQLEventStore:
                 id=uuid.uuid4(),
                 aggregate_id=sample_user_id,
                 event_type=EventType.USER_UPDATED,
-                timestamp=base_time.replace(second=base_time.second + 2),
+                timestamp=base_time + timedelta(seconds=2),
                 version="1",
                 revision=3,
                 data=UserUpdatedDataV1(email="updated@example.com"),

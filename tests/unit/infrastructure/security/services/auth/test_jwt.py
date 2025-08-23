@@ -6,6 +6,7 @@ from uuid import uuid4
 
 import pytest
 from fastapi import HTTPException
+from fastapi.security import OAuth2PasswordBearer
 
 from event_sourcing.dto.user import UserDTO
 from event_sourcing.enums import Role
@@ -327,6 +328,119 @@ class TestJWTAuthService:
         assert result is None
 
     @pytest.mark.asyncio
+    async def test_authenticate_user_deleted_user(
+        self,
+        auth_service: JWTAuthService,
+        mock_event_store: MagicMock,
+        sample_user: UserDTO,
+        hashing_service: BcryptHashingService,
+    ) -> None:
+        """Test user authentication when user is deleted."""
+        from event_sourcing.dto.events.user import (
+            UserCreatedDataV1,
+            UserCreatedV1,
+            UserDeletedDataV1,
+            UserDeletedV1,
+        )
+        from event_sourcing.enums import HashingMethod
+
+        password = "password123"  # noqa: S105  # pragma: allowlist secret
+        password_hash = hashing_service.hash_password(password)
+
+        user_created_event = UserCreatedV1(
+            aggregate_id=sample_user.id,
+            timestamp=datetime.now(timezone.utc),
+            revision=1,
+            data=UserCreatedDataV1(
+                username=sample_user.username,
+                email=sample_user.email,
+                first_name=sample_user.first_name,
+                last_name=sample_user.last_name,
+                password_hash=password_hash,
+                hashing_method=HashingMethod.BCRYPT,
+                role=sample_user.role,
+            ),
+        )
+
+        user_deleted_event = UserDeletedV1(
+            aggregate_id=sample_user.id,
+            timestamp=datetime.now(timezone.utc),
+            revision=2,
+            data=UserDeletedDataV1(),
+        )
+
+        mock_event_store.search_events.return_value = [user_created_event]
+        mock_event_store.get_stream.return_value = [
+            user_created_event,
+            user_deleted_event,
+        ]
+
+        result = await auth_service.authenticate_user(
+            "testuser",
+            "password123",  # pragma: allowlist secret
+        )
+
+        assert result is None
+        mock_event_store.search_events.assert_called_once()
+        mock_event_store.get_stream.assert_called_once()
+
+    @pytest.mark.asyncio
+    async def test_authenticate_user_no_user_created_event(
+        self,
+        auth_service: JWTAuthService,
+        mock_event_store: MagicMock,
+        sample_user: UserDTO,
+    ) -> None:
+        """Test user authentication when USER_CREATED event is missing."""
+        from event_sourcing.dto.events.user import (
+            UserUpdatedDataV1,
+            UserUpdatedV1,
+        )
+
+        # Mock an event that's not USER_CREATED
+        user_updated_event = UserUpdatedV1(
+            aggregate_id=sample_user.id,
+            timestamp=datetime.now(timezone.utc),
+            revision=1,
+            data=UserUpdatedDataV1(
+                username=sample_user.username,
+                email=sample_user.email,
+                first_name=sample_user.first_name,
+                last_name=sample_user.last_name,
+                role=sample_user.role,
+            ),
+        )
+
+        mock_event_store.search_events.return_value = [user_updated_event]
+
+        result = await auth_service.authenticate_user(
+            "testuser",
+            "password123",  # pragma: allowlist secret
+        )
+
+        assert result is None
+        mock_event_store.search_events.assert_called_once()
+
+    @pytest.mark.asyncio
+    async def test_authenticate_user_exception_handling(
+        self,
+        auth_service: JWTAuthService,
+        mock_event_store: MagicMock,
+    ) -> None:
+        """Test user authentication when an exception occurs."""
+        mock_event_store.search_events.side_effect = Exception(
+            "Database error"
+        )
+
+        result = await auth_service.authenticate_user(
+            "testuser",
+            "password123",  # pragma: allowlist secret
+        )
+
+        assert result is None
+        mock_event_store.search_events.assert_called_once()
+
+    @pytest.mark.asyncio
     async def test_get_current_user_success(
         self,
         auth_service: JWTAuthService,
@@ -372,6 +486,51 @@ class TestJWTAuthService:
         mock_event_store.get_stream.assert_called_once()
 
     @pytest.mark.asyncio
+    async def test_get_current_user_missing_credentials(
+        self, auth_service: JWTAuthService
+    ) -> None:
+        """Test getting current user when credentials are missing."""
+        with pytest.raises(HTTPException) as exc_info:
+            await auth_service.get_current_user(None)
+
+        assert exc_info.value.status_code == 401
+        assert "Not authenticated" in str(exc_info.value.detail)
+
+    @pytest.mark.asyncio
+    async def test_get_current_user_missing_username_in_token(
+        self, auth_service: JWTAuthService
+    ) -> None:
+        """Test getting current user when token is missing username."""
+        credentials = MagicMock()
+        # Create token without 'sub' field
+        credentials.credentials = auth_service.create_access_token(
+            {"user_id": str(uuid4())}
+        )
+
+        with pytest.raises(HTTPException) as exc_info:
+            await auth_service.get_current_user(credentials)
+
+        assert exc_info.value.status_code == 401
+        assert "Could not validate credentials" in str(exc_info.value.detail)
+
+    @pytest.mark.asyncio
+    async def test_get_current_user_missing_user_id_in_token(
+        self, auth_service: JWTAuthService
+    ) -> None:
+        """Test getting current user when token is missing user_id."""
+        credentials = MagicMock()
+        # Create token without 'user_id' field
+        credentials.credentials = auth_service.create_access_token(
+            {"sub": "testuser"}
+        )
+
+        with pytest.raises(HTTPException) as exc_info:
+            await auth_service.get_current_user(credentials)
+
+        assert exc_info.value.status_code == 401
+        assert "Could not validate credentials" in str(exc_info.value.detail)
+
+    @pytest.mark.asyncio
     async def test_get_current_user_not_found(
         self, auth_service: JWTAuthService, mock_event_store: MagicMock
     ) -> None:
@@ -389,3 +548,85 @@ class TestJWTAuthService:
 
         assert exc_info.value.status_code == 401
         assert "User not found" in str(exc_info.value.detail)
+
+    @pytest.mark.asyncio
+    async def test_get_current_user_deleted_user(
+        self,
+        auth_service: JWTAuthService,
+        mock_event_store: MagicMock,
+        sample_user: UserDTO,
+    ) -> None:
+        """Test getting current user when user is deleted."""
+        from event_sourcing.dto.events.user import (
+            UserCreatedDataV1,
+            UserCreatedV1,
+            UserDeletedDataV1,
+            UserDeletedV1,
+        )
+        from event_sourcing.enums import HashingMethod
+
+        credentials = MagicMock()
+        credentials.credentials = auth_service.create_access_token(
+            {"sub": "testuser", "user_id": str(sample_user.id)}
+        )
+
+        user_created_event = UserCreatedV1(
+            aggregate_id=sample_user.id,
+            timestamp=datetime.now(timezone.utc),
+            revision=1,
+            data=UserCreatedDataV1(
+                username=sample_user.username,
+                email=sample_user.email,
+                first_name=sample_user.first_name,
+                last_name=sample_user.last_name,
+                password_hash="hashed_password",  # pragma: allowlist secret
+                hashing_method=HashingMethod.BCRYPT,
+                role=sample_user.role,
+            ),
+        )
+
+        user_deleted_event = UserDeletedV1(
+            aggregate_id=sample_user.id,
+            timestamp=datetime.now(timezone.utc),
+            revision=2,
+            data=UserDeletedDataV1(),
+        )
+
+        mock_event_store.get_stream.return_value = [
+            user_created_event,
+            user_deleted_event,
+        ]
+
+        with pytest.raises(HTTPException) as exc_info:
+            await auth_service.get_current_user(credentials)
+
+        assert exc_info.value.status_code == 401
+        assert "User not found" in str(exc_info.value.detail)
+
+    def test_has_create_user_permission(
+        self, auth_service: JWTAuthService
+    ) -> None:
+        """Test create user permission method."""
+        result = auth_service.has_create_user_permission()
+        assert isinstance(result, OAuth2PasswordBearer)
+
+    def test_has_read_user_permission(
+        self, auth_service: JWTAuthService
+    ) -> None:
+        """Test read user permission method."""
+        result = auth_service.has_read_user_permission()
+        assert isinstance(result, OAuth2PasswordBearer)
+
+    def test_has_update_user_permission(
+        self, auth_service: JWTAuthService
+    ) -> None:
+        """Test update user permission method."""
+        result = auth_service.has_update_user_permission()
+        assert isinstance(result, OAuth2PasswordBearer)
+
+    def test_has_delete_user_permission(
+        self, auth_service: JWTAuthService
+    ) -> None:
+        """Test delete user permission method."""
+        result = auth_service.has_delete_user_permission()
+        assert isinstance(result, OAuth2PasswordBearer)

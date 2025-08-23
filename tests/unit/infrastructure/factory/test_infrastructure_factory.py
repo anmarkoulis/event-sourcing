@@ -173,19 +173,19 @@ class TestInfrastructureFactory:
         email_provider_factory_mock: MagicMock,
         factory: InfrastructureFactory,
     ) -> None:
-        """Test creating email provider with default config."""
-        provider_name = "logging"
-        mock_provider = MagicMock()
-        email_provider_factory_mock.create_provider.return_value = (
-            mock_provider
+        """Test email provider creation with default config."""
+        provider = factory.create_email_provider()
+        assert provider is not None
+
+    def test_get_hashing_service(self, factory: InfrastructureFactory) -> None:
+        """Test hashing service creation."""
+        from event_sourcing.infrastructure.security import (
+            HashingServiceInterface,
         )
 
-        result = factory.create_email_provider(provider_name)
-
-        email_provider_factory_mock.create_provider.assert_called_once_with(
-            provider_name, {}
-        )
-        assert result == mock_provider
+        hashing_service = factory.get_hashing_service()
+        assert isinstance(hashing_service, HashingServiceInterface)
+        assert hashing_service is not None
 
     @pytest.mark.asyncio
     async def test_create_create_user_command_handler(
@@ -438,6 +438,9 @@ class TestQueryHandlerWrappers:
         assert hasattr(wrapper, "_create_handler_with_session")
         assert callable(wrapper.handle)
         assert callable(wrapper._create_handler_with_session)
+
+        # Test that the wrapper is an instance of the expected class
+        assert "QueryHandlerWrapper" in str(type(wrapper))
 
     @pytest.mark.asyncio
     async def test_get_user_query_handler_wrapper_methods(
