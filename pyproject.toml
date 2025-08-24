@@ -94,7 +94,7 @@ version_files = [
 update_changelog_on_bump = true
 
 [tool.coverage.run]
-omit = ["*tests*", "*developer_tools*"]
+omit = ["*tests*", "*developer_tools*", "*/alembic/*"]
 concurrency = ["greenlet", "thread"]
 source = ["src"]
 
