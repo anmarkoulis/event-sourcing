@@ -74,16 +74,19 @@ class TestUserCreatedEmailProjection:
         await projection.handle(user_created_event)
 
         # Verify email provider was called with correct parameters
-        projection.email_provider.send_email.assert_awaited_once_with(
-            to_email=user_created_event.data.email,
-            subject="Welcome to Our Platform!",
-            body=projection._create_welcome_email_body(
-                first_name=user_created_event.data.first_name,
-                last_name=user_created_event.data.last_name,
-                username=user_created_event.data.username,
-            ),
-            from_email="welcome@example.com",
-        )
+        projection.email_provider.send_email.assert_awaited_once()
+
+        # Get the call arguments to verify the body content
+        call_args = projection.email_provider.send_email.call_args
+        assert call_args.kwargs["to_email"] == user_created_event.data.email
+        assert call_args.kwargs["subject"] == "Welcome to Our Platform!"
+        assert call_args.kwargs["from_email"] == "welcome@example.com"
+
+        # Verify the email body contains expected content
+        body = call_args.kwargs["body"]
+        assert "Dear Test User," in body
+        assert "testuser" in body
+        assert "Test User" in body
 
     @pytest.mark.asyncio
     async def test_handle_with_email_provider_error(
@@ -114,86 +117,162 @@ class TestUserCreatedEmailProjection:
             await projection.handle(user_created_event)
 
     @pytest.mark.asyncio
-    async def test_create_welcome_email_body_with_full_name(
+    async def test_handle_with_full_name(
         self, projection: UserCreatedEmailProjection
     ) -> None:
-        """Test welcome email body creation with full name."""
-        body = projection._create_welcome_email_body(
-            first_name="John",
-            last_name="Doe",
-            username="johndoe",
+        """Test welcome email body creation with full name through public interface."""
+        event = UserCreatedV1(
+            id=uuid4(),
+            aggregate_id=uuid4(),
+            event_type=EventType.USER_CREATED,
+            timestamp=datetime(2023, 1, 1, 12, 0, tzinfo=timezone.utc),
+            version="1",
+            revision=1,
+            data=UserCreatedDataV1(
+                username="johndoe",
+                email="john@example.com",
+                first_name="John",
+                last_name="Doe",
+                password_hash="hashed_password",  # noqa: S106  # pragma: allowlist secret
+                hashing_method=HashingMethod.BCRYPT,
+                role=Role.USER,
+            ),
         )
 
+        await projection.handle(event)
+
+        # Verify the email body contains expected content
+        call_args = projection.email_provider.send_email.call_args
+        body = call_args.kwargs["body"]
         assert "Dear John Doe," in body
         assert "johndoe" in body
         assert "John Doe" in body
 
     @pytest.mark.asyncio
-    async def test_create_welcome_email_body_with_empty_names(
+    async def test_handle_with_empty_names(
         self, projection: UserCreatedEmailProjection
     ) -> None:
-        """Test welcome email body creation with empty names."""
-        body = projection._create_welcome_email_body(
-            first_name="",
-            last_name="",
-            username="usernameonly",
+        """Test welcome email body creation with empty names through public interface."""
+        event = UserCreatedV1(
+            id=uuid4(),
+            aggregate_id=uuid4(),
+            event_type=EventType.USER_CREATED,
+            timestamp=datetime(2023, 1, 1, 12, 0, tzinfo=timezone.utc),
+            version="1",
+            revision=1,
+            data=UserCreatedDataV1(
+                username="usernameonly",
+                email="user@example.com",
+                first_name="",
+                last_name="",
+                password_hash="hashed_password",  # noqa: S106  # pragma: allowlist secret
+                hashing_method=HashingMethod.BCRYPT,
+                role=Role.USER,
+            ),
         )
 
+        await projection.handle(event)
+
+        # Verify the email body contains expected content
+        call_args = projection.email_provider.send_email.call_args
+        body = call_args.kwargs["body"]
         assert "Dear usernameonly," in body
         assert "usernameonly" in body
 
     @pytest.mark.asyncio
-    async def test_create_welcome_email_body_with_none_names(
+    async def test_handle_with_partial_names(
         self, projection: UserCreatedEmailProjection
     ) -> None:
-        """Test welcome email body creation with None names."""
-        # Note: Pydantic models don't allow None for these fields, so we'll test with empty strings instead
-        body = projection._create_welcome_email_body(
-            first_name="",  # Empty string instead of None
-            last_name="",  # Empty string instead of None
-            username="nonameuser",
-        )
-
-        assert "Dear nonameuser," in body
-        assert "nonameuser" in body
-
-    @pytest.mark.asyncio
-    async def test_create_welcome_email_body_with_partial_names(
-        self, projection: UserCreatedEmailProjection
-    ) -> None:
-        """Test welcome email body creation with partial names."""
+        """Test welcome email body creation with partial names through public interface."""
         # Only first name
-        body = projection._create_welcome_email_body(
-            first_name="Alice",
-            last_name="",
-            username="aliceuser",
+        event = UserCreatedV1(
+            id=uuid4(),
+            aggregate_id=uuid4(),
+            event_type=EventType.USER_CREATED,
+            timestamp=datetime(2023, 1, 1, 12, 0, tzinfo=timezone.utc),
+            version="1",
+            revision=1,
+            data=UserCreatedDataV1(
+                username="aliceuser",
+                email="alice@example.com",
+                first_name="Alice",
+                last_name="",
+                password_hash="hashed_password",  # noqa: S106  # pragma: allowlist secret
+                hashing_method=HashingMethod.BCRYPT,
+                role=Role.USER,
+            ),
         )
+
+        await projection.handle(event)
+
+        # Verify the email body contains expected content
+        call_args = projection.email_provider.send_email.call_args
+        body = call_args.kwargs["body"]
         assert "Dear Alice," in body
+        assert "aliceuser" in body
+        assert "Alice" in body
 
         # Only last name
-        body = projection._create_welcome_email_body(
-            first_name="",
-            last_name="Smith",
-            username="smithuser",
+        event2 = UserCreatedV1(
+            id=uuid4(),
+            aggregate_id=uuid4(),
+            event_type=EventType.USER_CREATED,
+            timestamp=datetime(2023, 1, 1, 12, 0, tzinfo=timezone.utc),
+            version="1",
+            revision=1,
+            data=UserCreatedDataV1(
+                username="bobuser",
+                email="bob@example.com",
+                first_name="",
+                last_name="Smith",
+                password_hash="hashed_password",  # noqa: S106  # pragma: allowlist secret
+                hashing_method=HashingMethod.BCRYPT,
+                role=Role.USER,
+            ),
         )
+
+        await projection.handle(event2)
+
+        # Verify the email body contains expected content
+        call_args = projection.email_provider.send_email.call_args
+        body = call_args.kwargs["body"]
         assert "Dear Smith," in body
+        assert "bobuser" in body
+        assert "Smith" in body
 
     @pytest.mark.asyncio
-    async def test_create_welcome_email_body_with_special_characters(
+    async def test_handle_with_special_characters(
         self, projection: UserCreatedEmailProjection
     ) -> None:
         """Test welcome email body creation with special characters in names."""
-        body = projection._create_welcome_email_body(
-            first_name="José",
-            last_name="O'Connor",
-            username="jose_user",
+        event = UserCreatedV1(
+            id=uuid4(),
+            aggregate_id=uuid4(),
+            event_type=EventType.USER_CREATED,
+            timestamp=datetime(2023, 1, 1, 12, 0, tzinfo=timezone.utc),
+            version="1",
+            revision=1,
+            data=UserCreatedDataV1(
+                username="jose_user",
+                email="jose@example.com",
+                first_name="José",
+                last_name="O'Connor",
+                password_hash="hashed_password",  # noqa: S106  # pragma: allowlist secret
+                hashing_method=HashingMethod.BCRYPT,
+                role=Role.USER,
+            ),
         )
 
+        await projection.handle(event)
+
+        # Verify the email body contains expected content
+        call_args = projection.email_provider.send_email.call_args
+        body = call_args.kwargs["body"]
         assert "Dear José O'Connor," in body
         assert "jose_user" in body
 
     @pytest.mark.asyncio
-    async def test_create_welcome_email_body_with_long_names(
+    async def test_handle_with_long_names(
         self, projection: UserCreatedEmailProjection
     ) -> None:
         """Test welcome email body creation with long names."""
@@ -201,40 +280,91 @@ class TestUserCreatedEmailProjection:
         long_last_name = "VeryLongLastNameThatExceedsNormalLength"
         long_username = "very_long_username_that_exceeds_normal_length"
 
-        body = projection._create_welcome_email_body(
-            first_name=long_first_name,
-            last_name=long_last_name,
-            username=long_username,
+        event = UserCreatedV1(
+            id=uuid4(),
+            aggregate_id=uuid4(),
+            event_type=EventType.USER_CREATED,
+            timestamp=datetime(2023, 1, 1, 12, 0, tzinfo=timezone.utc),
+            version="1",
+            revision=1,
+            data=UserCreatedDataV1(
+                username=long_username,
+                email="long@example.com",
+                first_name=long_first_name,
+                last_name=long_last_name,
+                password_hash="hashed_password",  # noqa: S106  # pragma: allowlist secret
+                hashing_method=HashingMethod.BCRYPT,
+                role=Role.USER,
+            ),
         )
 
+        await projection.handle(event)
+
+        # Verify the email body contains expected content
+        call_args = projection.email_provider.send_email.call_args
+        body = call_args.kwargs["body"]
         assert f"Dear {long_first_name} {long_last_name}," in body
         assert long_username in body
 
     @pytest.mark.asyncio
-    async def test_create_welcome_email_body_with_numbers_in_names(
+    async def test_handle_with_numbers_in_names(
         self, projection: UserCreatedEmailProjection
     ) -> None:
         """Test welcome email body creation with numbers in names."""
-        body = projection._create_welcome_email_body(
-            first_name="John2",
-            last_name="Doe3",
-            username="john2doe3",
+        event = UserCreatedV1(
+            id=uuid4(),
+            aggregate_id=uuid4(),
+            event_type=EventType.USER_CREATED,
+            timestamp=datetime(2023, 1, 1, 12, 0, tzinfo=timezone.utc),
+            version="1",
+            revision=1,
+            data=UserCreatedDataV1(
+                username="john2doe3",
+                email="numbers@example.com",
+                first_name="John2",
+                last_name="Doe3",
+                password_hash="hashed_password",  # noqa: S106  # pragma: allowlist secret
+                hashing_method=HashingMethod.BCRYPT,
+                role=Role.USER,
+            ),
         )
 
+        await projection.handle(event)
+
+        # Verify the email body contains expected content
+        call_args = projection.email_provider.send_email.call_args
+        body = call_args.kwargs["body"]
         assert "Dear John2 Doe3," in body
         assert "john2doe3" in body
 
     @pytest.mark.asyncio
-    async def test_create_welcome_email_body_with_whitespace(
+    async def test_handle_with_whitespace(
         self, projection: UserCreatedEmailProjection
     ) -> None:
         """Test welcome email body creation with whitespace in names."""
-        body = projection._create_welcome_email_body(
-            first_name="  John  ",
-            last_name="  Doe  ",
-            username="johndoe",
+        event = UserCreatedV1(
+            id=uuid4(),
+            aggregate_id=uuid4(),
+            event_type=EventType.USER_CREATED,
+            timestamp=datetime(2023, 1, 1, 12, 0, tzinfo=timezone.utc),
+            version="1",
+            revision=1,
+            data=UserCreatedDataV1(
+                username="johndoe",
+                email="whitespace@example.com",
+                first_name="  John  ",
+                last_name="  Doe  ",
+                password_hash="hashed_password",  # noqa: S106  # pragma: allowlist secret
+                hashing_method=HashingMethod.BCRYPT,
+                role=Role.USER,
+            ),
         )
 
+        await projection.handle(event)
+
+        # Verify the email body contains expected content
+        call_args = projection.email_provider.send_email.call_args
+        body = call_args.kwargs["body"]
         # The projection doesn't strip whitespace, so it preserves the original formatting
         assert "Dear John     Doe," in body
         assert "johndoe" in body
@@ -264,16 +394,15 @@ class TestUserCreatedEmailProjection:
 
         await projection.handle(event)
 
-        projection.email_provider.send_email.assert_awaited_once_with(
-            to_email="another@example.com",
-            subject="Welcome to Our Platform!",
-            body=projection._create_welcome_email_body(
-                first_name="Another",
-                last_name="Person",
-                username="anotheruser",
-            ),
-            from_email="welcome@example.com",
-        )
+        projection.email_provider.send_email.assert_awaited_once()
+        call_args = projection.email_provider.send_email.call_args
+        assert call_args.kwargs["to_email"] == "another@example.com"
+        assert call_args.kwargs["subject"] == "Welcome to Our Platform!"
+        assert call_args.kwargs["from_email"] == "welcome@example.com"
+        body = call_args.kwargs["body"]
+        assert "Dear Another Person," in body
+        assert "anotheruser" in body
+        assert "Another Person" in body
 
     @pytest.mark.asyncio
     async def test_handle_with_minimal_event_data(
@@ -300,16 +429,14 @@ class TestUserCreatedEmailProjection:
 
         await projection.handle(event)
 
-        projection.email_provider.send_email.assert_awaited_once_with(
-            to_email="minimal@example.com",
-            subject="Welcome to Our Platform!",
-            body=projection._create_welcome_email_body(
-                first_name="",
-                last_name="",
-                username="minimaluser",
-            ),
-            from_email="welcome@example.com",
-        )
+        projection.email_provider.send_email.assert_awaited_once()
+        call_args = projection.email_provider.send_email.call_args
+        assert call_args.kwargs["to_email"] == "minimal@example.com"
+        assert call_args.kwargs["subject"] == "Welcome to Our Platform!"
+        assert call_args.kwargs["from_email"] == "welcome@example.com"
+        body = call_args.kwargs["body"]
+        assert "Dear minimaluser," in body  # Empty names fall back to username
+        assert "minimaluser" in body
 
     @pytest.mark.asyncio
     async def test_handle_with_none_names(
@@ -337,16 +464,14 @@ class TestUserCreatedEmailProjection:
 
         await projection.handle(event)
 
-        projection.email_provider.send_email.assert_awaited_once_with(
-            to_email="none@example.com",
-            subject="Welcome to Our Platform!",
-            body=projection._create_welcome_email_body(
-                first_name="",
-                last_name="",
-                username="nonameuser",
-            ),
-            from_email="welcome@example.com",
-        )
+        projection.email_provider.send_email.assert_awaited_once()
+        call_args = projection.email_provider.send_email.call_args
+        assert call_args.kwargs["to_email"] == "none@example.com"
+        assert call_args.kwargs["subject"] == "Welcome to Our Platform!"
+        assert call_args.kwargs["from_email"] == "welcome@example.com"
+        body = call_args.kwargs["body"]
+        assert "Dear nonameuser," in body  # Empty names fall back to username
+        assert "nonameuser" in body
 
     @pytest.mark.asyncio
     async def test_handle_with_special_characters_in_email(
@@ -373,16 +498,15 @@ class TestUserCreatedEmailProjection:
 
         await projection.handle(event)
 
-        projection.email_provider.send_email.assert_awaited_once_with(
-            to_email="special+tag@example.com",
-            subject="Welcome to Our Platform!",
-            body=projection._create_welcome_email_body(
-                first_name="Special",
-                last_name="User",
-                username="specialuser",
-            ),
-            from_email="welcome@example.com",
-        )
+        projection.email_provider.send_email.assert_awaited_once()
+        call_args = projection.email_provider.send_email.call_args
+        assert call_args.kwargs["to_email"] == "special+tag@example.com"
+        assert call_args.kwargs["subject"] == "Welcome to Our Platform!"
+        assert call_args.kwargs["from_email"] == "welcome@example.com"
+        body = call_args.kwargs["body"]
+        assert "Dear Special User," in body
+        assert "specialuser" in body
+        assert "Special User" in body
 
     @pytest.mark.asyncio
     async def test_handle_with_long_email(
@@ -410,16 +534,15 @@ class TestUserCreatedEmailProjection:
 
         await projection.handle(event)
 
-        projection.email_provider.send_email.assert_awaited_once_with(
-            to_email=long_email,
-            subject="Welcome to Our Platform!",
-            body=projection._create_welcome_email_body(
-                first_name="Long",
-                last_name="Email",
-                username="longemailuser",
-            ),
-            from_email="welcome@example.com",
-        )
+        projection.email_provider.send_email.assert_awaited_once()
+        call_args = projection.email_provider.send_email.call_args
+        assert call_args.kwargs["to_email"] == long_email
+        assert call_args.kwargs["subject"] == "Welcome to Our Platform!"
+        assert call_args.kwargs["from_email"] == "welcome@example.com"
+        body = call_args.kwargs["body"]
+        assert "Dear Long Email," in body
+        assert "longemailuser" in body
+        assert "Long Email" in body
 
     @pytest.mark.asyncio
     async def test_handle_with_different_timestamp(
@@ -446,16 +569,15 @@ class TestUserCreatedEmailProjection:
 
         await projection.handle(event)
 
-        projection.email_provider.send_email.assert_awaited_once_with(
-            to_email="yearend@example.com",
-            subject="Welcome to Our Platform!",
-            body=projection._create_welcome_email_body(
-                first_name="Year",
-                last_name="End",
-                username="yearenduser",
-            ),
-            from_email="welcome@example.com",
-        )
+        projection.email_provider.send_email.assert_awaited_once()
+        call_args = projection.email_provider.send_email.call_args
+        assert call_args.kwargs["to_email"] == "yearend@example.com"
+        assert call_args.kwargs["subject"] == "Welcome to Our Platform!"
+        assert call_args.kwargs["from_email"] == "welcome@example.com"
+        body = call_args.kwargs["body"]
+        assert "Dear Year End," in body
+        assert "yearenduser" in body
+        assert "Year End" in body
 
     @pytest.mark.asyncio
     async def test_handle_with_different_version(
@@ -482,16 +604,14 @@ class TestUserCreatedEmailProjection:
 
         await projection.handle(event)
 
-        projection.email_provider.send_email.assert_awaited_once_with(
-            to_email="version2@example.com",
-            subject="Welcome to Our Platform!",
-            body=projection._create_welcome_email_body(
-                first_name="Version",
-                last_name="Two",
-                username="version2user",
-            ),
-            from_email="welcome@example.com",
-        )
+        projection.email_provider.send_email.assert_awaited_once()
+        call_args = projection.email_provider.send_email.call_args
+        assert call_args.kwargs["to_email"] == "version2@example.com"
+        assert call_args.kwargs["subject"] == "Welcome to Our Platform!"
+        assert call_args.kwargs["from_email"] == "welcome@example.com"
+        body = call_args.kwargs["body"]
+        assert "Dear Version Two," in body  # Uses actual first + last name
+        assert "version2user" in body
 
     @pytest.mark.asyncio
     async def test_handle_with_different_revision(
@@ -518,16 +638,16 @@ class TestUserCreatedEmailProjection:
 
         await projection.handle(event)
 
-        projection.email_provider.send_email.assert_awaited_once_with(
-            to_email="revision999@example.com",
-            subject="Welcome to Our Platform!",
-            body=projection._create_welcome_email_body(
-                first_name="Revision",
-                last_name="NineNineNine",
-                username="revision999user",
-            ),
-            from_email="welcome@example.com",
-        )
+        projection.email_provider.send_email.assert_awaited_once()
+        call_args = projection.email_provider.send_email.call_args
+        assert call_args.kwargs["to_email"] == "revision999@example.com"
+        assert call_args.kwargs["subject"] == "Welcome to Our Platform!"
+        assert call_args.kwargs["from_email"] == "welcome@example.com"
+        body = call_args.kwargs["body"]
+        assert (
+            "Dear Revision NineNineNine," in body
+        )  # Uses actual first + last name
+        assert "revision999user" in body
 
     @pytest.mark.asyncio
     async def test_handle_with_different_event_id(
@@ -554,16 +674,14 @@ class TestUserCreatedEmailProjection:
 
         await projection.handle(event)
 
-        projection.email_provider.send_email.assert_awaited_once_with(
-            to_email="differentevent@example.com",
-            subject="Welcome to Our Platform!",
-            body=projection._create_welcome_email_body(
-                first_name="Different",
-                last_name="Event",
-                username="differenteventuser",
-            ),
-            from_email="welcome@example.com",
-        )
+        projection.email_provider.send_email.assert_awaited_once()
+        call_args = projection.email_provider.send_email.call_args
+        assert call_args.kwargs["to_email"] == "differentevent@example.com"
+        assert call_args.kwargs["subject"] == "Welcome to Our Platform!"
+        assert call_args.kwargs["from_email"] == "welcome@example.com"
+        body = call_args.kwargs["body"]
+        assert "Dear Different Event," in body  # Uses actual first + last name
+        assert "differenteventuser" in body
 
     @pytest.mark.asyncio
     async def test_handle_multiple_times(
@@ -611,23 +729,24 @@ class TestUserCreatedEmailProjection:
 
         # Verify both calls were made
         assert projection.email_provider.send_email.await_count == 2
-        projection.email_provider.send_email.assert_any_call(
-            to_email="user1@example.com",
-            subject="Welcome to Our Platform!",
-            body=projection._create_welcome_email_body(
-                first_name="User",
-                last_name="One",
-                username="user1",
-            ),
-            from_email="welcome@example.com",
-        )
-        projection.email_provider.send_email.assert_any_call(
-            to_email="user2@example.com",
-            subject="Welcome to Our Platform!",
-            body=projection._create_welcome_email_body(
-                first_name="User",
-                last_name="Two",
-                username="user2",
-            ),
-            from_email="welcome@example.com",
-        )
+
+        # Get all calls to send_email
+        calls = projection.email_provider.send_email.call_args_list
+
+        # Verify first call
+        first_call = calls[0]
+        assert first_call.kwargs["to_email"] == "user1@example.com"
+        assert first_call.kwargs["subject"] == "Welcome to Our Platform!"
+        assert first_call.kwargs["from_email"] == "welcome@example.com"
+        first_body = first_call.kwargs["body"]
+        assert "Dear User One," in first_body
+        assert "user1" in first_body
+
+        # Verify second call
+        second_call = calls[1]
+        assert second_call.kwargs["to_email"] == "user2@example.com"
+        assert second_call.kwargs["subject"] == "Welcome to Our Platform!"
+        assert second_call.kwargs["from_email"] == "welcome@example.com"
+        second_body = second_call.kwargs["body"]
+        assert "Dear User Two," in second_body
+        assert "user2" in second_body

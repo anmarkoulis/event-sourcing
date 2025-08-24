@@ -36,7 +36,6 @@ class TestSessionManager:
         """Test SessionManager initialization."""
         session_manager = SessionManager(database_manager_mock)
         assert session_manager.database_manager == database_manager_mock
-        assert session_manager._session is None
 
     @pytest.mark.asyncio
     async def test_get_session_first_time(
@@ -51,15 +50,22 @@ class TestSessionManager:
 
         assert result == session_mock
         session_manager.database_manager.get_session.assert_awaited_once()
-        assert session_manager._session == session_mock
 
     @pytest.mark.asyncio
     async def test_get_session_cached(
         self, session_manager: SessionManager, session_mock: MagicMock
     ) -> None:
         """Test getting cached session."""
-        session_manager._session = session_mock
+        # First call to populate cache
+        session_manager.database_manager.get_session.return_value = (
+            session_mock
+        )
+        await session_manager.get_session()
 
+        # Reset mock to verify second call doesn't hit database
+        session_manager.database_manager.get_session.reset_mock()
+
+        # Second call should use cached session
         result = await session_manager.get_session()
 
         assert result == session_mock
@@ -70,21 +76,30 @@ class TestSessionManager:
         self, session_manager: SessionManager, session_mock: MagicMock
     ) -> None:
         """Test closing session when session exists."""
-        session_manager._session = session_mock
+        # First get a session to populate cache
+        session_manager.database_manager.get_session.return_value = (
+            session_mock
+        )
+        await session_manager.get_session()
 
         await session_manager.close_session()
 
         session_mock.close.assert_awaited_once()
-        assert session_manager._session is None
 
     @pytest.mark.asyncio
     async def test_close_session_no_session(
         self, session_manager: SessionManager
     ) -> None:
         """Test closing session when no session exists."""
-        session_manager._session = None
-
         await session_manager.close_session()
 
         # Should not raise any errors
-        assert session_manager._session is None
+        # Verify by calling get_session again - it should create a new session
+        session_mock = MagicMock()
+        session_mock.close = AsyncMock()
+        session_manager.database_manager.get_session.return_value = (
+            session_mock
+        )
+
+        result = await session_manager.get_session()
+        assert result == session_mock

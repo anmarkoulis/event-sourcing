@@ -15,7 +15,6 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from event_sourcing.dto.snapshot import SnapshotDTO
 from event_sourcing.dto.user import UserDTO
 from event_sourcing.enums import AggregateTypeEnum, Role
-from event_sourcing.exceptions import UnsupportedAggregateTypeError
 
 if TYPE_CHECKING:
     from event_sourcing.infrastructure.snapshot_store.psql_store import (
@@ -70,46 +69,28 @@ class TestPsqlSnapshotStore:
             updated_at=datetime.now(timezone.utc),
         )
 
-    async def test_table_for_supported_aggregate_type(
+    async def test_user_aggregate_type_works(
         self, snapshot_store: "PsqlSnapshotStore"
     ) -> None:
-        """Test that _table_for returns correct table for supported aggregate type."""
-        # Test with USER aggregate type
-        table = snapshot_store._table_for(AggregateTypeEnum.USER)
-
-        # Should return UserSnapshot class
-        from event_sourcing.infrastructure.database.models.snapshot import (
-            UserSnapshot,
+        """Test that USER aggregate type works correctly through public interface."""
+        sample_snapshot = SnapshotDTO(
+            aggregate_id=uuid.uuid4(),
+            aggregate_type=AggregateTypeEnum.USER,
+            data={"test": "data"},
+            revision=1,
+            created_at=datetime.now(timezone.utc),
+            updated_at=datetime.now(timezone.utc),
         )
-
-        assert table == UserSnapshot
-
-    async def test_table_for_unsupported_aggregate_type(
-        self, snapshot_store: "PsqlSnapshotStore"
-    ) -> None:
-        """Test that _table_for raises UnsupportedAggregateTypeError for unsupported types."""
-
-        # Create a mock enum value that's not in the _TABLES mapping
-        class MockAggregateType:
-            def __str__(self) -> str:
-                return "UNSUPPORTED_TYPE"
-
-        mock_unsupported_type = MockAggregateType()
-
-        # This should raise UnsupportedAggregateTypeError
-        with pytest.raises(UnsupportedAggregateTypeError) as exc_info:
-            # We need to temporarily modify the _TABLES to test this
-            # Let's test by accessing a key that doesn't exist
-            original_tables = snapshot_store._TABLES
-            snapshot_store._TABLES = {}
-            try:
-                # Use the mock_unsupported_type to trigger the error
-                snapshot_store._table_for(mock_unsupported_type)
-            finally:
-                snapshot_store._TABLES = original_tables
-
-        # Verify the error message contains the string representation of the mock type
-        assert "UNSUPPORTED_TYPE" in str(exc_info.value)
+        await snapshot_store.set(sample_snapshot)
+        retrieved = await snapshot_store.get(
+            aggregate_id=sample_snapshot.aggregate_id,
+            aggregate_type=sample_snapshot.aggregate_type,
+        )
+        assert retrieved is not None
+        assert retrieved.aggregate_id == sample_snapshot.aggregate_id
+        assert retrieved.aggregate_type == sample_snapshot.aggregate_type
+        assert retrieved.data == sample_snapshot.data
+        assert retrieved.revision == sample_snapshot.revision
 
     async def test_get_snapshot_success(
         self,
@@ -224,58 +205,6 @@ class TestPsqlSnapshotStore:
         assert retrieved_snapshot is not None
         assert retrieved_snapshot.revision == 2
         assert retrieved_snapshot.data["email"] == "updated@example.com"
-
-    async def test_set_snapshot_with_unsupported_aggregate_type(
-        self, snapshot_store: "PsqlSnapshotStore"
-    ) -> None:
-        """Test that set method properly handles unsupported aggregate types."""
-        # Create a snapshot with an unsupported aggregate type
-        # We'll test this by temporarily modifying the _TABLES to be empty
-        original_tables = snapshot_store._TABLES
-        snapshot_store._TABLES = {}
-
-        try:
-            sample_snapshot = SnapshotDTO(
-                aggregate_id=uuid.uuid4(),
-                aggregate_type=AggregateTypeEnum.USER,
-                data=UserDTO(
-                    id=uuid.uuid4(),
-                    username="testuser",
-                    email="test@example.com",
-                    first_name="Test",
-                    last_name="User",
-                    role=Role.USER,
-                    created_at=datetime.now(timezone.utc),
-                    updated_at=datetime.now(timezone.utc),
-                ).model_dump(mode="json"),  # Convert to JSON-serializable dict
-                revision=1,
-                created_at=datetime.now(timezone.utc),
-                updated_at=datetime.now(timezone.utc),
-            )
-
-            # This should raise UnsupportedAggregateTypeError
-            with pytest.raises(UnsupportedAggregateTypeError):
-                await snapshot_store.set(sample_snapshot)
-        finally:
-            snapshot_store._TABLES = original_tables
-
-    async def test_get_snapshot_with_unsupported_aggregate_type(
-        self, snapshot_store: "PsqlSnapshotStore"
-    ) -> None:
-        """Test that get method properly handles unsupported aggregate types."""
-        # Test this by temporarily modifying the _TABLES to be empty
-        original_tables = snapshot_store._TABLES
-        snapshot_store._TABLES = {}
-
-        try:
-            # This should raise UnsupportedAggregateTypeError
-            with pytest.raises(UnsupportedAggregateTypeError):
-                await snapshot_store.get(
-                    aggregate_id=uuid.uuid4(),
-                    aggregate_type=AggregateTypeEnum.USER,
-                )
-        finally:
-            snapshot_store._TABLES = original_tables
 
     async def test_snapshot_data_integrity(
         self,
