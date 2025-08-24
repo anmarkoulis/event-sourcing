@@ -19,5 +19,5 @@ app.autodiscover_tasks(packages=["event_sourcing.application.tasks"])
 
 
 @setup_logging.connect
-def config_loggers(*args: Any, **kwags: Any) -> None:
+def config_loggers(*args: Any, **kwags: Any) -> None:  # pragma: no cover
     dictConfig(settings.LOGGING_CONFIG)

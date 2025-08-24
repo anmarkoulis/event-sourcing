@@ -280,3 +280,19 @@ class TestPsqlSnapshotStore:
         assert final_snapshot is not None
         assert final_snapshot.revision == 4
         assert final_snapshot.data["email"] == "revision4@example.com"
+
+    async def test_unsupported_aggregate_type_error(
+        self, snapshot_store: "PsqlSnapshotStore"
+    ) -> None:
+        """Test that unsupported aggregate types raise UnsupportedAggregateTypeError."""
+        from event_sourcing.exceptions import UnsupportedAggregateTypeError
+
+        # Create a mock aggregate type that's not supported
+        class MockAggregateType:
+            pass
+
+        mock_aggregate_type = MockAggregateType()
+
+        # Test that calling _table_for with unsupported type raises the error
+        with pytest.raises(UnsupportedAggregateTypeError):
+            snapshot_store._table_for(mock_aggregate_type)

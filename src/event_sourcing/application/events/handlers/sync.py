@@ -106,9 +106,6 @@ class SyncEventHandler(EventHandler):
                 case _:
                     logger.warning(f"Unknown handler: {handler_name}")
 
-        except ImportError as e:
-            logger.error(f"Could not import handler {handler_name}: {e}")
-            raise
         except Exception as e:
             logger.error(f"Error calling handler {handler_name}: {e}")
             raise

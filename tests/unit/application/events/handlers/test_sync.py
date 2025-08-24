@@ -432,3 +432,66 @@ class TestSyncEventHandler:
 
         # Verify that the handler processed the event without crashing
         # The warnings will be logged but the event processing continues
+
+    def test_get_handler_functions_unknown_event_type(self) -> None:
+        """Test _get_handler_functions with unknown event type."""
+        handler = SyncEventHandler()
+
+        # Test with an unknown event type that will trigger the _ case
+        # We need to create a mock event type that's not in our enum
+        class MockEventType:
+            pass
+
+        mock_event_type = MockEventType()
+
+        # This should return the default handler
+        result = handler._get_handler_functions(mock_event_type)
+        assert result == ["default_event_handler"]
+
+    async def test_call_handler_unknown_handler_case(
+        self, mock_infrastructure_factory: MagicMock
+    ) -> None:
+        """Test _call_handler with unknown handler name to cover the _ case."""
+        handler = SyncEventHandler(mock_infrastructure_factory)
+
+        event = EventDTO(
+            id=uuid4(),
+            aggregate_id=uuid4(),
+            event_type=EventType.USER_CREATED,
+            timestamp=datetime(2023, 1, 1, 12, 0, tzinfo=timezone.utc),
+            version="1",
+            revision=1,
+            data={"username": "testuser"},
+        )
+
+        # Test with unknown handler to trigger the _ case
+        await handler._call_handler("unknown_handler", event)
+
+        # This should log a warning but not crash
+        # The method should complete without raising an exception
+
+    async def test_dispatch_with_unknown_handler(
+        self, mock_infrastructure_factory: MagicMock
+    ) -> None:
+        """Test dispatch with unknown handler to cover the _ case in _call_handler."""
+        handler = SyncEventHandler(mock_infrastructure_factory)
+
+        event = EventDTO(
+            id=uuid4(),
+            aggregate_id=uuid4(),
+            event_type=EventType.USER_CREATED,
+            timestamp=datetime(2023, 1, 1, 12, 0, tzinfo=timezone.utc),
+            version="1",
+            revision=1,
+            data={"username": "testuser"},
+        )
+
+        # Mock _get_handler_functions to return an unknown handler
+        with patch.object(
+            handler, "_get_handler_functions", return_value=["unknown_handler"]
+        ):
+            # This should trigger the _ case in _call_handler
+            await handler.dispatch([event])
+
+        # The handler should log a warning but not crash
+        # The method should complete without raising an exception
