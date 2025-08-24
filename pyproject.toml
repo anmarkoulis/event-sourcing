@@ -96,7 +96,7 @@ update_changelog_on_bump = true
 [tool.coverage.run]
 omit = ["*tests*", "*developer_tools*"]
 concurrency = ["greenlet", "thread"]
-include = ["/app/src/*", ]
+source = ["src"]
 
 [tool.coverage.report]
 precision = 2
