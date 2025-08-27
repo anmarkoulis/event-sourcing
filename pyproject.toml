@@ -38,7 +38,7 @@ create-admin = "event_sourcing.cli.create_admin:app"
 [dependency-groups]
 dev = [
     "commitizen==4.8.3",
-    "faker==37.5.3",
+    "faker==37.6.0",
     "freezegun==1.5.5",
     "greenlet==3.2.4",
     "httpx==0.28.1",
