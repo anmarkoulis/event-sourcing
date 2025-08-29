@@ -10,7 +10,7 @@ authors = [{name = "Antonis Markoulis"}]
 requires-python = ">=3.13.0,<3.14.0"
 keywords = ["event_sourcing"]
 dependencies = [
-    "alembic==1.16.4",
+    "alembic==1.16.5",
     "asgiref==3.9.1",
     "asyncpg==0.30.0",
     "celery[sqs]==5.5.3",
