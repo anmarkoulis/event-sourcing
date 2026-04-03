@@ -2,6 +2,7 @@
 
 This is an example Event Sourcing project
 
+
 ## Documentation
 
 This project contains comprehensive documentation organized in two main areas:
