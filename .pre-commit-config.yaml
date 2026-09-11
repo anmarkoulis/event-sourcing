@@ -5,7 +5,7 @@ repos:
   - hooks:
       - id: actionlint
     repo: https://github.com/rhysd/actionlint
-    rev: v1.7.7
+    rev: v1.7.12
 
   - hooks:
       - id: detect-secrets
@@ -35,7 +35,7 @@ repos:
     rev: v6.0.0
 
   - repo: https://github.com/asottile/pyupgrade
-    rev: v3.20.0
+    rev: v3.21.2
     hooks:
       - id: pyupgrade
 
@@ -49,14 +49,14 @@ repos:
         stages:
           - manual
     repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: v0.12.8
+    rev: v0.16.7
 
   - hooks:
       - id: commitizen
         stages:
           - commit-msg
     repo: https://github.com/commitizen-tools/commitizen
-    rev: v4.8.3
+    rev: v4.18.0
 
   - hooks:
       - entry: mypy
@@ -77,7 +77,7 @@ repos:
     repo: local
 
   - repo: https://github.com/phildp/alembic-check
-    rev: v1.1.0
+    rev: v1.2.1
     hooks:
       - id: alembic-check
         args: ["src/event_sourcing/infrastructure/database/alembic/versions"]
